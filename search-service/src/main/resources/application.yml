@@ -1,0 +1,11 @@
+server:
+  port: 6071
+
+spring:
+  application:
+    name: search-service
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}

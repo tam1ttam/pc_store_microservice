@@ -1,0 +1,152 @@
+server:
+  port: 6060
+
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      routes:
+        # IDENTITY-SERVICE
+        - id: identity-service
+          uri: lb://IDENTITY-SERVICE
+          predicates:
+            - Path=/api-gateway/identity-service/**
+          filters:
+            - StripPrefix=1
+
+        # USER-SERVICE
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api-gateway/user-service/**
+          filters:
+            - StripPrefix=1
+
+        # PRODUCT-SERVICE
+        - id: product-service
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/api-gateway/product-service/**
+          filters:
+            - StripPrefix=1
+
+        # INVENTORY-SERVICE
+        - id: inventory-service
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api-gateway/inventory-service/**
+          filters:
+            - StripPrefix=1
+
+        # ORDER-SERVICE
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api-gateway/order-service/**
+          filters:
+            - StripPrefix=1
+
+        # PAYMENT-SERVICE
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api-gateway/payment-service/**
+          filters:
+            - StripPrefix=1
+
+        # FAVORITE-SERVICE
+        - id: favorite-service
+          uri: lb://FAVORITE-SERVICE
+          predicates:
+            - Path=/api-gateway/favorite-service/**
+          filters:
+            - StripPrefix=1
+
+        # NOTIFICATION-SERVICE
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api-gateway/notification-service/**
+          filters:
+            - StripPrefix=1
+
+        # RATING-SERVICE
+        - id: rating-service
+          uri: lb://RATING-SERVICE
+          predicates:
+            - Path=/api-gateway/rating-service/**
+          filters:
+            - StripPrefix=1
+
+        # SEARCH-SERVICE
+        - id: search-service
+          uri: lb://SEARCH-SERVICE
+          predicates:
+            - Path=/api-gateway/search-service/**
+          filters:
+            - StripPrefix=1
+
+        # PROMOTION-SERVICE
+        - id: promotion-service
+          uri: lb://PROMOTION-SERVICE
+          predicates:
+            - Path=/api-gateway/promotion-service/**
+          filters:
+            - StripPrefix=1
+
+        # SHIPPING-SERVICE
+        - id: shipping-service
+          uri: lb://SHIPPING-SERVICE
+          predicates:
+            - Path=/api-gateway/shipping-service/**
+          filters:
+            - StripPrefix=1
+
+        # TAX-SERVICE
+        - id: tax-service
+          uri: lb://TAX-SERVICE
+          predicates:
+            - Path=/api-gateway/tax-service/**
+          filters:
+            - StripPrefix=1
+
+        # MEDIA-SERVICE
+        - id: media-service
+          uri: lb://MEDIA-SERVICE
+          predicates:
+            - Path=/api-gateway/media-service/**
+          filters:
+            - StripPrefix=1
+
+        # SAGA-ORCHESTRATOR-SERVICE
+        - id: saga-orchestrator-service
+          uri: lb://SAGA-ORCHESTRATOR-SERVICE
+          predicates:
+            - Path=/api-gateway/saga-orchestrator-service/**
+          filters:
+            - StripPrefix=1
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/unicall}
+
+app:
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:6061/eureka/}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: INFO
+    org.springframework.cloud.gateway: TRACE

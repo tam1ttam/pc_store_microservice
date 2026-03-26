@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package pc_store.inventory.v1;
+
+option java_multiple_files = true;
+option java_package = "iuh.fit.pc_store.grpc.inventory.v1";
+option java_outer_classname = "InventoryServiceProto";
+
+service InventoryService {
+  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryResponse);
+  rpc ReleaseReservation(ReleaseReservationRequest) returns (ReleaseReservationResponse);
+  rpc CommitReservation(CommitReservationRequest) returns (CommitReservationResponse);
+  rpc GetInventoryStatus(GetInventoryStatusRequest) returns (GetInventoryStatusResponse);
+}
+
+message ReserveInventoryRequest {
+  string reservationId = 1;
+  int64 productId = 2;
+  int32 quantity = 3;
+  string reason = 4;
+}
+
+message ReserveInventoryResponse {
+  bool reserved = 1;
+  string reservationId = 2;
+  int32 reservedQuantity = 3;
+  string message = 4;
+}
+
+message ReleaseReservationRequest {
+  string reservationId = 1;
+  int64 productId = 2;
+  string reason = 3;
+}
+
+message ReleaseReservationResponse {
+  bool released = 1;
+  string message = 2;
+}
+
+message CommitReservationRequest {
+  string reservationId = 1;
+  int64 productId = 2;
+  int32 quantity = 3;
+}
+
+message CommitReservationResponse {
+  bool committed = 1;
+  string message = 2;
+}
+
+message GetInventoryStatusRequest {
+  int64 productId = 1;
+}
+
+message GetInventoryStatusResponse {
+  int64 productId = 1;
+  int32 totalQuantity = 2;
+  int32 reservedQuantity = 3;
+  int32 availableQuantity = 4;
+}

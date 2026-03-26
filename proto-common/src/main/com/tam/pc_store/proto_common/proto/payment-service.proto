@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package pc_store.payment.v1;
+
+option java_multiple_files = true;
+option java_package = "iuh.fit.pc_store.grpc.payment.v1";
+option java_outer_classname = "PaymentServiceProto";
+
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+}
+
+enum PaymentStatus {
+  PAYMENT_PENDING = 0;
+  PAYMENT_PROCESSING = 1;
+  PAYMENT_SUCCESS = 2;
+  PAYMENT_FAILED = 3;
+  PAYMENT_REFUNDED = 4;
+  PAYMENT_CANCELLED = 5;
+}
+
+message ProcessPaymentRequest {
+  string transactionId = 1;
+  string userId = 2;
+  double amount = 3;
+  string currency = 4;
+  string paymentMethod = 5;
+  string cardToken = 6;
+  string description = 7;
+}
+
+message ProcessPaymentResponse {
+  string transactionId = 1;
+  PaymentStatus status = 2;
+  double amount = 3;
+  string message = 4;
+  string paymentGatewayRef = 5;
+}
+
+message RefundPaymentRequest {
+  string transactionId = 1;
+  double refundAmount = 2;
+  string reason = 3;
+}
+
+message RefundPaymentResponse {
+  string transactionId = 1;
+  string refundId = 2;
+  PaymentStatus status = 3;
+  double refundedAmount = 4;
+  string message = 5;
+}
+
+message GetPaymentStatusRequest {
+  string transactionId = 1;
+}
+
+message GetPaymentStatusResponse {
+  string transactionId = 1;
+  PaymentStatus status = 2;
+  double amount = 3;
+  string timestamp = 4;
+}

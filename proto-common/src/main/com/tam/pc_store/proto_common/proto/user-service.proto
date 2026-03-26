@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package pc_store.user.v1;
+
+option java_multiple_files = true;
+option java_package = "iuh.fit.pc_store.grpc.user.v1";
+option java_outer_classname = "UserServiceProto";
+
+service UserService {
+  rpc CreateUserProfile(CreateUserProfileRequest) returns (CreateUserProfileResponse);
+  rpc DeleteUserProfile(DeleteUserProfileRequest) returns (DeleteUserProfileResponse);
+  rpc GetUserProfileByIdentity(GetUserProfileByIdentityRequest) returns (GetUserProfileByIdentityResponse);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
+}
+
+message CreateUserProfileRequest {
+  string identityUserId = 1;
+  string email = 2;
+  string phoneNumber = 3;
+  string firstName = 4;
+  string lastName = 5;
+}
+
+message CreateUserProfileResponse {
+  int64 id = 1;
+  string identityUserId = 2;
+}
+
+message DeleteUserProfileRequest {
+  string identityUserId = 1;
+}
+
+message DeleteUserProfileResponse {
+  bool deleted = 1;
+}
+
+message GetUserProfileByIdentityRequest {
+  string identityUserId = 1;
+}
+
+message GetUserProfileByIdentityResponse {
+  int64 id = 1;
+  string identityUserId = 2;
+  string email = 3;
+  string phoneNumber = 4;
+  string firstName = 5;
+  string lastName = 6;
+  bool isActive = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+}
+
+message UpdateUserProfileRequest {
+  string identityUserId = 1;
+  string phoneNumber = 2;
+  string firstName = 3;
+  string lastName = 4;
+}
+
+message UpdateUserProfileResponse {
+  int64 id = 1;
+  bool updated = 2;
+}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package pc_store.product.v1;
+
+option java_multiple_files = true;
+option java_package = "iuh.fit.pc_store.grpc.product.v1";
+option java_outer_classname = "ProductServiceProto";
+
+service ProductService {
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc GetProductsByIds(GetProductsByIdsRequest) returns (GetProductsByIdsResponse);
+  rpc CheckProductAvailability(CheckProductAvailabilityRequest) returns (CheckProductAvailabilityResponse);
+}
+
+message GetProductRequest {
+  int64 productId = 1;
+}
+
+message GetProductResponse {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string category = 5;
+  int32 stockQuantity = 6;
+  bool isAvailable = 7;
+  string imageUrl = 8;
+}
+
+message GetProductsByIdsRequest {
+  repeated int64 productIds = 1;
+}
+
+message GetProductsByIdsResponse {
+  repeated ProductDetail products = 1;
+}
+
+message ProductDetail {
+  int64 id = 1;
+  string name = 2;
+  double price = 3;
+  int32 stockQuantity = 4;
+  bool isAvailable = 5;
+}
+
+message CheckProductAvailabilityRequest {
+  int64 productId = 1;
+  int32 quantity = 2;
+}
+
+message CheckProductAvailabilityResponse {
+  bool available = 1;
+  int32 availableQuantity = 2;
+  string message = 3;
+}

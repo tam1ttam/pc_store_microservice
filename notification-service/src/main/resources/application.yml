@@ -1,0 +1,11 @@
+server:
+  port: 6069
+
+spring:
+  application:
+    name: notification-service
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
