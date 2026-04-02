@@ -1,16 +1,18 @@
 package tam.userservice.controllers;
 
-import iuh.fit.common_service.dtos.response.base.PageResponse;
-import iuh.fit.common_service.dtos.response.base.ResponseSuccess;
-import iuh.fit.user_service.dtos.response.UserProfileResponse;
-import iuh.fit.user_service.dtos.response.UserSearchResponse;
-import iuh.fit.user_service.entities.User;
-import iuh.fit.user_service.services.UserProfileService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tam.common.base.PageResponse;
+import tam.common.base.ResponseSuccess;
+import tam.userservice.entities.User;
+import tam.userservice.response.UserProfileResponse;
+import tam.userservice.response.UserSearchResponse;
+import tam.userservice.services.UserProfileService;
 
 @RestController
 @RequestMapping("${api.prefix:/api/v1}/users")

@@ -1,4 +1,4 @@
-package tam.userservice.model.entity;
+package tam.userservice.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -8,8 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import javax.management.relation.Role;
 import java.time.LocalDate;
 
 @Entity
@@ -36,19 +34,13 @@ public class User {
     @Column(nullable = false, length = 100)
     private String lastName;
 
-    @Column(nullable = false, length = 20)
-    private String gender;
-
     @Column(nullable = false)
     private LocalDate dateOfBirth;
-
-    @Column
-    private String avatar;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean isActive = true;
-}
+
     private String password;
 
     @NotBlank(message = "Gender must not be blank")
@@ -65,5 +57,5 @@ public class User {
     @Column(name = "imageUrl")
     private String avatar;
 
-
 }
+

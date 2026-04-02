@@ -1,5 +1,5 @@
 server:
-  port: 6063
+  port: 6065
 
 spring:
   application:
@@ -21,9 +21,13 @@ spring:
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
     register-with-eureka: true
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+grpc:
+  server:
+    port: ${ORDER_SERVICE_GRPC_PORT:6165}
 

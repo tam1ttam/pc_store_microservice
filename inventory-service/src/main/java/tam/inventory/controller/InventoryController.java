@@ -3,6 +3,7 @@ package tam.inventory.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tam.inventory.security.JwtValidate;
@@ -16,4 +17,9 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final JwtValidate jwtValidate;
+    
+    @GetMapping("/health")
+    public String health() {
+        return "Inventory Service is running";
+    }
 }

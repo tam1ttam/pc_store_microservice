@@ -1,5 +1,5 @@
 server:
-  port: 6070
+  port: 6069
 
 spring:
   application:
@@ -21,4 +21,8 @@ spring:
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+
+grpc:
+  server:
+    port: ${RATING_SERVICE_GRPC_PORT:6169}

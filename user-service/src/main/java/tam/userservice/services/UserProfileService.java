@@ -1,7 +1,8 @@
 package tam.userservice.services;
 
-import iuh.fit.user_service.entities.User;
+
 import org.springframework.data.domain.Page;
+import tam.userservice.entities.User;
 
 import java.time.LocalDate;
 

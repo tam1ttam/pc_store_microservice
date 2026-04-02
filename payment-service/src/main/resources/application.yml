@@ -1,5 +1,5 @@
 server:
-  port: 6067
+  port: 6066
 
 spring:
   application:
@@ -21,4 +21,11 @@ spring:
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+
+grpc:
+  server:
+    port: ${PAYMENT_SERVICE_GRPC_PORT:6166}
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production}

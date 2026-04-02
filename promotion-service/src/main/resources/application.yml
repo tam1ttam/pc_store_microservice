@@ -18,7 +18,17 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  liquibase:
+    enabled: false
+
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-for-development-only}
+
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+
+grpc:
+  server:
+    port: ${PROMOTION_SERVICE_GRPC_PORT:6168}

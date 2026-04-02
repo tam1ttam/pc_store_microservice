@@ -1,5 +1,5 @@
 server:
-  port: 6071
+  port: 6070
 
 spring:
   application:
@@ -8,4 +8,8 @@ spring:
 eureka:
   client:
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+
+grpc:
+  server:
+    port: ${SEARCH_SERVICE_GRPC_PORT:6170}
