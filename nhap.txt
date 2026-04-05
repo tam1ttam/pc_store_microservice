@@ -1,0 +1,23 @@
+service chia theo nhom (cho moi truong thuc te):
+nhom 1 (core):
+- gateway
+- discovery
+- saga
+- notification
+nhom 2(common):
+- commom-lib
+- proto-common
+- media
+- identity
+nhom 3 (analysis):
+- favourite
+- promotion
+- search
+nhom 4 (logic):
+- order
+- payment
+- product
+- inventory
+- user
+
+service chia theo nhom (cho bao cao do an):

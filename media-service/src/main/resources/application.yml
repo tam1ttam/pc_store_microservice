@@ -1,16 +1,16 @@
 server:
-  port: 6064
+  port: ${SERVER_PORT:6064}
+  servlet:
+    context-path: /media-service
 
 spring:
   application:
     name: media-service
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/media
-    username: postgres
-    password: 123456
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/media
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,23 +18,24 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  liquibase:
-    enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
 
-  h2:
-    console:
-      enabled: false
-
-file:
-  directory: ${FILE_DIRECTORY:/tmp/media-files}
-
-jwt:
-  secret: ${JWT_SECRET:default-secret-key-for-development-only}
+# Cấu hình Cloudinary
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:your_cloud_name}
+  api-key: ${CLOUDINARY_API_KEY:your_api_key}
+  api-secret: ${CLOUDINARY_API_SECRET:your_api_secret}
 
 eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+  instance:
+    prefer-ip-address: true
 
 grpc:
   server:

@@ -1,14 +1,22 @@
 server:
-  port: 6067
+  port: ${SERVER_PORT:6067}
+  servlet:
+    context-path: /product-service
 
 spring:
   application:
-    name: PRODUCT-SERVICE
+    name: product-service
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/product
-    username: postgres
-    password: 123456
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/product
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -22,12 +30,9 @@ eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
-    register-with-eureka: true
-    fetch-registry: true
   instance:
     prefer-ip-address: true
 
 grpc:
   server:
     port: ${PRODUCT_SERVICE_GRPC_PORT:6167}
-

@@ -1,10 +1,16 @@
+server:
+  port: ${SERVER_PORT:6073}
+  servlet:
+    context-path: /user-service
+
 spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/userservice
-    username: postgres
-    password: 123456
+    # Đã tham số hóa DB để mốt lên Docker không phải khóc
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/userservice
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,11 +21,15 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
-api:
-  prefix: /api/v1
+  # CÁI NÀY LÀ CỨU CÁNH CHÍ MẠNG: Khớp nối bảo mật với toàn hệ thống
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
 
-server:
-  port: 6073
+api:
+  prefix: ${API_PREFIX:/api/v1}
 
 grpc:
   server:
@@ -28,7 +38,8 @@ grpc:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:6059/eureka/}
+      # Đổi thành EUREKA_URI cho đồng bộ với các service khác
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
   instance:
     prefer-ip-address: true
 

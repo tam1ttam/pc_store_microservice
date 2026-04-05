@@ -1,14 +1,22 @@
 server:
-  port: 6066
+  port: ${SERVER_PORT:6066}
+  servlet:
+    context-path: /payment-service
 
 spring:
   application:
     name: payment-service
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment
-    username: postgres
-    password: 123456
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/payment
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -22,10 +30,9 @@ eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+  instance:
+    prefer-ip-address: true
 
 grpc:
   server:
     port: ${PAYMENT_SERVICE_GRPC_PORT:6166}
-
-jwt:
-  secret: ${JWT_SECRET:your-secret-key-change-in-production}

@@ -1,5 +1,5 @@
 server:
-  port: 6060
+  port: ${SERVER_PORT:6060}
 
 spring:
   application:
@@ -9,7 +9,6 @@ spring:
   cloud:
     gateway:
       routes:
-        # IDENTITY-SERVICE
         - id: identity-service
           uri: lb://IDENTITY-SERVICE
           predicates:
@@ -17,7 +16,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # USER-SERVICE
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
@@ -25,7 +23,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # PRODUCT-SERVICE
         - id: product-service
           uri: lb://PRODUCT-SERVICE
           predicates:
@@ -33,7 +30,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # INVENTORY-SERVICE
         - id: inventory-service
           uri: lb://INVENTORY-SERVICE
           predicates:
@@ -41,7 +37,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # ORDER-SERVICE
         - id: order-service
           uri: lb://ORDER-SERVICE
           predicates:
@@ -49,7 +44,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # PAYMENT-SERVICE
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
           predicates:
@@ -57,7 +51,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # FAVORITE-SERVICE
         - id: favorite-service
           uri: lb://FAVORITE-SERVICE
           predicates:
@@ -65,7 +58,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # NOTIFICATION-SERVICE
         - id: notification-service
           uri: lb://NOTIFICATION-SERVICE
           predicates:
@@ -73,7 +65,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # RATING-SERVICE
         - id: rating-service
           uri: lb://RATING-SERVICE
           predicates:
@@ -81,7 +72,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # SEARCH-SERVICE
         - id: search-service
           uri: lb://SEARCH-SERVICE
           predicates:
@@ -89,7 +79,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # PROMOTION-SERVICE
         - id: promotion-service
           uri: lb://PROMOTION-SERVICE
           predicates:
@@ -97,7 +86,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # SHIPPING-SERVICE
         - id: shipping-service
           uri: lb://SHIPPING-SERVICE
           predicates:
@@ -105,7 +93,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # TAX-SERVICE
         - id: tax-service
           uri: lb://TAX-SERVICE
           predicates:
@@ -113,7 +100,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # MEDIA-SERVICE
         - id: media-service
           uri: lb://MEDIA-SERVICE
           predicates:
@@ -121,7 +107,6 @@ spring:
           filters:
             - StripPrefix=1
 
-        # SAGA-ORCHESTRATOR-SERVICE
         - id: saga-orchestrator-service
           uri: lb://SAGA-ORCHESTRATOR-SERVICE
           predicates:
@@ -133,7 +118,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/unicall}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
 
 app:
   security:
@@ -143,10 +128,12 @@ app:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:6059/eureka/}
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:
     root: INFO
     org.springframework.cloud.gateway.route.RouteDefinitionLocator: INFO
-    org.springframework.cloud.gateway: TRACE
+    org.springframework.cloud.gateway: ${GATEWAY_LOG_LEVEL:INFO}

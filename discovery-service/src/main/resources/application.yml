@@ -1,15 +1,16 @@
 server:
-  port: 6059
+  port: ${SERVER_PORT:6059}
 
 spring:
   application:
-    name: DISCOVERY-SERVICE
+    name: discovery-service
 
 eureka:
   instance:
-    hostname: localhost
+    hostname: ${EUREKA_HOSTNAME:localhost}
   client:
     register-with-eureka: false
     fetch-registry: false
     serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6061/eureka}
+      # Tự động lấy hostname và port hiện tại để cấu hình, không bao giờ trật
+      defaultZone: ${EUREKA_URI:http://${eureka.instance.hostname}:${server.port}/eureka/}

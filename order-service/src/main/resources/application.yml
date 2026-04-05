@@ -1,14 +1,24 @@
 server:
-  port: 6065
+  port: ${SERVER_PORT:6065}
+  servlet:
+    context-path: /order-service
 
 spring:
   application:
-    name: ORDER-SERVICE
+    name: order-service
+
+  # Bản cũ mày thụt dòng chữ security nằm dưới chữ name là sai cmn syntax!
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Đổi thành iluttmab cho khớp toàn hệ thống
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/order
-    username: postgres
-    password: 123456
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/order
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -22,12 +32,9 @@ eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
-    register-with-eureka: true
-    fetch-registry: true
   instance:
     prefer-ip-address: true
 
 grpc:
   server:
     port: ${ORDER_SERVICE_GRPC_PORT:6165}
-
