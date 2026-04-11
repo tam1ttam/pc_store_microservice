@@ -2,15 +2,23 @@ spring:
   application:
     name: saga-orchestrator-service
 
+  # Cấu hình security phòng khi Saga có mở API REST để check trạng thái
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+
 server:
   servlet:
     context-path: /saga-orchestrator-service
-  port: 6058
+  port: ${SERVER_PORT:6058}
 
 grpc:
   client:
     user-service:
-      address: ${USER_SERVICE_GRPC_ADDRESS:static://localhost:6173}
+      # Đã sửa thành discovery để scale mượt mà
+      address: ${USER_SERVICE_GRPC_ADDRESS:discovery:///USER-SERVICE}
       negotiationType: plaintext
   server:
     port: ${SAGA_ORCHESTRATOR_GRPC_PORT:6158}
@@ -20,7 +28,11 @@ grpc:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:6059/eureka/}
+      # Đổi tên biến cho đồng bộ toàn hệ thống
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
   instance:
     prefer-ip-address: true
-
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

@@ -6,8 +6,11 @@ server:
 spring:
   application:
     name: user-service
+  main:
+    # Cho phép ghi đè Bean nếu bị trùng tên
+    allow-bean-definition-overriding: true
   datasource:
-    # Đã tham số hóa DB để mốt lên Docker không phải khóc
+    # Database userservice giờ sẽ chứa thêm bảng favourites
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/userservice
     username: ${DB_USER:postgres}
     password: ${DB_PASS:123456}
@@ -21,15 +24,24 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
-  # CÁI NÀY LÀ CỨU CÁNH CHÍ MẠNG: Khớp nối bảo mật với toàn hệ thống
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
 
 api:
   prefix: ${API_PREFIX:/api/v1}
+
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
 
 grpc:
   server:
@@ -38,7 +50,6 @@ grpc:
 eureka:
   client:
     service-url:
-      # Đổi thành EUREKA_URI cho đồng bộ với các service khác
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
   instance:
     prefer-ip-address: true
@@ -55,3 +66,7 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

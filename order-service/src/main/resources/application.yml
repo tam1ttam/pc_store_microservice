@@ -4,17 +4,20 @@ server:
     context-path: /order-service
 
 spring:
+  main:
+    # Cho phép ghi đè Bean nếu bị trùng tên
+    allow-bean-definition-overriding: true
   application:
     name: order-service
 
-  # Bản cũ mày thụt dòng chữ security nằm dưới chữ name là sai cmn syntax!
+  # Bảo mật chuẩn chỉ
   security:
     oauth2:
       resourceserver:
         jwt:
-          # Đổi thành iluttmab cho khớp toàn hệ thống
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
 
+  # Database 'order' giờ sẽ chứa cả bảng orders, order_items, và promotions, vouchers...
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/order
     username: ${DB_USER:postgres}
@@ -28,6 +31,16 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
 eureka:
   client:
     serviceUrl:
@@ -38,3 +51,7 @@ eureka:
 grpc:
   server:
     port: ${ORDER_SERVICE_GRPC_PORT:6165}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

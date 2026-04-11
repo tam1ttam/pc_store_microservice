@@ -62,7 +62,7 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>${protobuf.maven.plugin.version}</version>
                 <configuration>
-                    <protoSourceRoot>${project.basedir}/src/main/iuh/fit/pc_store/proto_common/proto</protoSourceRoot>
+                    <protoSourceRoot>${project.basedir}/src/main/com/tam/pc_store/proto_common/proto</protoSourceRoot>
                     <outputDirectory>${project.build.directory}/generated-sources/protobuf/java</outputDirectory>
                     <clearOutputDirectory>false</clearOutputDirectory>
                     <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>

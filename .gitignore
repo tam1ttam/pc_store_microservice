@@ -59,3 +59,8 @@ build/
 
 ### MacOs ###
 .DS_Store
+
+# UI (Nếu UI là React/Vue/Angular)
+UI/node_modules/
+UI/dist/
+UI/build/

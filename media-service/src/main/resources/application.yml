@@ -22,9 +22,20 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
 
 # Cấu hình Cloudinary
+# Cấu hình Cloudinary được đưa vào dùng chung cho toàn hệ thống
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:your_cloud_name}
   api-key: ${CLOUDINARY_API_KEY:your_api_key}
@@ -40,3 +51,7 @@ eureka:
 grpc:
   server:
     port: ${MEDIA_SERVICE_GRPC_PORT:6164}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

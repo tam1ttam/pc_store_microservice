@@ -1,24 +1,31 @@
 package tam.common.config;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import tam.common.constants.Property;
 
-@ConfigurationProperties
+@Configuration
+@RequiredArgsConstructor
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins}")
-    private String allowedOrigins;
+    private final Property securityProps;
 
     @Bean
     public WebMvcConfigurer corsConfigure() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**").allowedMethods(allowedOrigins)
-                    .allowedOrigins(allowedOrigins).allowedHeaders(allowedOrigins);
+                // Lấy origins từ Property bean (đã bind từ app.security.allowed-origins trong
+                // yml)
+                String[] origins = securityProps.getAllowedOrigins().toArray(new String[0]);
+                registry.addMapping("/**")
+                        .allowedOrigins(origins)
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }

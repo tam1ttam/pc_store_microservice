@@ -7,6 +7,6 @@ WORKDIR /home/app
 ENV SPRING_PROFILES_ACTIVE application
 COPY ./ .
 ADD target/user-service-0.0.1-SNAPSHOT.jar user-service-0.0.1-SNAPSHOT.jar
-EXPOSE 8888
+EXPOSE 8181
 ENTRYPOINT ["java", "-jar", "user-service-0.0.1-SNAPSHOT.jar"]
 CMD ["mvn", "spring-boot:run"]

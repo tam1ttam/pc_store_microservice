@@ -6,13 +6,18 @@ server:
 spring:
   application:
     name: product-service
+  main:
+    # Cho phép ghi đè Bean nếu bị trùng tên
+    allow-bean-definition-overriding: true
 
+  # Giữ nguyên bảo mật chuẩn iluttmab
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
 
+  # Database 'product' giờ sẽ gánh luôn cả các bảng của Inventory
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/product
     username: ${DB_USER:postgres}
@@ -26,6 +31,24 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  # Bê nguyên bộ đồ lòng của Search Service sang đây
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME:elastic}
+    password: ${ELASTICSEARCH_PASSWORD:changeme}
+
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+      - /api/v1/products/**
+      - /api/v1/categories/**
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
 eureka:
   client:
     serviceUrl:
@@ -33,6 +56,11 @@ eureka:
   instance:
     prefer-ip-address: true
 
+# Chỉ giữ lại đúng 1 cổng gRPC của Product
 grpc:
   server:
     port: ${PRODUCT_SERVICE_GRPC_PORT:6167}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

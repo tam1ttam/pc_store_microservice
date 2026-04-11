@@ -1,19 +1,24 @@
 package tam.userservice.repositories;
 
-import iuh.fit.user_service.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.stereotype.Repository;
+import tam.userservice.entities.User;
 
 import java.util.Optional;
 
-@Repository
-public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+public interface UserRepository extends JpaRepository<User, String>, JpaSpecificationExecutor<User> {
+
     boolean existsByIdentityUserId(String identityUserId);
 
-    boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsByDefaultPhoneNumber(String phoneNumber);
+
+    boolean existsByDefaultEmail(String email);
 
     Optional<User> findByIdentityUserId(String identityUserId);
+
+    Optional<User> findByDefaultPhoneNumber(String phoneNumber);
+
+    Optional<User> findByDefaultEmail(String email);
 
     void deleteByIdentityUserId(String identityUserId);
 }

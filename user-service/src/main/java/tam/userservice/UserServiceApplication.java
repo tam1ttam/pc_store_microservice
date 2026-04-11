@@ -3,7 +3,7 @@ package tam.userservice;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication(scanBasePackages = "iuh.fit")
+@SpringBootApplication(scanBasePackages = {"tam.userservice", "tam.common"})
 public class UserServiceApplication {
 
 	public static void main(String[] args) {

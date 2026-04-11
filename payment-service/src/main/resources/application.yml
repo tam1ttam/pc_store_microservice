@@ -4,6 +4,9 @@ server:
     context-path: /payment-service
 
 spring:
+  main:
+    # Cho phép ghi đè Bean nếu bị trùng tên
+    allow-bean-definition-overriding: true
   application:
     name: payment-service
 
@@ -11,7 +14,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/payment
@@ -26,6 +29,16 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
 eureka:
   client:
     serviceUrl:
@@ -36,3 +49,7 @@ eureka:
 grpc:
   server:
     port: ${PAYMENT_SERVICE_GRPC_PORT:6166}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

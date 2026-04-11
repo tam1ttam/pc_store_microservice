@@ -1,6 +1,14 @@
 spring:
   application:
     name: identity-service
+  main:
+    # Cho phép ghi đè Bean nếu bị trùng tên
+    allow-bean-definition-overriding: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
   datasource:
     # Tham số hóa Database
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/identityservice
@@ -24,12 +32,26 @@ server:
 app:
   prefix: ${API_PREFIX:/api/v1}
   security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+       /v3/api-docs/**
+       /swagger-ui/**
+       /actuator/health
+       ${app.prefix}/auth/login
+       ${app.prefix}/auth/register
+       ${app.prefix}/auth/refresh
+       ${app.prefix}/auth/login/google
+       ${app.prefix}/auth/register/google
+       ${app.prefix}/auth/login/github
+       ${app.prefix}/auth/register/github
+    allowed-origins:
+      ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
     cookie:
       secure: ${COOKIE_SECURE:false}
       same-site: ${COOKIE_SAME_SITE:Strict}
     keycloak:
       # Tham số hóa và đổi Realm thành iluttmab cho khớp toàn hệ thống!
-      server-url: ${KEYCLOAK_URL:http://localhost:8888}
+      server-url: ${KEYCLOAK_URL:http://localhost:8181}
       realm: ${KEYCLOAK_REALM:iluttmab}
       client-id: ${KEYCLOAK_CLIENT_ID:iluttmab-client}
       client-secret: ${KEYCLOAK_CLIENT_SECRET:BnaPyiYRiG0LP8sGdQNuCp1eZ32IFIya}
@@ -53,3 +75,16 @@ eureka:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
   instance:
     prefer-ip-address: true
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID:dev-placeholder}
+    secret: ${GOOGLE_CLIENT_SECRET:dev-placeholder}
+
+github:
+  client:
+    id: ${GITHUB_CLIENT_ID:dev-placeholder}
+    secret: ${GITHUB_CLIENT_SECRET:dev-placeholder}

@@ -32,7 +32,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: 12042003
     working_dir: /home/app
     ports:
-      - "8888:8888"
+      - "8181:8181"
     entrypoint: [ "java", "-jar", "user-service-0.0.1-SNAPSHOT.jar" ]
     depends_on:
       - mysql

@@ -4,6 +4,17 @@ server:
     context-path: /notification-service
 
 spring:
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   application:
     name: notification-service
 
@@ -21,7 +32,17 @@ spring:
       resourceserver:
         jwt:
           # Đã sửa lại thành iluttmab
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8888/realms/iluttmab}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
 
 eureka:
   client:
@@ -33,3 +54,7 @@ eureka:
 grpc:
   server:
     port: ${NOTIFICATION_SERVICE_GRPC_PORT:6170}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

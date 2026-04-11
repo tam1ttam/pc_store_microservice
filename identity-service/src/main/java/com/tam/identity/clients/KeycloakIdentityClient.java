@@ -39,7 +39,8 @@ public class KeycloakIdentityClient {
         // Create user in Keycloak
         Map<String, Object> userPayload = Map.of(
                 "username", request.getPhoneNumber(),
-                "email", request.getPhoneNumber() + "@example.com",
+                "email", request.getEmail() != null && !request.getEmail().isBlank() ? 
+                        request.getEmail() : request.getPhoneNumber() + "@example.com",
                 "firstName", request.getFirstName() != null ? request.getFirstName() : "",
                 "lastName", request.getLastName() != null ? request.getLastName() : "",
                 "enabled", true,
@@ -84,13 +85,45 @@ public class KeycloakIdentityClient {
         log.info("User deleted from Keycloak: {}", userId);
     }
 
-    public AuthTokenResponse login(String phoneNumber, String password) {
+    public AuthTokenResponse login(String username, String password) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("client_id", clientId);
         body.add("client_secret", clientSecret);
         body.add("grant_type", "password");
-        body.add("username", phoneNumber);
+        body.add("username", username); // Can be email or phoneNumber
         body.add("password", password);
+
+        return keycloakWebClient
+                .post()
+                .uri("/realms/{realm}/protocol/openid-connect/token", realm)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(BodyInserters.fromFormData(body))
+                .retrieve()
+                .bodyToMono(AuthTokenResponse.class)
+                .block();
+    }
+
+    public AuthTokenResponse loginWithGoogle(String identityUserId) {
+        // For Google/Github login, we use direct grant with a special grant type
+        // In production, you might want to use Keycloak federated identity
+        // For now, generate a temporary token for the user
+        return generateTokenForUser(identityUserId);
+    }
+
+    public AuthTokenResponse loginWithGithub(String identityUserId) {
+        // For Google/Github login, we use direct grant with a special grant type
+        // In production, you might want to use Keycloak federated identity
+        // For now, generate a temporary token for the user
+        return generateTokenForUser(identityUserId);
+    }
+
+    private AuthTokenResponse generateTokenForUser(String username) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+        body.add("grant_type", "password");
+        body.add("username", username);
+        body.add("password", "social-login-token"); // Dummy password for social login
 
         return keycloakWebClient
                 .post()

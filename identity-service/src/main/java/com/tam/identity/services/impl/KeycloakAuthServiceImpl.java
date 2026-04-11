@@ -19,13 +19,23 @@ public class KeycloakAuthServiceImpl implements KeycloakAuthService {
     public RegisterResponse register(RegisterRequest request) {
         String identityUserId = keycloakIdentityClient.createUser(request);
         return RegisterResponse.builder()
-                .identityUserId(identityUserId)
+                .userId(identityUserId)
                 .build();
     }
 
     @Override
-    public AuthTokenResponse login(String phoneNumber, String password) {
-        return keycloakIdentityClient.login(phoneNumber, password);
+    public AuthTokenResponse login(String username, String password) {
+        return keycloakIdentityClient.login(username, password); // username can be email or phoneNumber
+    }
+
+    @Override
+    public AuthTokenResponse loginWithGoogle(String identityUserId) {
+        return keycloakIdentityClient.loginWithGoogle(identityUserId);
+    }
+
+    @Override
+    public AuthTokenResponse loginWithGithub(String identityUserId) {
+        return keycloakIdentityClient.loginWithGithub(identityUserId);
     }
 
     @Override

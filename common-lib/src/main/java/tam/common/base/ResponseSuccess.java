@@ -4,6 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+/**
+ * @deprecated Use {@link ApiResponse} instead.
+ *             This class has been replaced with a unified response model.
+ */
+@Deprecated(since = "1.0.0", forRemoval = true)
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ResponseSuccess<T> {

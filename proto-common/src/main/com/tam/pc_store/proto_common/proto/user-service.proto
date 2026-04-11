@@ -13,16 +13,31 @@ service UserService {
   rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
 }
 
+message Address {
+  string id = 1;
+  string country = 2;
+  string province = 3;
+  string city = 4;
+  string ward = 5;
+  string street = 6;
+  bool isDefault = 7;
+  repeated string phoneContacts = 8;
+  bool isActive = 9;
+}
+
 message CreateUserProfileRequest {
   string identityUserId = 1;
-  string email = 2;
-  string phoneNumber = 3;
+  string defaultPhoneNumber = 2;
+  string defaultEmail = 3;
   string firstName = 4;
   string lastName = 5;
+  string gender = 6;
+  string dateOfBirth = 7;
+  string avatar = 8;
 }
 
 message CreateUserProfileResponse {
-  int64 id = 1;
+  string id = 1;
   string identityUserId = 2;
 }
 
@@ -39,25 +54,31 @@ message GetUserProfileByIdentityRequest {
 }
 
 message GetUserProfileByIdentityResponse {
-  int64 id = 1;
+  string id = 1;
   string identityUserId = 2;
-  string email = 3;
-  string phoneNumber = 4;
+  string defaultPhoneNumber = 3;
+  string defaultEmail = 4;
   string firstName = 5;
   string lastName = 6;
-  bool isActive = 7;
-  string createdAt = 8;
-  string updatedAt = 9;
+  string gender = 7;
+  string dateOfBirth = 8;
+  string avatar = 9;
+  bool isActive = 10;
+  repeated Address addresses = 11;
 }
 
 message UpdateUserProfileRequest {
   string identityUserId = 1;
-  string phoneNumber = 2;
-  string firstName = 3;
-  string lastName = 4;
+  string defaultPhoneNumber = 2;
+  string defaultEmail = 3;
+  string firstName = 4;
+  string lastName = 5;
+  string gender = 6;
+  string dateOfBirth = 7;
+  string avatar = 8;
 }
 
 message UpdateUserProfileResponse {
-  int64 id = 1;
+  string id = 1;
   bool updated = 2;
 }

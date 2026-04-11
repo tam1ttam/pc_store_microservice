@@ -7,7 +7,11 @@ import com.tam.identity.dtos.response.auth.RegisterResponse;
 public interface KeycloakAuthService {
     RegisterResponse register(RegisterRequest request);
 
-    AuthTokenResponse login(String phoneNumber, String password);
+    AuthTokenResponse login(String username, String password); // username can be email or phoneNumber
+
+    AuthTokenResponse loginWithGoogle(String identityUserId);
+
+    AuthTokenResponse loginWithGithub(String identityUserId);
 
     AuthTokenResponse refreshToken(String refreshToken);
 

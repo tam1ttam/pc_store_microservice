@@ -4,7 +4,7 @@ import com.opencsv.CSVWriter;
 import com.opencsv.ICSVWriter;
 import tam.common.csv.anotation.CsvColumn;
 import tam.common.csv.anotation.CsvName;
-import tam.common.utils.DateTimeUtils;
+import tam.common.utils.DateUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-
 @Slf4j
 public class CsvExporter {
 
@@ -30,11 +29,11 @@ public class CsvExporter {
 
     public static <T> byte[] exportToCsv(List<BaseCsv> dataList, Class<T> clazz) throws IOException {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(byteArrayOutputStream,
-                 StandardCharsets.UTF_8);
-             CSVWriter csvWriter = new CSVWriter(outputStreamWriter, ICSVWriter.DEFAULT_SEPARATOR,
-                 ICSVWriter.NO_QUOTE_CHARACTER,
-                 ICSVWriter.DEFAULT_ESCAPE_CHARACTER, ICSVWriter.DEFAULT_LINE_END)) {
+                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(byteArrayOutputStream,
+                        StandardCharsets.UTF_8);
+                CSVWriter csvWriter = new CSVWriter(outputStreamWriter, ICSVWriter.DEFAULT_SEPARATOR,
+                        ICSVWriter.NO_QUOTE_CHARACTER,
+                        ICSVWriter.DEFAULT_ESCAPE_CHARACTER, ICSVWriter.DEFAULT_LINE_END)) {
 
             // Write CSV header
             writeCsvHeader(csvWriter, clazz);
@@ -52,21 +51,21 @@ public class CsvExporter {
         Field[] fields = clazz.getDeclaredFields();
 
         String[] header = Stream.concat(Stream.of(baseFields), Stream.of(fields))
-            .filter(field -> field.getAnnotation(CsvColumn.class) != null)
-            .map(field -> field.getAnnotation(CsvColumn.class).columnName())
-            .toArray(String[]::new);
+                .filter(field -> field.getAnnotation(CsvColumn.class) != null)
+                .map(field -> field.getAnnotation(CsvColumn.class).columnName())
+                .toArray(String[]::new);
 
         csvWriter.writeNext(header);
     }
 
     private static <T> void writeCsvData(CSVWriter csvWriter, List<BaseCsv> dataList,
-                                         Class<T> clazz) {
+            Class<T> clazz) {
         Field[] baseFields = BaseCsv.class.getDeclaredFields();
         Field[] fields = clazz.getDeclaredFields();
 
         Field[] allFields = Stream.concat(Stream.of(baseFields), Stream.of(fields))
-            .filter(field -> field.getAnnotation(CsvColumn.class) != null)
-            .toArray(Field[]::new);
+                .filter(field -> field.getAnnotation(CsvColumn.class) != null)
+                .toArray(Field[]::new);
 
         for (BaseCsv data : dataList) {
             String[] row = getFieldValues(allFields, data);
@@ -76,9 +75,9 @@ public class CsvExporter {
 
     private static String[] getFieldValues(Field[] fields, Object data) {
         return Stream.of(fields)
-            .filter(field -> field.getAnnotation(CsvColumn.class) != null)
-            .map(field -> getFieldValueAsString(field, data))
-            .toArray(String[]::new);
+                .filter(field -> field.getAnnotation(CsvColumn.class) != null)
+                .map(field -> getFieldValueAsString(field, data))
+                .toArray(String[]::new);
     }
 
     private static String getFieldValueAsString(Field field, Object data) {
@@ -102,7 +101,7 @@ public class CsvExporter {
     }
 
     public static <T> String createFileName(Class<T> clazz) {
-        String fromDate = DateTimeUtils.format(LocalDateTime.now());
+        String fromDate = DateUtils.formatTimestamp(LocalDateTime.now());
         CsvName csvName = clazz.getAnnotation(CsvName.class);
         return String.format("%s_%s.csv", csvName.fileName(), fromDate);
     }

@@ -14,3 +14,7 @@ eureka:
     serviceUrl:
       # Tự động lấy hostname và port hiện tại để cấu hình, không bao giờ trật
       defaultZone: ${EUREKA_URI:http://${eureka.instance.hostname}:${server.port}/eureka/}
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

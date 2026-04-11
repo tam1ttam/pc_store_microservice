@@ -248,7 +248,7 @@ http://localhost:8088
 
 - **Port**: `8088`
 - **Service Discovery**: Eureka (Discovery Service at `localhost:8761`)
-- **Authentication**: OAuth2 JWT from Keycloak (issuer: `http://localhost:8888/realms/unicall`)
+- **Authentication**: OAuth2 JWT from Keycloak (issuer: `http://localhost:8181/realms/unicall`)
 - **CORS Enabled**: For frontend at `http://localhost:5173`
 - **Security**: All auth endpoints are public, other endpoints require valid JWT token
 - **Header Injection**: Gateway injects `X-User-Id` and `X-User-Role` headers from JWT to downstream services
@@ -282,3 +282,24 @@ This project is licensed under the [`MIT License`](LICENSE).
 MIT License
 Copyright (c) 2024 Hoàng Anh Tiến
 ```
+
+update hosts on window
+127.0.0.1 tam.iluttmab.hose
+
+build
+
+XOA CAC FILE TEST DI
+
+# 1. Build proto-common trước
+mvn clean install -f proto-common/pom.xml
+
+# 2. Build common-lib (phụ thuộc proto-common)
+mvn clean install -f common-lib/pom.xml
+
+# 3. Build các services (phụ thuộc proto-common + common-lib)
+mvn clean install -f identity-service/pom.xml
+mvn clean install -f user-service/pom.xml
+mvn clean install -f media-service/pom.xml
+mvn clean install -f product-service/pom.xml
+mvn clean install -f order-service/pom.xml
+mvn clean install -f payment-service/pom.xml
