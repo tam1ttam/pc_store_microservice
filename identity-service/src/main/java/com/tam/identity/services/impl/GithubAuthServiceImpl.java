@@ -12,7 +12,7 @@ import com.tam.identity.services.KeycloakAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tam.common.exceptions.InvalidParamException;
+import tam.common.exception.InvalidParamException;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -96,7 +96,7 @@ public class GithubAuthServiceImpl implements GithubAuthService {
             
             // Login after registration
             AuthTokenResponse tokens = keycloakAuthService.loginWithGithub(identityUserId);
-            
+
             return LoginResult.builder()
                     .accessToken(tokens.getAccessToken())
                     .refreshToken(tokens.getRefreshToken())

@@ -8,7 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import tam.common.exceptions.InvalidParamException;
+import tam.common.exception.InvalidParamException;
+//import tam.common.exceptions.InvalidParamException;
 
 @Component
 @RequiredArgsConstructor

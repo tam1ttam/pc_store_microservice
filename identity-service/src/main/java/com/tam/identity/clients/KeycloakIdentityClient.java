@@ -11,7 +11,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.core.ParameterizedTypeReference;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -19,6 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class KeycloakIdentityClient {
     private final WebClient keycloakWebClient;
+
+    private static final String SOCIAL_LOGIN_PASSWORD = "social-login-token";
 
     @Value("${app.security.keycloak.realm}")
     private String realm;
@@ -104,35 +108,117 @@ public class KeycloakIdentityClient {
     }
 
     public AuthTokenResponse loginWithGoogle(String identityUserId) {
-        // For Google/Github login, we use direct grant with a special grant type
-        // In production, you might want to use Keycloak federated identity
-        // For now, generate a temporary token for the user
-        return generateTokenForUser(identityUserId);
+        return loginWithSocialIdentity(identityUserId, "google");
     }
 
     public AuthTokenResponse loginWithGithub(String identityUserId) {
-        // For Google/Github login, we use direct grant with a special grant type
-        // In production, you might want to use Keycloak federated identity
-        // For now, generate a temporary token for the user
-        return generateTokenForUser(identityUserId);
+        return loginWithSocialIdentity(identityUserId, "github");
     }
 
-    private AuthTokenResponse generateTokenForUser(String username) {
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("client_id", clientId);
-        body.add("client_secret", clientSecret);
-        body.add("grant_type", "password");
-        body.add("username", username);
-        body.add("password", "social-login-token"); // Dummy password for social login
+    private AuthTokenResponse loginWithSocialIdentity(String identityUserId, String provider) {
+        String token = getAdminToken();
+        Map<String, Object> user = findUserByIdOrUsername(identityUserId, provider, token);
+        if (user == null) {
+            log.warn("No Keycloak user found for {} identity: {}", provider, identityUserId);
+            throw new IllegalArgumentException("User not found for social login");
+        }
 
-        return keycloakWebClient
-                .post()
-                .uri("/realms/{realm}/protocol/openid-connect/token", realm)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData(body))
+        String userId = (String) user.get("id");
+        String username = (String) user.get("username");
+        if ((username == null || username.isBlank()) && user.get("email") instanceof String) {
+            username = (String) user.get("email");
+        }
+        if (username == null || username.isBlank()) {
+            throw new IllegalStateException("Keycloak username is missing for social login");
+        }
+
+        resetPassword(userId, token);
+        return login(username, SOCIAL_LOGIN_PASSWORD);
+    }
+
+    private void resetPassword(String userId, String token) {
+        Map<String, Object> payload = Map.of(
+                "type", "password",
+                "value", SOCIAL_LOGIN_PASSWORD,
+                "temporary", false
+        );
+
+        keycloakWebClient
+                .put()
+                .uri("/admin/realms/{realm}/users/{userId}/reset-password", realm, userId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(payload)
                 .retrieve()
-                .bodyToMono(AuthTokenResponse.class)
+                .toBodilessEntity()
                 .block();
+    }
+
+    private Map<String, Object> findUserByIdOrUsername(String identityUserId, String provider, String token) {
+        Map<String, Object> user = getUserById(identityUserId, token);
+        if (user != null) {
+            return user;
+        }
+
+        user = findUserByUsername(identityUserId, token);
+        if (user != null) {
+            return user;
+        }
+
+        user = findUserByEmail(identityUserId, token);
+        if (user != null) {
+            return user;
+        }
+
+        String prefixedIdentity = provider + "_" + identityUserId;
+        user = findUserByUsername(prefixedIdentity, token);
+        if (user != null) {
+            return user;
+        }
+
+        return findUserByEmail(prefixedIdentity, token);
+    }
+
+    private Map<String, Object> getUserById(String userId, String token) {
+        try {
+            return keycloakWebClient
+                    .get()
+                    .uri("/admin/realms/{realm}/users/{userId}", realm, userId)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> findUserByUsername(String username, String token) {
+        return findUserByQuery("username", username, token);
+    }
+
+    private Map<String, Object> findUserByEmail(String email, String token) {
+        return findUserByQuery("email", email, token);
+    }
+
+    private Map<String, Object> findUserByQuery(String field, String value, String token) {
+        List<Map<String, Object>> users = keycloakWebClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/admin/realms/{realm}/users")
+                        .queryParam(field, value)
+                        .queryParam("exact", "true")
+                        .build(realm))
+                .header("Authorization", "Bearer " + token)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<Map<String, Object>>>() {})
+                .block();
+
+        if (users == null || users.isEmpty()) {
+            return null;
+        }
+
+        return users.get(0);
     }
 
     public AuthTokenResponse refreshToken(String refreshToken) {

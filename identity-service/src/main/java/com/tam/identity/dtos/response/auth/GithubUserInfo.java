@@ -22,7 +22,7 @@ public class GithubUserInfo {
     private String bio;
     
     private String email;
-    
+
     @JsonProperty("public_repos")
     private Integer publicRepos;
     

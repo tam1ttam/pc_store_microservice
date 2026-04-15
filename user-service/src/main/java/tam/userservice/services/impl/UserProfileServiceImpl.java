@@ -2,9 +2,10 @@ package tam.userservice.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
-import tam.common.exceptions.ConflictException;
-import tam.common.exceptions.ResourceNotFoundException;
+import tam.common.exception.ConflictException;
+//import tam.common.exception.ResourceNotFoundException;
 import tam.userservice.entities.User;
 import tam.userservice.repositories.UserRepository;
 import tam.userservice.services.UserProfileService;

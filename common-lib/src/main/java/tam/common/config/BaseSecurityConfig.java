@@ -32,6 +32,7 @@ public class BaseSecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permitAll).permitAll() // Đã có sẵn các path từ YML
                         .anyRequest().authenticated())
@@ -44,7 +45,7 @@ public class BaseSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Lấy list origins trực tiếp từ YML, không lo lỗi dấu cách
-        configuration.setAllowedOrigins(securityProps.getAllowedOrigins());
+        configuration.setAllowedOriginPatterns(List.of("*"));  // securityProps.getAllowedOrigins()
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

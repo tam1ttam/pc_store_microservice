@@ -10,8 +10,8 @@ import iuh.fit.pc_store.grpc.user.v1.UserServiceGrpc;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import tam.common.exceptions.ConflictException;
-import tam.common.exceptions.InvalidParamException;
+import tam.common.exception.ConflictException;
+import tam.common.exception.InvalidParamException;
 
 import java.util.concurrent.TimeUnit;
 

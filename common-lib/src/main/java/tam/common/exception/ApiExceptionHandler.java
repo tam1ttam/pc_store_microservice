@@ -29,7 +29,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleNotFoundException(
             NotFoundException ex,
             HttpServletRequest request) {
-        log.error("NotFoundException: ", ex);
+        log.error("NotFoundException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
@@ -37,7 +37,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleBadRequestException(
             BadRequestException ex,
             HttpServletRequest request) {
-        log.error("BadRequestException: ", ex);
+        log.error("BadRequestException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
@@ -45,6 +45,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleConflictException(
             ConflictException ex,
             HttpServletRequest request) {
+        log.error("ConflictException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
@@ -52,6 +53,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleInvalidParamException(
             InvalidParamException ex,
             HttpServletRequest request) {
+        log.error("InvalidParamException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
@@ -59,6 +61,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleInvalidFileTypeException(
             InvalidFileTypeException ex,
             HttpServletRequest request) {
+        log.error("InvalidFileTypeException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
@@ -66,7 +69,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleUnauthenticatedException(
             UnauthenticatedException ex,
             HttpServletRequest request) {
-        log.error("UnauthenticatedException: ", ex);
+        log.error("UnauthenticatedException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
@@ -74,7 +77,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleCustomAccessDeniedException(
             CustomAccessDeniedException ex,
             HttpServletRequest request) {
-        log.error("CustomAccessDeniedException: ", ex);
+        log.error("CustomAccessDeniedException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
@@ -82,6 +85,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex,
             HttpServletRequest request) {
+        log.error("AccessDeniedException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
@@ -89,6 +93,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDuplicatedException(
             DuplicatedException ex,
             HttpServletRequest request) {
+        log.error("DuplicatedException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
@@ -96,7 +101,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleInternalServerErrorException(
             InternalServerErrorException ex,
             HttpServletRequest request) {
-        log.error("Internal server error: ", ex);
+        log.error("InternalServerErrorException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
@@ -104,12 +109,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
-        log.error("MethodArgumentNotValidException: ", ex);
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
+        log.error("MethodArgumentNotValidException: {} | Root cause: {}", errors, getRootCause(ex));
 
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .timestamp(new Date())
@@ -134,6 +139,7 @@ public class ApiExceptionHandler {
                     }
                     return error.getDefaultMessage();
                 }).toList();
+        log.error("HandlerMethodValidationException: {} | Root cause: {}", errors, getRootCause(ex));
 
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .timestamp(new Date())
@@ -154,6 +160,7 @@ public class ApiExceptionHandler {
         List<String> errors = ex.getConstraintViolations().stream()
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .toList();
+        log.error("ConstraintViolationException: {} | Root cause: {}", errors, getRootCause(ex));
 
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .timestamp(new Date())
@@ -171,6 +178,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException ex,
             HttpServletRequest request) {
+        log.error("DataIntegrityViolationException: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Data integrity violation", request);
     }
 
@@ -178,7 +186,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleGeneralException(
             Exception ex,
             HttpServletRequest request) {
-        log.error("Unhandled exception: ", ex);
+        log.error("Unhandled exception: {} | Root cause: {}", ex.getMessage(), getRootCause(ex));
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", request);
     }
 
@@ -195,5 +203,13 @@ public class ApiExceptionHandler {
                 .build();
 
         return ResponseEntity.status(status).body(response);
+    }
+
+    private String getRootCause(Throwable ex) {
+        Throwable cause = ex;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause.getClass().getSimpleName() + ": " + cause.getMessage();
     }
 }

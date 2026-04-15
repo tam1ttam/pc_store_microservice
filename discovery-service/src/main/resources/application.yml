@@ -16,5 +16,13 @@ eureka:
       defaultZone: ${EUREKA_URI:http://${eureka.instance.hostname}:${server.port}/eureka/}
 logging:
   level:
+    root: INFO
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/discovery-service.log
+    max-size: 10MB
+    max-history: 7

@@ -88,7 +88,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>com.tam.gateway.ApiGatewayApplication</mainClass>
+					<mainClass>tam.gateway.ApiGatewayApplication</mainClass>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>

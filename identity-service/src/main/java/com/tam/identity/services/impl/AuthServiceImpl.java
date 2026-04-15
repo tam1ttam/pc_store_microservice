@@ -48,16 +48,16 @@ public class AuthServiceImpl implements AuthService {
             userRepository.save(user);
             log.info("User saved to internal database: {}", identityUserId);
             
-            // Step 3: Assign default role (CLIENT)
-            Optional<Role> defaultRole = roleRepository.findById("CLIENT");
+            // Step 3: Assign default role (GUEST)
+            Optional<Role> defaultRole = roleRepository.findById("GUEST");
             if (defaultRole.isPresent()) {
                 Set<Role> roles = new HashSet<>();
                 roles.add(defaultRole.get());
                 user.setRoles(roles);
                 userRepository.save(user);
-                log.info("Default role 'CLIENT' assigned to user: {}", identityUserId);
+                log.info("Default role 'GUEST' assigned to user: {}", identityUserId);
             } else {
-                log.warn("Default role 'CLIENT' not found in database");
+                log.warn("Default role 'GUEST' not found in database");
             }
             
             // Step 4: Call gRPC to User Service to create profile

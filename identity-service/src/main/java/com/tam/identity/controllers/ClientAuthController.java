@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("${app.prefix}/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class ClientAuthController {
     private final AuthService authService;
     private final GoogleAuthService googleAuthService;
     private final GithubAuthService githubAuthService;

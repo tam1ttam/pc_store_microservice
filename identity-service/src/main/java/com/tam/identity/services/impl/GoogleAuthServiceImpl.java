@@ -13,7 +13,7 @@ import com.tam.identity.services.KeycloakAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tam.common.exceptions.InvalidParamException;
+import tam.common.exception.InvalidParamException;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -62,7 +62,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             throw new InvalidParamException("Invalid Google user information");
         }
 
-        String identityUserId = "google_" + googleUserInfo.getSub();
+        String identityUserId =  googleUserInfo.getSub();
         
         // Generate a temporary password (not used for Google login)
         String tempPassword = UUID.randomUUID().toString();
@@ -87,7 +87,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             
             // Login after registration
             AuthTokenResponse tokens = keycloakAuthService.loginWithGoogle(identityUserId);
-            
+
             return LoginResult.builder()
                     .accessToken(tokens.getAccessToken())
                     .refreshToken(tokens.getRefreshToken())
