@@ -154,7 +154,70 @@ public class ProductController {
     }
 
     /**
-     * Tìm kiếm sản phẩm theo tên
+     * Lấy sản phẩm mới nhất
+     */
+    @GetMapping("/newest")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getNewestProducts(
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            log.info("Fetching newest products with limit: {}", limit);
+            List<ProductResponse> responses = productService.getNewestProducts(limit);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    ApiResponse.success(HttpStatus.OK, "Newest products fetched", responses)
+            );
+        } catch (Exception e) {
+            log.error("Error fetching newest products", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ApiResponse.success(HttpStatus.BAD_REQUEST, e.getMessage(), null)
+            );
+        }
+    }
+
+    /**
+     * Lấy sản phẩm bán chạy nhất
+     */
+    @GetMapping("/best-selling")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getBestSellingProducts(
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            log.info("Fetching best-selling products with limit: {}", limit);
+            List<ProductResponse> responses = productService.getBestSellingProducts(limit);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    ApiResponse.success(HttpStatus.OK, "Best-selling products fetched", responses)
+            );
+        } catch (Exception e) {
+            log.error("Error fetching best-selling products", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ApiResponse.success(HttpStatus.BAD_REQUEST, e.getMessage(), null)
+            );
+        }
+    }
+
+    /**
+     * Tìm kiếm sản phẩm theo tên với phân trang
+     */
+    @GetMapping("/{name}")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> searchByNamePaginated(
+            @PathVariable String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            log.info("Searching products with name: {} - page: {}, size: {}", name, page, size);
+            Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+            Page<ProductResponse> responses = productService.searchByNamePaginated(name, pageable);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    ApiResponse.success(HttpStatus.OK, "Search completed", responses)
+            );
+        } catch (Exception e) {
+            log.error("Error searching products with name: {}", name, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ApiResponse.success(HttpStatus.BAD_REQUEST, e.getMessage(), null)
+            );
+        }
+    }
+
+    /**
+     * Tìm kiếm sản phẩm theo tên (không phân trang)
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> searchByName(

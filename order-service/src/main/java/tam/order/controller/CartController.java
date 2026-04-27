@@ -74,4 +74,89 @@ public class CartController {
         cartService.emptyCart(userId);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * GET /api/v1/carts/{userId}/count
+     * Đếm tổng số lượng item trong giỏ hàng
+     */
+    @GetMapping("/{userId}/count")
+    public ResponseEntity<Integer> countCartItems(@PathVariable String userId) {
+        try {
+            log.info("Counting cart items for user: {}", userId);
+            CartResponse cartResponse = cartService.getCart(userId);
+            int totalQuantity = cartResponse.getItems().stream()
+                    .mapToInt(item -> item.getQuantity() != null ? item.getQuantity() : 0)
+                    .sum();
+            return ResponseEntity.ok(totalQuantity);
+        } catch (Exception e) {
+            log.error("Error counting cart items for user: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(0);
+        }
+    }
+
+    /**
+     * POST /api/v1/carts/items/increase
+     * Tăng số lượng item trong giỏ hàng
+     */
+    @PostMapping("/items/increase")
+    public ResponseEntity<CartResponse> increaseQuantity(
+            @RequestParam String userId,
+            @RequestParam Integer itemId) {
+        try {
+            log.info("Increasing quantity for item: {} in cart of user: {}", itemId, userId);
+            //TODO: Extract user ID từ JWT token hoặc SecurityContext
+            CartResponse cartResponse = cartService.getCart(userId);
+            var item = cartResponse.getItems().stream()
+                    .filter(i -> i.getItemId().equals(itemId))
+                    .findFirst();
+            
+            if (item.isPresent()) {
+                UpdateCartItemRequest request = new UpdateCartItemRequest();
+                request.setQuantity(item.get().getQuantity() + 1);
+                CartResponse response = cartService.updateCartItem(userId, itemId, request);
+                return ResponseEntity.ok(response);
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (Exception e) {
+            log.error("Error increasing quantity for item: {}", itemId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+    /**
+     * POST /api/v1/carts/items/decrease
+     * Giảm số lượng item trong giỏ hàng
+     */
+    @PostMapping("/items/decrease")
+    public ResponseEntity<CartResponse> decreaseQuantity(
+            @RequestParam String userId,
+            @RequestParam Integer itemId) {
+        try {
+            log.info("Decreasing quantity for item: {} in cart of user: {}", itemId, userId);
+            //TODO: Extract user ID từ JWT token hoặc SecurityContext
+            CartResponse cartResponse = cartService.getCart(userId);
+            var item = cartResponse.getItems().stream()
+                    .filter(i -> i.getItemId().equals(itemId))
+                    .findFirst();
+            
+            if (item.isPresent()) {
+                int newQuantity = item.get().getQuantity() - 1;
+                if (newQuantity <= 0) {
+                    // Nếu số lượng <= 0, xóa item khỏi giỏ
+                    DeleteMultipleCartItemsRequest deleteRequest = new DeleteMultipleCartItemsRequest();
+                    deleteRequest.setItemIds(java.util.List.of(itemId));
+                    return ResponseEntity.ok(cartService.removeMultipleFromCart(userId, deleteRequest.getItemIds()));
+                } else {
+                    UpdateCartItemRequest request = new UpdateCartItemRequest();
+                    request.setQuantity(newQuantity);
+                    CartResponse response = cartService.updateCartItem(userId, itemId, request);
+                    return ResponseEntity.ok(response);
+                }
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (Exception e) {
+            log.error("Error decreasing quantity for item: {}", itemId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
 }

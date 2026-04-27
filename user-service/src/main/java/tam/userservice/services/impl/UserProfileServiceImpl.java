@@ -30,12 +30,12 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     public String createUserProfile(UserProfileRequest request) {
         User savedUser = null;
-        try{
+        try {
             User user = userProfileMapper.toUser(request);
             System.out.println("user in service impl: " + user.toString());
             savedUser = userRepository.save(user);
             log.info("User profile created successfully for identity user: {}", request.getIdentityUserId());
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return savedUser.getId();
@@ -52,7 +52,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     public boolean updateUserProfile(UserProfileRequest request, String userId) {
         User user = userRepository.findById(userId)
                 .orElse(null);
-        if(Objects.isNull(user))
+        if (Objects.isNull(user))
             return false;
 
         if (!user.getDefaultEmail().equals(request.getDefaultEmail()) &&
@@ -74,7 +74,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     public boolean updateAddress(AddressRequest addressRequest, String userId) {
         User user = userRepository.findById(userId)
                 .orElse(null);
-        if(Objects.isNull(user))
+        if (Objects.isNull(user))
             return false;
         Address address;
         if (addressRequest.getId() != null) {
@@ -96,6 +96,12 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     public Optional<UserProfileResponse> getUserProfileByIdentityUserId(String identityUserId) {
         return userRepository.findByIdentityUserId(identityUserId)
+                .map(userProfileMapper::toUserProfileResponse);
+    }
+
+    @Override
+    public Optional<UserProfileResponse> getUserProfileByUsername(String username) {
+        return userRepository.findByUsername(username)
                 .map(userProfileMapper::toUserProfileResponse);
     }
 }

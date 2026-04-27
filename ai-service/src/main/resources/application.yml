@@ -1,0 +1,66 @@
+server:
+  port: ${SERVER_PORT:6071}
+  servlet:
+    context-path: /ai-service
+
+spring:
+  application:
+    name: ai-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/aiservice
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:123456}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+
+app:
+  security:
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
+# Cấu hình Cloudinary
+# Cấu hình Cloudinary được đưa vào dùng chung cho toàn hệ thống
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:your_cloud_name}
+  api-key: ${CLOUDINARY_API_KEY:your_api_key}
+  api-secret: ${CLOUDINARY_API_SECRET:your_api_secret}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
+  instance:
+    prefer-ip-address: true
+
+grpc:
+  server:
+    port: ${MEDIA_SERVICE_GRPC_PORT:6171}
+logging:
+  level:
+    root: INFO
+    com.tam: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/media-service.log
+    max-size: 10MB
+    max-history: 7

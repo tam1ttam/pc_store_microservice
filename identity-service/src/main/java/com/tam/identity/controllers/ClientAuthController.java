@@ -45,6 +45,21 @@ public class ClientAuthController {
         response.sendRedirect(keycloakUrl);
     }
 
+    @GetMapping("/register")
+    public void register(HttpServletResponse response) throws IOException {
+        String realm = "iluttmab";
+        String clientId = "iluttmab-client";
+        String backendCallbackUrl = "http://localhost:6060/api-gateway/identity-service/api/v1/auth/callback/login";
+        String keycloakUrl = "http://localhost:8181"
+                + "/realms/" + realm + "/protocol/openid-connect/registrations"
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + URLEncoder.encode(backendCallbackUrl, StandardCharsets.UTF_8)
+                + "&response_type=code"
+                + "&scope=openid+profile+email";
+
+        response.sendRedirect(keycloakUrl);
+    }
+
     @GetMapping("/callback/login")
     public ResponseEntity<Void> handleRegisterCallback(
             @RequestParam("code") String code,

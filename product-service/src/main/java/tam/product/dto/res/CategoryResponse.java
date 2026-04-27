@@ -9,16 +9,11 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryResponse {
-    Long id;
+    String categoryId;
+    String categoryName;
     String name;
-    String description;
     String slug;
-    CategoryImageDTO categoryImage;
-
-    @Data
-    @Builder
-    public static class CategoryImageDTO {
-        Long id;
-        String url;
-    }
+    String description;
+    String imageUrl;
+    String keyword;
 }

@@ -20,5 +20,7 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     Optional<User> findByDefaultEmail(String email);
 
+    Optional<User> findByUsername(String username);
+
     void deleteByIdentityUserId(String identityUserId);
 }

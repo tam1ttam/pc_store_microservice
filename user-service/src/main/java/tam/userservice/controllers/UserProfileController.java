@@ -34,16 +34,39 @@ public class UserProfileController {
                             .status(Integer.valueOf(ApiConstant.CODE_200))
                             .message("User profile found")
                             .data(response.get())
-                            .build()
-            );
+                            .build());
         } catch (Exception e) {
             log.error("Error retrieving user profile for userId: {}", userId, e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ApiResponse.<UserProfileResponse>builder()
                             .status(Integer.valueOf(ApiConstant.CODE_404))
                             .message("User profile not found")
-                            .build()
-            );
+                            .build());
+        }
+    }
+
+    /**
+     * Lấy thông tin khách hàng theo tên đăng nhập (username)
+     * GET /api/v1/customers/{username}
+     */
+    @GetMapping("/username/{username}")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfileByUsername(@PathVariable String username) {
+        try {
+            log.info("Fetching user profile with username: {}", username);
+            var response = userProfileService.getUserProfileByUsername(username);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    ApiResponse.<UserProfileResponse>builder()
+                            .status(Integer.valueOf(ApiConstant.CODE_200))
+                            .message("User profile found")
+                            .data(response.get())
+                            .build());
+        } catch (Exception e) {
+            log.error("Error retrieving user profile for username: {}", username, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponse.<UserProfileResponse>builder()
+                            .status(Integer.valueOf(ApiConstant.CODE_404))
+                            .message("User profile not found")
+                            .build());
         }
     }
 
@@ -59,16 +82,14 @@ public class UserProfileController {
                             .status(Integer.valueOf(ApiConstant.CODE_201))
                             .message("User profile created successfully")
                             .data(userId)
-                            .build()
-            );
+                            .build());
         } catch (Exception e) {
             log.error("Error creating user profile", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ApiResponse.<String>builder()
                             .status(Integer.valueOf(ApiConstant.CODE_400))
                             .message(e.getMessage())
-                            .build()
-            );
+                            .build());
         }
     }
 
@@ -77,7 +98,7 @@ public class UserProfileController {
      */
     @PutMapping("/update/{userId}")
     public ResponseEntity<ApiResponse<String>> updateProfile(@PathVariable String userId,
-                                                              @RequestBody UserProfileRequest request) {
+            @RequestBody UserProfileRequest request) {
         try {
             boolean success = userProfileService.updateUserProfile(request, userId);
             if (success) {
@@ -86,15 +107,13 @@ public class UserProfileController {
                                 .status(Integer.valueOf(ApiConstant.CODE_200))
                                 .message("User profile updated successfully")
                                 .data(userId)
-                                .build()
-                );
+                                .build());
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                         ApiResponse.<String>builder()
                                 .status(Integer.valueOf(ApiConstant.CODE_400))
                                 .message("Failed to update user profile")
-                                .build()
-                );
+                                .build());
             }
         } catch (Exception e) {
             log.error("Error updating user profile for userId: {}", userId, e);
@@ -102,8 +121,7 @@ public class UserProfileController {
                     ApiResponse.<String>builder()
                             .status(Integer.valueOf(ApiConstant.CODE_400))
                             .message(e.getMessage())
-                            .build()
-            );
+                            .build());
         }
     }
 
@@ -120,15 +138,13 @@ public class UserProfileController {
                                 .status(Integer.valueOf(ApiConstant.CODE_200))
                                 .message("User profile deleted successfully")
                                 .data(userId)
-                                .build()
-                );
+                                .build());
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                         ApiResponse.<String>builder()
                                 .status(Integer.valueOf(ApiConstant.CODE_400))
                                 .message("Failed to delete user profile")
-                                .build()
-                );
+                                .build());
             }
         } catch (Exception e) {
             log.error("Error deleting user profile for userId: {}", userId, e);
@@ -136,8 +152,7 @@ public class UserProfileController {
                     ApiResponse.<String>builder()
                             .status(Integer.valueOf(ApiConstant.CODE_400))
                             .message(e.getMessage())
-                            .build()
-            );
+                            .build());
         }
     }
 
@@ -146,7 +161,7 @@ public class UserProfileController {
      */
     @PutMapping("/update-address/{userId}")
     public ResponseEntity<ApiResponse<String>> updateAddress(@PathVariable String userId,
-                                                              @RequestBody AddressRequest addressRequest) {
+            @RequestBody AddressRequest addressRequest) {
         try {
             boolean success = userProfileService.updateAddress(addressRequest, userId);
             if (success) {
@@ -155,15 +170,13 @@ public class UserProfileController {
                                 .status(Integer.valueOf(ApiConstant.CODE_200))
                                 .message("Address updated successfully")
                                 .data(userId)
-                                .build()
-                );
+                                .build());
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                         ApiResponse.<String>builder()
                                 .status(Integer.valueOf(ApiConstant.CODE_400))
                                 .message("Failed to update address")
-                                .build()
-                );
+                                .build());
             }
         } catch (Exception e) {
             log.error("Error updating address for userId: {}", userId, e);
@@ -171,8 +184,7 @@ public class UserProfileController {
                     ApiResponse.<String>builder()
                             .status(Integer.valueOf(ApiConstant.CODE_400))
                             .message(e.getMessage())
-                            .build()
-            );
+                            .build());
         }
     }
 }

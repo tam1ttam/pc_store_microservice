@@ -8,9 +8,14 @@ import java.util.Optional;
 
 public interface UserProfileService {
     String createUserProfile(UserProfileRequest request);
+
     boolean deleteUserProfileByIdentityUserId(String identityUserId);
+
     boolean updateUserProfile(UserProfileRequest request, String userId);
+
     boolean updateAddress(AddressRequest addressRequest, String userId);
 
     Optional<UserProfileResponse> getUserProfileByIdentityUserId(String identityUserId);
+
+    Optional<UserProfileResponse> getUserProfileByUsername(String username);
 }

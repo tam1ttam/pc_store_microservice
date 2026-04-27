@@ -1,13 +1,13 @@
-package tam.controller;
+package tam.media.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class PaymentServiceController {
+public class MediaServiceController {
     
     @GetMapping("/health")
     public String health() {
-        return "Payment Service is running";
+        return "Media Service is running";
     }
 }

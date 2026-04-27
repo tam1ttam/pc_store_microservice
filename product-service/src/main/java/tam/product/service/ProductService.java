@@ -44,12 +44,27 @@ public interface ProductService {
     List<ProductResponse> searchByName(String keyword);
 
     /**
+     * Tìm kiếm sản phẩm theo tên với phân trang
+     */
+    Page<ProductResponse> searchByNamePaginated(String name, Pageable pageable);
+
+    /**
      * Lấy sản phẩm nổi bật
      */
     List<ProductResponse> getFeaturedProducts();
 
     /**
-     * Lấy sản phẩm có thể đặt hàng
+     * Lấy sản phẩm có thể đặt hàng/đã publish
      */
     Page<ProductResponse> getPublishedProducts(Pageable pageable);
+
+    /**
+     * Lấy sản phẩm mới nhất
+     */
+    List<ProductResponse> getNewestProducts(int limit);
+
+    /**
+     * Lấy sản phẩm bán chạy nhất (dựa trên rating/favorites)
+     */
+    List<ProductResponse> getBestSellingProducts(int limit);
 }
