@@ -1,12 +1,18 @@
 package com.tam.identity.services;
 
+import com.tam.identity.dtos.response.auth.AuthTokenResponse;
+import com.tam.identity.dtos.response.auth.DeleteAccountResponse;
+import com.tam.identity.dtos.response.auth.MeResponse;
+
+import java.util.Map;
 import java.util.Set;
 
 public interface UserService {
-    /**
-     * Get all permissions for a user by their Keycloak identity ID
-     * @param identityUserId the user's identity ID from Keycloak
-     * @return a set of permission names that the user has
-     */
+
     Set<String> getUserPermissions(String identityUserId);
+    AuthTokenResponse handleRegisterCallback(String code);
+    DeleteAccountResponse handleDeleteAccountCallback(String code);
+    MeResponse me(String accessToken);
+    AuthTokenResponse refreshAccessToken(String refreshToken);
+    void revokeToken(String refreshToken);
 }

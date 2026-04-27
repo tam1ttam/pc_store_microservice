@@ -16,5 +16,9 @@ public class AuthTokenResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType;
+    @Builder.Default
+    private boolean isExpired = false;
     private long expiresIn;
+    private long refreshExpiresIn;
+    private Object userProfile;
 }

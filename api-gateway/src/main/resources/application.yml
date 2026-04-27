@@ -29,6 +29,10 @@ spring:
             key-resolver: "#{@ipKeyResolver}"
             deny-empty-key: false
             empty-key-status-code: 429
+        - name: CircuitBreaker
+          args:
+            name: globalCB
+            fallbackUri: forward:/fallback/unavailble
       routes:
         - id: identity-service
           uri: lb://IDENTITY-SERVICE
@@ -139,3 +143,15 @@ management:
     export:
       prometheus:
         enabled: true
+resilience4j:
+  circuitbreaker:
+    instances:
+      globalCB:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+  timelimiter:
+    instances:
+      identityServiceCB:
+        timeout-duration: 5s

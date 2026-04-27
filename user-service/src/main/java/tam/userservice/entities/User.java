@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -28,10 +29,10 @@ public class User {
     @EqualsAndHashCode.Include
     String identityUserId;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(unique = true, length = 32)
     String defaultPhoneNumber;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, unique = true, length = 32)
     String defaultEmail;
 
     @Column(nullable = false, length = 100)
@@ -40,10 +41,10 @@ public class User {
     @Column(nullable = false, length = 100)
     String lastName;
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 32)
     String gender;
 
-    @Column(nullable = false)
+
     LocalDate dateOfBirth;
 
     @Column
@@ -54,5 +55,5 @@ public class User {
     Boolean isActive = true;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    Set<Address> addresses;
+    List<Address> addresses;
 }

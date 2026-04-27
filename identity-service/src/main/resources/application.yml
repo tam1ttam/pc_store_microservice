@@ -34,6 +34,7 @@ server:
 
 app:
   prefix: ${API_PREFIX:/api/v1}
+  auth-url: http://localhost:6060/api-gateway/identity-service/api/v1/auth
   context-path: ${server.servlet.context-path:/identity-service}
   security:
     issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
@@ -42,12 +43,8 @@ app:
       - /swagger-ui/**
       - /actuator/health
       - ${app.prefix}/auth/login
-      - ${app.prefix}/auth/register
-      - ${app.prefix}/auth/refresh
-      - ${app.prefix}/auth/login/google
-      - ${app.prefix}/auth/register/google
-      - ${app.prefix}/auth/login/github
-      - ${app.prefix}/auth/register/github
+      - ${app.prefix}/auth/callback/login
+      - ${app.prefix}/auth/callback/delete-account
     allowed-origins:
       - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
     cookie:
@@ -81,10 +78,10 @@ eureka:
     prefer-ip-address: true
 logging:
   level:
-    root: DEBUG
-    com.tam: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    root: ERROR
+    com.tam: ERROR
+    org.springframework.security: ERROR
+    org.springframework.web: ERROR
   pattern:
     console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"

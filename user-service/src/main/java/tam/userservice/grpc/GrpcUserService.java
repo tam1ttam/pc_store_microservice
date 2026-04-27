@@ -3,11 +3,12 @@ package tam.userservice.grpc;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.common.errors.ResourceNotFoundException;
+import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.stereotype.Component;
 import tam.common.exception.ConflictException;
-//import tam.common.exception.ResourceNotFoundException;
-import tam.userservice.entities.User;
+import tam.userservice.dtos.req.AddressRequest;
+import tam.userservice.dtos.req.UserProfileRequest;
+import tam.userservice.dtos.res.UserProfileResponse;
 import tam.userservice.services.UserProfileService;
 import iuh.fit.pc_store.grpc.user.v1.*;
 
@@ -16,6 +17,7 @@ import java.time.format.DateTimeParseException;
 
 @Component
 @RequiredArgsConstructor
+@GrpcService
 public class GrpcUserService extends UserServiceGrpc.UserServiceImplBase {
     private final UserProfileService userProfileService;
 
@@ -24,16 +26,21 @@ public class GrpcUserService extends UserServiceGrpc.UserServiceImplBase {
             CreateUserProfileRequest request,
             StreamObserver<CreateUserProfileResponse> responseObserver) {
         try {
-            LocalDate dateOfBirth = LocalDate.parse(request.getDateOfBirth());
-            String userId = userProfileService.createUserProfile(
-                    request.getIdentityUserId(),
-                    request.getDefaultPhoneNumber(),
-                    request.getDefaultEmail(),
-                    request.getFirstName(),
-                    request.getLastName(),
-                    request.getGender(),
-                    dateOfBirth,
-                    request.getAvatar());
+            LocalDate dateOfBirth = null;
+            if(!request.getDateOfBirth().equals("")) dateOfBirth = LocalDate.parse(request.getDateOfBirth());
+
+            UserProfileRequest userRequest = UserProfileRequest.builder()
+                    .identityUserId(request.getIdentityUserId())
+                    .defaultPhoneNumber(request.getDefaultPhoneNumber())
+                    .defaultEmail(request.getDefaultEmail())
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .gender(request.getGender())
+                    .dateOfBirth(dateOfBirth)
+                    .avatar(request.getAvatar())
+                    .build();
+
+            String userId = userProfileService.createUserProfile(userRequest);
 
             responseObserver.onNext(CreateUserProfileResponse.newBuilder()
                     .setId(userId)
@@ -59,6 +66,8 @@ public class GrpcUserService extends UserServiceGrpc.UserServiceImplBase {
             boolean deleted = userProfileService.deleteUserProfileByIdentityUserId(request.getIdentityUserId());
             responseObserver.onNext(DeleteUserProfileResponse.newBuilder().setDeleted(deleted).build());
             responseObserver.onCompleted();
+        } catch (ConflictException ex) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(ex.getMessage()).asRuntimeException());
         } catch (Exception ex) {
             responseObserver
                     .onError(Status.INTERNAL.withDescription("Unable to delete user profile").asRuntimeException());
@@ -71,27 +80,47 @@ public class GrpcUserService extends UserServiceGrpc.UserServiceImplBase {
             StreamObserver<GetUserProfileByIdentityResponse> responseObserver) {
         try {
             String identityUserId = request.getIdentityUserId();
-            if (identityUserId == null || identityUserId.isBlank()) {
+            if (identityUserId.isBlank()) {
                 responseObserver.onError(
                         Status.INVALID_ARGUMENT.withDescription("identityUserId is required").asRuntimeException());
                 return;
             }
 
-            User user = (User) userProfileService.getUserProfileByIdentityUserId(identityUserId);
-            responseObserver.onNext(GetUserProfileByIdentityResponse.newBuilder()
-                    .setId(user.getId())
-                    .setIdentityUserId(user.getIdentityUserId())
-                    .setDefaultPhoneNumber(user.getDefaultPhoneNumber())
-                    .setDefaultEmail(user.getDefaultEmail())
-                    .setFirstName(user.getFirstName())
-                    .setLastName(user.getLastName())
-                    .setGender(user.getGender())
-                    .setDateOfBirth(user.getDateOfBirth().toString())
-                    .setAvatar(user.getAvatar() == null ? "" : user.getAvatar())
-                    .setIsActive(Boolean.TRUE.equals(user.getIsActive()))
-                    .build());
+            UserProfileResponse userProfileRequest = userProfileService.getUserProfileByIdentityUserId(identityUserId)
+                    .orElse(null);
+
+            GetUserProfileByIdentityResponse.Builder responseBuilder = GetUserProfileByIdentityResponse.newBuilder()
+                    .setId(userProfileRequest.getId())
+                    .setIdentityUserId(userProfileRequest.getIdentityUserId())
+                    .setDefaultPhoneNumber(userProfileRequest.getDefaultPhoneNumber())
+                    .setDefaultEmail(userProfileRequest.getDefaultEmail())
+                    .setFirstName(userProfileRequest.getFirstName())
+                    .setLastName(userProfileRequest.getLastName())
+                    .setGender(userProfileRequest.getGender())
+                    .setDateOfBirth(userProfileRequest.getDateOfBirth().toString())
+                    .setAvatar(userProfileRequest.getAvatar() == null ? "" : userProfileRequest.getAvatar())
+                    .setIsActive(Boolean.TRUE.equals(userProfileRequest.getIsActive()));
+
+            if (userProfileRequest.getAddresses() != null) {
+                userProfileRequest.getAddresses().forEach(addr -> {
+                    Address protoAddress = Address.newBuilder()
+                            .setId(addr.getId())
+                            .setCountry(addr.getCountry())
+                            .setProvince(addr.getProvince())
+                            .setCity(addr.getCity())
+                            .setWard(addr.getWard())
+                            .setStreet(addr.getStreet())
+                            .setIsDefault(addr.getIsDefault())
+                            .addAllPhoneContacts(addr.getPhoneContacts())
+                            .setIsActive(addr.getIsActive())
+                            .build();
+                    responseBuilder.addAddresses(protoAddress);
+                });
+            }
+
+            responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
-        } catch (ResourceNotFoundException ex) {
+        } catch (ConflictException ex) {
             responseObserver.onError(Status.NOT_FOUND.withDescription(ex.getMessage()).asRuntimeException());
         } catch (Exception ex) {
             responseObserver
@@ -105,20 +134,29 @@ public class GrpcUserService extends UserServiceGrpc.UserServiceImplBase {
             StreamObserver<UpdateUserProfileResponse> responseObserver) {
         try {
             LocalDate dateOfBirth = LocalDate.parse(request.getDateOfBirth());
-            boolean updated = userProfileService.updateUserProfile(
-                    request.getIdentityUserId(),
-                    request.getDefaultPhoneNumber(),
-                    request.getDefaultEmail(),
-                    request.getFirstName(),
-                    request.getLastName(),
-                    request.getGender(),
-                    dateOfBirth,
-                    request.getAvatar());
-            responseObserver.onNext(UpdateUserProfileResponse.newBuilder().setId("").setUpdated(updated).build());
+
+            UserProfileRequest userRequest = UserProfileRequest.builder()
+                    .defaultPhoneNumber(request.getDefaultPhoneNumber())
+                    .defaultEmail(request.getDefaultEmail())
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .gender(request.getGender())
+                    .dateOfBirth(dateOfBirth)
+                    .avatar(request.getAvatar())
+                    .build();
+
+            boolean updated = userProfileService.updateUserProfile(userRequest, request.getIdentityUserId());
+
+            responseObserver.onNext(UpdateUserProfileResponse.newBuilder()
+                    .setId(request.getIdentityUserId())
+                    .setUpdated(updated)
+                    .build());
             responseObserver.onCompleted();
         } catch (DateTimeParseException ex) {
             responseObserver.onError(
                     Status.INVALID_ARGUMENT.withDescription("Invalid dateOfBirth format").asRuntimeException());
+        } catch (ConflictException ex) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(ex.getMessage()).asRuntimeException());
         } catch (Exception ex) {
             responseObserver
                     .onError(Status.INTERNAL.withDescription("Unable to update user profile").asRuntimeException());

@@ -6,6 +6,8 @@ option java_multiple_files = true;
 option java_package = "iuh.fit.pc_store.grpc.user.v1";
 option java_outer_classname = "UserServiceProto";
 
+import "google/protobuf/timestamp.proto"; // Khuyên dùng cho ngày tháng chuyên nghiệp
+
 service UserService {
   rpc CreateUserProfile(CreateUserProfileRequest) returns (CreateUserProfileResponse);
   rpc DeleteUserProfile(DeleteUserProfileRequest) returns (DeleteUserProfileResponse);
@@ -13,6 +15,7 @@ service UserService {
   rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
 }
 
+// 1. Tách Address thành message riêng để dùng lại trong repeated (tương đương List)
 message Address {
   string id = 1;
   string country = 2;
@@ -20,29 +23,29 @@ message Address {
   string city = 4;
   string ward = 5;
   string street = 6;
-  bool isDefault = 7;
-  repeated string phoneContacts = 8;
-  bool isActive = 9;
+  bool is_default = 7;           // gRPC chuẩn dùng snake_case cho field
+  repeated string phone_contacts = 8; // repeated tương đương với List<String>
+  bool is_active = 9;
 }
 
 message CreateUserProfileRequest {
-  string identityUserId = 1;
-  string defaultPhoneNumber = 2;
-  string defaultEmail = 3;
-  string firstName = 4;
-  string lastName = 5;
+  string identity_user_id = 1;
+  string default_phone_number = 2;
+  string default_email = 3;
+  string first_name = 4;
+  string last_name = 5;
   string gender = 6;
-  string dateOfBirth = 7;
+  string date_of_birth = 7;      // Có thể dùng string "YYYY-MM-DD" như bạn đang làm
   string avatar = 8;
 }
 
 message CreateUserProfileResponse {
   string id = 1;
-  string identityUserId = 2;
+  string identity_user_id = 2;
 }
 
 message DeleteUserProfileRequest {
-  string identityUserId = 1;
+  string identity_user_id = 1;
 }
 
 message DeleteUserProfileResponse {
@@ -50,31 +53,32 @@ message DeleteUserProfileResponse {
 }
 
 message GetUserProfileByIdentityRequest {
-  string identityUserId = 1;
+  string identity_user_id = 1;
 }
 
+// 2. Cập nhật Response để chứa danh sách Address
 message GetUserProfileByIdentityResponse {
   string id = 1;
-  string identityUserId = 2;
-  string defaultPhoneNumber = 3;
-  string defaultEmail = 4;
-  string firstName = 5;
-  string lastName = 6;
+  string identity_user_id = 2;
+  string default_phone_number = 3;
+  string default_email = 4;
+  string first_name = 5;
+  string last_name = 6;
   string gender = 7;
-  string dateOfBirth = 8;
+  string date_of_birth = 8;
   string avatar = 9;
-  bool isActive = 10;
-  repeated Address addresses = 11;
+  bool is_active = 10;
+  repeated Address addresses = 11; // repeated chính là List<Address>
 }
 
 message UpdateUserProfileRequest {
-  string identityUserId = 1;
-  string defaultPhoneNumber = 2;
-  string defaultEmail = 3;
-  string firstName = 4;
-  string lastName = 5;
+  string identity_user_id = 1;
+  string default_phone_number = 2;
+  string default_email = 3;
+  string first_name = 4;
+  string last_name = 5;
   string gender = 6;
-  string dateOfBirth = 7;
+  string date_of_birth = 7;
   string avatar = 8;
 }
 

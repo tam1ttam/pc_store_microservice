@@ -8,18 +8,18 @@ import lombok.*;
 
 import java.util.Set;
 
-@Entity
-@Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString
-@EqualsAndHashCode
+//@Entity
+//@Data
+//@Builder
+//@AllArgsConstructor
+//@NoArgsConstructor
+//@ToString
+//@EqualsAndHashCode
 public class Role {
-    @Id
-    @EqualsAndHashCode.Include
-    private String name; // Ví dụ: "CLIENT", "SELLER", "MODERATOR"
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Permission> permissions;
+//    @Id
+//    @EqualsAndHashCode.Include
+//    private String name; // Ví dụ: "CLIENT", "SELLER", "MODERATOR"
+//
+//    @ManyToMany(fetch = FetchType.EAGER)
+//    private Set<Permission> permissions;
 }

@@ -1,35 +1,29 @@
 package tam.userservice.dtos.res;
 
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import tam.userservice.entities.Address;
 import tam.userservice.entities.User;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
 
 @Getter
-@Builder
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserProfileResponse {
-    private String id;
-    private String identityUserId;
-    private String phoneNumber;
-    private String firstName;
-    private String lastName;
-    private String gender;
-    private LocalDate dateOfBirth;
-    private String avatar;
-    private Boolean isActive;
-
-    public static UserProfileResponse from(User user) {
-        return UserProfileResponse.builder()
-                .id(user.getId())
-                .identityUserId(user.getIdentityUserId())
-                .phoneNumber(user.getDefaultPhoneNumber())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .gender(user.getGender())
-                .dateOfBirth(user.getDateOfBirth())
-                .avatar(user.getAvatar())
-                .isActive(user.getIsActive())
-                .build();
-    }
+    String id;
+    String identityUserId;
+    String defaultPhoneNumber;
+    String defaultEmail;
+    String firstName;
+    String lastName;
+    String gender;
+    LocalDate dateOfBirth;
+    String avatar;
+    Boolean isActive;
+    List<Address> addresses;
 }
