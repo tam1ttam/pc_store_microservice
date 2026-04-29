@@ -1,0 +1,89 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker containers logs
+  - job_name: docker-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: network
+            values: ["ecommerce-network"]
+
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+
+      - source_labels: ["__meta_docker_container_name"]
+        target_label: "container_name"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(gateway|api.gateway).*"
+        target_label: "service"
+        replacement: "api-gateway"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(discovery|eureka).*"
+        target_label: "service"
+        replacement: "discovery-server"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(identity).*"
+        target_label: "service"
+        replacement: "identity-service"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(order).*"
+        target_label: "service"
+        replacement: "order-service"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(payment).*"
+        target_label: "service"
+        replacement: "payment-service"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(product).*"
+        target_label: "service"
+        replacement: "product-service"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(user).*"
+        target_label: "service"
+        replacement: "user-service"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(saga).*"
+        target_label: "service"
+        replacement: "saga-orchestrator"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(keycloak).*"
+        target_label: "service"
+        replacement: "keycloak"
+
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(redis).*"
+        target_label: "service"
+        replacement: "redis"
+
+      - source_labels: ["__meta_docker_container_image"]
+        target_label: "image"
+
+      # Ensure job label is set
+      - target_label: job
+        replacement: docker-containers
+
+    pipeline_stages:
+      - docker: {}
+      - labels:
+          job: docker-containers

@@ -1,0 +1,25 @@
+package com.tam.profile.dto.response;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class CustomerResponse {
+    String id;
+    String userName;
+    String firstName;
+    String lastName;
+    String email;
+    String phoneNumber;
+
+    // NOTE: Không trả về password
+    // Password được quản lý bởi Identity Service
+}

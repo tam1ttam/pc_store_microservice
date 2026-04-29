@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package com.devteria.file.v1;
+
+option java_multiple_files = true;
+option java_package = "com.devteria.file.v1";
+option java_outer_classname = "FileServiceProto";
+
+service FileService {
+  rpc UploadImage(UploadImageRequest) returns (UploadImageResponse);
+  rpc ValidateImage(ValidateImageRequest) returns (ValidateImageResponse);
+  rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
+}
+
+message UploadImageRequest {
+  string base64_image = 1;
+  string file_type = 2;  // "product", "avatar", "profile", etc.
+}
+
+message UploadImageResponse {
+  string url = 1;
+  string public_id = 2;
+  int64 file_size = 3;
+  string format = 4;
+}
+
+message ValidateImageRequest {
+  string base64_image = 1;
+}
+
+message ValidateImageResponse {
+  bool safe = 1;
+  string message = 2;
+}
+
+message DeleteImageRequest {
+  string public_id = 1;
+}
+
+message DeleteImageResponse {
+  bool deleted = 1;
+}

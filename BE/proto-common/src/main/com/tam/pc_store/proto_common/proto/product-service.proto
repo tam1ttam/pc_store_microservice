@@ -1,0 +1,243 @@
+syntax = "proto3";
+
+package com.devteria.product.v1;
+
+option java_multiple_files = true;
+option java_package = "com.devteria.product.grpc.v1";
+option java_outer_classname = "ProductServiceProto";
+
+service ProductService {
+  // Lấy sản phẩm mới nhất
+  rpc GetNewestProducts(GetNewestProductsRequest) returns (GetNewestProductsResponse);
+  
+  // Lấy sản phẩm bán chạy nhất
+  rpc GetBestSellingProducts(GetBestSellingProductsRequest) returns (GetBestSellingProductsResponse);
+  
+  // Lấy thông tin chi tiết sản phẩm
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  
+  // Lấy nhiều sản phẩm theo danh sách ID
+  rpc GetProductsByIds(GetProductsByIdsRequest) returns (GetProductsByIdsResponse);
+  
+  // Tạo sản phẩm mới
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  
+  // Cập nhật sản phẩm
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  
+  // Xóa sản phẩm
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  
+  // Tìm kiếm sản phẩm theo tên hoặc nhà cung cấp
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+  
+  // Kiểm tra tính khả dụng của sản phẩm (stock)
+  rpc CheckProductAvailability(CheckProductAvailabilityRequest) returns (CheckProductAvailabilityResponse);
+  
+  // Cập nhật số lượng hàng trong kho
+  rpc UpdateStock(UpdateStockRequest) returns (UpdateStockResponse);
+  
+  // Kiểm tra số lượng hàng còn lại
+  rpc CheckRemainingStock(CheckRemainingStockRequest) returns (CheckRemainingStockResponse);
+  
+  // Lấy chi tiết sản phẩm
+  rpc GetProductDetail(GetProductDetailRequest) returns (GetProductDetailResponse);
+}
+
+// ==================== GET PRODUCT MESSAGES ====================
+
+message GetProductRequest {
+  string productId = 1;
+}
+
+message GetProductResponse {
+  string id = 1;
+  string name = 2;
+  string img = 3;
+  double priceAfterDiscount = 4;
+  double originalPrice = 5;
+  double discountPercent = 6;
+  double priceDiscount = 7;
+  SupplierInfo supplier = 8;
+}
+
+// ==================== GET NEWEST PRODUCTS MESSAGES ====================
+
+message GetNewestProductsRequest {
+  int32 limit = 1;
+}
+
+message GetNewestProductsResponse {
+  repeated ProductDetail products = 1;
+}
+
+// ==================== GET BEST SELLING PRODUCTS MESSAGES ====================
+
+message GetBestSellingProductsRequest {
+  int32 limit = 1;
+}
+
+message GetBestSellingProductsResponse {
+  repeated ProductDetail products = 1;
+}
+
+// ==================== GET PRODUCTS BY IDS MESSAGES ====================
+
+message GetProductsByIdsRequest {
+  repeated string productIds = 1;
+}
+
+message GetProductsByIdsResponse {
+  repeated ProductDetail products = 1;
+}
+
+message ProductDetail {
+  string id = 1;
+  string name = 2;
+  string img = 3;
+  double priceAfterDiscount = 4;
+  double originalPrice = 5;
+  double discountPercent = 6;
+  double priceDiscount = 7;
+  SupplierInfo supplier = 8;
+}
+
+// ==================== CREATE PRODUCT MESSAGES ====================
+
+message CreateProductRequest {
+  string name = 1;
+  string img = 2;
+  double priceAfterDiscount = 3;
+  double originalPrice = 4;
+  double discountPercent = 5;
+  double priceDiscount = 6;
+  int32 inStock = 7;
+  SupplierInfo supplier = 8;
+  ProductDetailCreationRequest productDetail = 9;
+}
+
+message CreateProductResponse {
+  bool success = 1;
+  string message = 2;
+  ProductDetail product = 3;
+}
+
+// ==================== UPDATE PRODUCT MESSAGES ====================
+
+message UpdateProductRequest {
+  string productId = 1;
+  string name = 2;
+  string img = 3;
+  double priceAfterDiscount = 4;
+  double originalPrice = 5;
+  double discountPercent = 6;
+  double priceDiscount = 7;
+  int32 inStock = 8;
+  SupplierInfo supplier = 9;
+  ProductDetailCreationRequest productDetail = 10;
+}
+
+message UpdateProductResponse {
+  bool success = 1;
+  string message = 2;
+  ProductDetail product = 3;
+}
+
+// ==================== DELETE PRODUCT MESSAGES ====================
+
+message DeleteProductRequest {
+  string productId = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ==================== SEARCH PRODUCTS MESSAGES ====================
+
+message SearchProductsRequest {
+  string keyword = 1;
+}
+
+message SearchProductsResponse {
+  repeated ProductDetail products = 1;
+}
+
+// ==================== CHECK PRODUCT AVAILABILITY MESSAGES ====================
+
+message CheckProductAvailabilityRequest {
+  string productId = 1;
+  int32 quantity = 2;
+}
+
+message CheckProductAvailabilityResponse {
+  bool available = 1;
+  string message = 2;
+  string productId = 3;
+  int32 requestedQuantity = 4;
+}
+
+// ==================== SUPPLIER INFO ====================
+
+message SupplierInfo {
+  string name = 1;
+  string address = 2;
+}
+
+// ==================== PRODUCT DETAIL MESSAGES ====================
+
+message ProductDetailCreationRequest {
+  string processor = 1;
+  string ram = 2;
+  string storage = 3;
+  string graphicsCard = 4;
+  string powerSupply = 5;
+  string motherboard = 6;
+  string case_ = 7;
+  string coolingSystem = 8;
+  string operatingSystem = 9;
+}
+
+message GetProductDetailRequest {
+  string productId = 1;
+}
+
+message GetProductDetailResponse {
+  string productId = 1;
+  string processor = 2;
+  string ram = 3;
+  string storage = 4;
+  string graphicsCard = 5;
+  string powerSupply = 6;
+  string motherboard = 7;
+  string case_ = 8;
+  string coolingSystem = 9;
+  string operatingSystem = 10;
+  repeated string images = 11;
+}
+
+// ==================== STOCK MANAGEMENT MESSAGES ====================
+
+message UpdateStockRequest {
+  string productId = 1;
+  int32 quantity = 2;
+}
+
+message UpdateStockResponse {
+  bool success = 1;
+  string message = 2;
+  string productId = 3;
+  int32 newStock = 4;
+}
+
+message CheckRemainingStockRequest {
+  string productId = 1;
+}
+
+message CheckRemainingStockResponse {
+  string productId = 1;
+  int32 remainingStock = 2;
+  bool available = 3;
+  string message = 4;
+}

@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: saga-orchestrator-service
+
+  # Cấu hình security phòng khi Saga có mở API REST để check trạng thái
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/iluttmab}
+
+server:
+  servlet:
+    context-path: /saga-orchestrator-service
+  port: ${SERVER_PORT:6058}
+
+grpc:
+  client:
+    user-service:
+      # Đã sửa thành discovery để scale mượt mà
+      address: ${USER_SERVICE_GRPC_ADDRESS:discovery:///USER-SERVICE}
+      negotiationType: plaintext
+  server:
+    port: ${SAGA_ORCHESTRATOR_GRPC_PORT:6158}
+  user-service:
+    deadline-ms: ${USER_SERVICE_GRPC_DEADLINE_MS:3000}
+
+eureka:
+  client:
+    service-url:
+      # Đổi tên biến cho đồng bộ toàn hệ thống
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
+logging:
+  level:
+    root: INFO
+    com.tam: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/saga-orchestrator-service.log
+    max-size: 10MB
+    max-history: 7

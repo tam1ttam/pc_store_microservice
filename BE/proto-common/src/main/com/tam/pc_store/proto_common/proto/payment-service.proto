@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package com.devteria.payment.v1;
+
+option java_multiple_files = true;
+option java_package = "com.devteria.payment.grpc.v1";
+option java_outer_classname = "PaymentServiceProto";
+
+service PaymentService {
+  // Tạo payment mới
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  
+  // Lấy thông tin payment
+  rpc GetPayment(GetPaymentRequest) returns (PaymentResponse);
+  
+  // Lấy payment theo orderId
+  rpc GetPaymentByOrder(GetPaymentByOrderRequest) returns (PaymentResponse);
+  
+  // Cập nhật status payment
+  rpc UpdatePaymentStatus(UpdatePaymentStatusRequest) returns (PaymentResponse);
+  
+  // Thực thi payment (execute)
+  rpc ExecutePayment(ExecutePaymentRequest) returns (ExecutePaymentResponse);
+  
+  // Hủy payment
+  rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
+}
+
+// ==================== ENUMS ====================
+
+enum PaymentStatus {
+  PAYMENT_STATUS_CREATED = 0;
+  PAYMENT_STATUS_APPROVED = 1;
+  PAYMENT_STATUS_FAILED = 2;
+  PAYMENT_STATUS_CANCELLED = 3;
+}
+
+// ==================== REQUEST MESSAGES ====================
+
+message CreatePaymentRequest {
+  string userId = 1;
+  string amount = 2;
+  string paymentMethod = 3;
+  string description = 4;
+}
+
+message GetPaymentRequest {
+  string paymentId = 1;
+}
+
+message GetPaymentByOrderRequest {
+  string orderId = 1;
+}
+
+message UpdatePaymentStatusRequest {
+  string paymentId = 1;
+  string status = 2;
+}
+
+message ExecutePaymentRequest {
+  string paymentId = 1;
+}
+
+message CancelPaymentRequest {
+  string paymentId = 1;
+}
+
+// ==================== RESPONSE MESSAGES ====================
+
+message PaymentResponse {
+  string id = 1;
+  string paymentId = 2;
+  string userId = 3;
+  string paymentMethod = 4;
+  string orderId = 5;
+  double amount = 6;
+  string currency = 7;
+  string description = 8;
+  PaymentStatus status = 9;
+}
+
+message CreatePaymentResponse {
+  bool success = 1;
+  string message = 2;
+  PaymentResponse payment = 3;
+}
+
+message ExecutePaymentResponse {
+  bool success = 1;
+  string message = 2;
+  PaymentResponse payment = 3;
+}
+
+message CancelPaymentResponse {
+  bool success = 1;
+  string message = 2;
+  string paymentId = 3;
+}
