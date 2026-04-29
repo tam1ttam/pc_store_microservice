@@ -18,6 +18,7 @@ import com.devteria.identity.dto.request.UserUpdateRequest;
 import com.devteria.identity.dto.response.UserResponse;
 import com.devteria.identity.entity.Role;
 import com.devteria.identity.entity.User;
+import com.devteria.identity.event.UserDeletedEvent;
 import com.devteria.identity.exception.AppException;
 import com.devteria.identity.exception.ErrorCode;
 import com.devteria.identity.mapper.ProfileMapper;
@@ -109,7 +110,15 @@ public class UserService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteUser(String userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         userRepository.deleteById(userId);
+
+        UserDeletedEvent event = UserDeletedEvent.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .build();
+        kafkaTemplate.send("user.deleted", event);
+        log.info("Published user.deleted event for userId={}, username={}", userId, user.getUsername());
     }
 
     @PreAuthorize("hasRole('ADMIN')")

@@ -1,4 +1,4 @@
-package com.devteria.order.controller;
+package com.tam.order.controller;
 
 import java.util.Locale;
 
@@ -6,10 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.devteria.order.dto.request.ApiResponse;
-import com.devteria.order.dto.request.PaymentRequest;
-import com.devteria.order.dto.response.PaymentResponse;
-import com.devteria.order.service.PaymentService;
+import com.tam.order.dto.request.ApiResponse;
+import com.tam.order.dto.request.PaymentRequest;
+import com.tam.order.dto.response.PaymentResponse;
+import com.tam.order.service.PaymentService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

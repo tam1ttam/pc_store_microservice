@@ -3,10 +3,10 @@ package com.tam.profile.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.devteria.profile.dto.request.CustomerCreationRequest;
-import com.devteria.profile.dto.request.CustomerUpdateRequest;
-import com.devteria.profile.dto.response.CustomerResponse;
-import com.devteria.profile.entity.Customer;
+import com.tam.profile.dto.request.CustomerCreationRequest;
+import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.response.CustomerResponse;
+import com.tam.profile.entity.Customer;
 
 @Mapper(componentModel = "spring")
 public interface CustomerMapper {
@@ -17,5 +17,9 @@ public interface CustomerMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userName", ignore = true)
+    @Mapping(source = "request.firstName", target = "firstName")
+    @Mapping(source = "request.lastName", target = "lastName")
+    @Mapping(source = "request.email", target = "email")
+    @Mapping(source = "request.phoneNumber", target = "phoneNumber")
     Customer updateCustomerFromRequest(CustomerUpdateRequest request, Customer customer);
 }

@@ -1,7 +1,7 @@
 package tam.orchestrator.orchestrator;
 
-//import iuh.fit.pc_store.grpc.user.v1.CreateUserProfileRequest;
-//import iuh.fit.pc_store.grpc.user.v1.CreateUserProfileResponse;
+import com.tam.proto.profile.v1.CreateCustomerRequest;
+import com.tam.proto.profile.v1.CreateCustomerResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,31 +11,32 @@ import tam.orchestrator.clients.GrpcUserServiceClient;
 @Component
 @RequiredArgsConstructor
 public class SignupSagaOrchestrator {
+
     private final GrpcUserServiceClient grpcUserServiceClient;
 
-//    public CreateUserProfileResponse createUserProfile(CreateUserProfileRequest request) {
-//        String identityUserId = request.getIdentityUserId();
-//        log.info("Start signup saga for identityUserId={}", identityUserId);
-//
-//        try {
-//            CreateUserProfileResponse response = grpcUserServiceClient.createUserProfile(request);
-//            log.info("Signup saga completed for identityUserId={}", identityUserId);
-//            return response;
-//        } catch (RuntimeException ex) {
-//            log.error("Signup saga exception for identityUserId={}: {}", identityUserId, ex.getMessage(), ex);
-//            compensate(identityUserId);
-//            throw ex;
-//        }
-//    }
-//
-//    private void compensate(String identityUserId) {
-//        if (identityUserId != null && !identityUserId.isBlank()) {
-//            try {
-//                grpcUserServiceClient.deleteUserProfile(identityUserId);
-//                log.warn("Compensated user profile for identityUserId={}", identityUserId);
-//            } catch (Exception compensationEx) {
-//                log.error("Failed compensating user profile for identityUserId={}", identityUserId, compensationEx);
-//            }
-//        }
-//    }
+    public CreateCustomerResponse createCustomer(CreateCustomerRequest request) {
+        String userName = request.getUserName();
+        log.info("Start signup saga for userName={}", userName);
+
+        try {
+            CreateCustomerResponse response = grpcUserServiceClient.createCustomer(request);
+            log.info("Signup saga completed for userName={}", userName);
+            return response;
+        } catch (RuntimeException ex) {
+            log.error("Signup saga exception for userName={}: {}", userName, ex.getMessage(), ex);
+            compensate(userName);
+            throw ex;
+        }
+    }
+
+    private void compensate(String userName) {
+        if (userName != null && !userName.isBlank()) {
+            try {
+                grpcUserServiceClient.deleteCustomer(userName);
+                log.warn("Compensated customer profile for userName={}", userName);
+            } catch (Exception compensationEx) {
+                log.error("Failed compensating customer profile for userName={}", userName, compensationEx);
+            }
+        }
+    }
 }

@@ -3,10 +3,10 @@ package com.tam.profile.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
-import com.devteria.profile.dto.request.ProfileCreationRequest;
-import com.devteria.profile.dto.request.UpdateProfileRequest;
-import com.devteria.profile.dto.response.UserProfileResponse;
-import com.devteria.profile.entity.UserProfile;
+import com.tam.profile.dto.request.ProfileCreationRequest;
+import com.tam.profile.dto.request.UpdateProfileRequest;
+import com.tam.profile.dto.response.UserProfileResponse;
+import com.tam.profile.entity.UserProfile;
 
 @Mapper(componentModel = "spring")
 public interface UserProfileMapper {

@@ -1,23 +1,56 @@
 server:
-  port: 8082
+  port: ${NOTIFICATION_SERVICE_PORT:6068}
   servlet:
     context-path: /notification
+
 spring:
   application:
     name: notification-service
   data:
     mongodb:
-      uri: mongodb://root:root@localhost:27017/notification-service?authSource=admin
+      uri: ${NOTIFICATION_MONGO_URI:mongodb://localhost:27017/notification-service}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6002}
+      connect-timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
   kafka:
-    bootstrap-servers: localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
     consumer:
       group-id: notification-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "*"
+        "[spring.json.trusted.packages]": "*"
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
+
 notification:
   email:
     brevo-url: https://api.brevo.com
-    brevo-apikey: <key>
+    brevo-apikey: ${BREVO_API_KEY}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    root: INFO
+    com.devteria.notification: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/notification-service.log
+    max-size: 10MB
+    max-history: 7

@@ -1,10 +1,10 @@
-package com.devteria.order.dto.response;
+package com.tam.order.dto.response;
 
 import java.util.List;
 
-import com.devteria.order.entity.CartItem;
-import com.devteria.order.entity.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.tam.order.entity.CartItem;
+import com.tam.order.entity.OrderStatus;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

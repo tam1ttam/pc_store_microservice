@@ -7,13 +7,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.devteria.profile.dto.request.CustomerCreationRequest;
-import com.devteria.profile.dto.request.CustomerUpdateRequest;
-import com.devteria.profile.dto.response.CustomerResponse;
-import com.devteria.profile.entity.Customer;
-import com.devteria.profile.mapper.CustomerMapper;
-import com.devteria.profile.repository.CustomerRepository;
-import com.devteria.profile.service.CustomerService;
+import com.tam.profile.dto.request.CustomerCreationRequest;
+import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.response.CustomerResponse;
+import com.tam.profile.entity.Customer;
+import com.tam.profile.mapper.CustomerMapper;
+import com.tam.profile.repository.CustomerRepository;
+import com.tam.profile.service.CustomerService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.devteria.payment.v1;
+package com.tam.proto.payment.v1;
 
 option java_multiple_files = true;
-option java_package = "com.devteria.payment.grpc.v1";
+option java_package = "com.tam.proto.payment.v1";
 option java_outer_classname = "PaymentServiceProto";
 
 service PaymentService {

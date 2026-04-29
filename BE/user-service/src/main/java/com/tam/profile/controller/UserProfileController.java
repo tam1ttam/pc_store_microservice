@@ -5,11 +5,11 @@ import java.util.List;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.devteria.profile.dto.ApiResponse;
-import com.devteria.profile.dto.request.SearchUserRequest;
-import com.devteria.profile.dto.request.UpdateProfileRequest;
-import com.devteria.profile.dto.response.UserProfileResponse;
-import com.devteria.profile.service.UserProfileService;
+import com.tam.profile.dto.ApiResponse;
+import com.tam.profile.dto.request.SearchUserRequest;
+import com.tam.profile.dto.request.UpdateProfileRequest;
+import com.tam.profile.dto.response.UserProfileResponse;
+import com.tam.profile.service.UserProfileService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

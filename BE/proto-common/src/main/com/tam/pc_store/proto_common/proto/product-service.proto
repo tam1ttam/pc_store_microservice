@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.devteria.product.v1;
+package com.tam.proto.product.v1;
 
 option java_multiple_files = true;
-option java_package = "com.devteria.product.grpc.v1";
+option java_package = "com.tam.proto.product.v1";
 option java_outer_classname = "ProductServiceProto";
 
 service ProductService {

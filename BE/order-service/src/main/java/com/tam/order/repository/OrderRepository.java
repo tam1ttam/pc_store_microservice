@@ -1,4 +1,4 @@
-package com.devteria.order.repository;
+package com.tam.order.repository;
 
 import java.util.List;
 
@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import com.devteria.order.entity.Order;
+import com.tam.order.entity.Order;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, ObjectId> {

@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.devteria.profile.v1;
+package com.tam.proto.profile.v1;
 
 option java_multiple_files = true;
-option java_package = "com.devteria.profile.v1";
+option java_package = "com.tam.proto.profile.v1";
 option java_outer_classname = "ProfileServiceProto";
 
 service ProfileService {

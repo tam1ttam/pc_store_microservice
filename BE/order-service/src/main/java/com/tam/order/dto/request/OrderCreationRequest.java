@@ -1,9 +1,9 @@
-package com.devteria.order.dto.request;
+package com.tam.order.dto.request;
 
 import java.util.List;
 
-import com.devteria.order.entity.CartItem;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.tam.order.entity.CartItem;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -20,6 +20,8 @@ import lombok.experimental.FieldDefaults;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderCreationRequest {
     String customerId;
+    String customerEmail;
+    String customerName;
     String shipAddress;
     List<CartItem> items;
     double totalPrice;

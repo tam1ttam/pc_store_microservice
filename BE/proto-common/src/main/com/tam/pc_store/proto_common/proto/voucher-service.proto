@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package tam.pc_store.voucher.v1;
+package com.tam.proto.voucher.v1;
 
 option java_multiple_files = true;
-option java_package = "iuh.fit.pc_store.grpc.voucher.v1";
+option java_package = "com.tam.proto.voucher.v1";
 option java_outer_classname = "VoucherServiceProto";
 
 service VoucherService {

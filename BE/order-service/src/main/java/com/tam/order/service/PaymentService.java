@@ -1,10 +1,10 @@
-package com.devteria.order.service;
+package com.tam.order.service;
 
 import java.util.Optional;
 
-import com.devteria.order.dto.request.PaymentRequest;
-import com.devteria.order.dto.response.PaymentResponse;
-import com.devteria.order.entity.Payment;
+import com.tam.order.dto.request.PaymentRequest;
+import com.tam.order.dto.response.PaymentResponse;
+import com.tam.order.entity.Payment;
 
 public interface PaymentService {
     PaymentResponse createPayment(PaymentRequest request) throws Exception;

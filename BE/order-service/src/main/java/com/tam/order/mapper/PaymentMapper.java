@@ -1,11 +1,11 @@
-package com.devteria.order.mapper;
+package com.tam.order.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.devteria.order.dto.request.PaymentRequest;
-import com.devteria.order.dto.response.PaymentResponse;
-import com.devteria.order.entity.Payment;
+import com.tam.order.dto.request.PaymentRequest;
+import com.tam.order.dto.response.PaymentResponse;
+import com.tam.order.entity.Payment;
 
 @Mapper(componentModel = "spring")
 public interface PaymentMapper {

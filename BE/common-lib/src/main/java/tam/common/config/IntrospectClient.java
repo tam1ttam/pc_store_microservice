@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import tam.common.constants.dto.IntrospectRequest;
 import tam.common.constants.dto.IntrospectResponse;
 
-@FeignClient(name = "IDENTITY-SERVICE", path = "/identity")
+@FeignClient(name = "IDENTITY-SERVICE", path = "/identity-service")
 public interface IntrospectClient {
     @PostMapping("/auth/introspect")
     IntrospectResponse introspect(@RequestBody IntrospectRequest request);

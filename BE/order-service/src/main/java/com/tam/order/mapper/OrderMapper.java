@@ -1,11 +1,11 @@
-package com.devteria.order.mapper;
+package com.tam.order.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.devteria.order.dto.request.OrderCreationRequest;
-import com.devteria.order.dto.response.OrderResponse;
-import com.devteria.order.entity.Order;
+import com.tam.order.dto.request.OrderCreationRequest;
+import com.tam.order.dto.response.OrderResponse;
+import com.tam.order.entity.Order;
 
 @Mapper(componentModel = "spring")
 public interface OrderMapper {

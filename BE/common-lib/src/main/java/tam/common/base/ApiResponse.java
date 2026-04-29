@@ -1,13 +1,12 @@
 package tam.common.base;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
-
-import org.springframework.http.HttpStatus;
 
 /**
  * Unified API success response model.

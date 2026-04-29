@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:6067}
+  port: ${PRODUCT_SERVICE_PORT:6067}
   servlet:
     context-path: /product-service
 
@@ -9,33 +9,34 @@ spring:
   main:
     allow-bean-definition-overriding: true
   data:
+    mongodb:
+      uri: ${PRODUCT_MONGO_URI:mongodb://localhost:27017/product-service}
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:6002}
       connect-timeout: 2s
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
           min-idle: 2
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/product
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:123456}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
     username: ${ELASTICSEARCH_USERNAME:elastic}
     password: ${ELASTICSEARCH_PASSWORD:changeme}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: product-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "*"
+        "[spring.json.type.mapping]": "com.tam.order.event.OrderCreatedEvent:com.tam.product.kafka.event.OrderCreatedEvent,com.tam.order.event.OrderItemEvent:com.tam.product.kafka.event.OrderItemEvent"
 
 jwt:
-  signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
 
 app:
   security:
@@ -48,16 +49,16 @@ app:
     allowed-origins:
       - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka}
-  instance:
-    prefer-ip-address: true
-
 grpc:
   server:
     port: ${PRODUCT_SERVICE_GRPC_PORT:6167}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:

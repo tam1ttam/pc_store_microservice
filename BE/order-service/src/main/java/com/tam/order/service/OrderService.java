@@ -1,16 +1,16 @@
-package com.devteria.order.service;
+package com.tam.order.service;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.bson.types.ObjectId;
 
-import com.devteria.order.dto.request.OrderCreationRequest;
-import com.devteria.order.dto.response.OrderResponse;
-import com.devteria.order.entity.Order;
+import com.tam.order.dto.request.OrderCreationRequest;
+import com.tam.order.dto.response.OrderResponse;
+import com.tam.order.entity.Order;
 
 public interface OrderService {
-    boolean saveOrder(OrderCreationRequest request);
+    Order saveOrder(OrderCreationRequest request);
 
     List<Order> getAllOrders(ObjectId customerId);
 

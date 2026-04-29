@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.devteria.profile.dto.request.CustomerCreationRequest;
-import com.devteria.profile.dto.response.ApiResponse;
-import com.devteria.profile.dto.response.CustomerResponse;
-import com.devteria.profile.service.CustomerService;
+import com.tam.profile.dto.request.CustomerCreationRequest;
+import com.tam.profile.dto.response.ApiResponse;
+import com.tam.profile.dto.response.CustomerResponse;
+import com.tam.profile.service.CustomerService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.devteria.order.dto.request;
+package com.tam.order.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

@@ -7,16 +7,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.devteria.profile.dto.request.ProfileCreationRequest;
-import com.devteria.profile.dto.request.SearchUserRequest;
-import com.devteria.profile.dto.request.UpdateProfileRequest;
-import com.devteria.profile.dto.response.UserProfileResponse;
-import com.devteria.profile.entity.UserProfile;
-import com.devteria.profile.exception.AppException;
-import com.devteria.profile.exception.ErrorCode;
-import com.devteria.profile.mapper.UserProfileMapper;
-import com.devteria.profile.repository.UserProfileRepository;
-import com.devteria.profile.repository.httpclient.FileClient;
+import com.tam.profile.dto.request.ProfileCreationRequest;
+import com.tam.profile.dto.request.SearchUserRequest;
+import com.tam.profile.dto.request.UpdateProfileRequest;
+import com.tam.profile.dto.response.UserProfileResponse;
+import com.tam.profile.entity.UserProfile;
+import com.tam.profile.exception.AppException;
+import com.tam.profile.exception.ErrorCode;
+import com.tam.profile.mapper.UserProfileMapper;
+import com.tam.profile.repository.UserProfileRepository;
+import com.tam.profile.repository.httpclient.FileClient;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

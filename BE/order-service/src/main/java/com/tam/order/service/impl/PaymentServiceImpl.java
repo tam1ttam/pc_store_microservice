@@ -1,4 +1,4 @@
-package com.devteria.order.service.impl;
+package com.tam.order.service.impl;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -7,13 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.devteria.order.dto.request.PaymentRequest;
-import com.devteria.order.dto.response.PaymentResponse;
-import com.devteria.order.entity.Payment;
-import com.devteria.order.entity.PaymentStatus;
-import com.devteria.order.mapper.PaymentMapper;
-import com.devteria.order.repository.PaymentRepository;
-import com.devteria.order.service.PaymentService;
+import com.tam.order.dto.request.PaymentRequest;
+import com.tam.order.dto.response.PaymentResponse;
+import com.tam.order.entity.Payment;
+import com.tam.order.entity.PaymentStatus;
+import com.tam.order.mapper.PaymentMapper;
+import com.tam.order.repository.PaymentRepository;
+import com.tam.order.service.PaymentService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

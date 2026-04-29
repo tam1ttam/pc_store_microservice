@@ -24,5 +24,6 @@ public class ProductResponse {
     double originalPrice;
     double discountPercent;
     double priceDiscount;
+    int inStock;
     Supplier supplier;
 }

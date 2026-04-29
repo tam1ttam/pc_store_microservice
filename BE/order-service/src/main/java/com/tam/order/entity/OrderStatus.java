@@ -1,4 +1,4 @@
-package com.devteria.order.entity;
+package com.tam.order.entity;
 
 import lombok.Getter;
 

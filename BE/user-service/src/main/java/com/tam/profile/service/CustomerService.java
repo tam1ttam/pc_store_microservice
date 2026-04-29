@@ -3,9 +3,9 @@ package com.tam.profile.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import com.devteria.profile.dto.request.CustomerCreationRequest;
-import com.devteria.profile.dto.request.CustomerUpdateRequest;
-import com.devteria.profile.dto.response.CustomerResponse;
+import com.tam.profile.dto.request.CustomerCreationRequest;
+import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.response.CustomerResponse;
 
 public interface CustomerService {
     CustomerResponse createCustomer(CustomerCreationRequest request);

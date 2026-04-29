@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package pc_store.saga.v1;
+package com.tam.proto.saga.v1;
 
 option java_multiple_files = true;
-option java_package = "iuh.fit.pc_store.grpc.saga.v1";
+option java_package = "com.tam.proto.saga.v1";
 option java_outer_classname = "SagaOrchestratorProto";
 
 service SagaOrchestratorService {
