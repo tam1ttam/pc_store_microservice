@@ -1,1 +1,12 @@
-UI/
+# Node
+node_modules/
+UI/**/node_modules/
+UI/**/.next/
+UI/**/dist/
+UI/**/.nuxt/
+UI/**/.output/
+
+# Env
+.env
+*.env
+!.env.example
