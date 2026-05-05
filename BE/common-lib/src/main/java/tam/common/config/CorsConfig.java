@@ -1,13 +1,15 @@
 package tam.common.config;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import tam.common.constants.Property;
 
-@Configuration
+@AutoConfiguration
 @RequiredArgsConstructor
 public class CorsConfig {
 

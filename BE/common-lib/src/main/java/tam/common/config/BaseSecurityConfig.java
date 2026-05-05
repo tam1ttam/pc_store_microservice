@@ -1,13 +1,16 @@
 package tam.common.config;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -20,7 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import lombok.RequiredArgsConstructor;
 import tam.common.constants.Property;
 
-@Configuration
+@AutoConfiguration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
@@ -66,17 +69,22 @@ public class BaseSecurityConfig {
                 ? securityProps.getPermitAllEndpoints().toArray(new String[0])
                 : new String[0];
 
-        httpSecurity.authorizeHttpRequests(auth -> auth
-                .requestMatchers(publicEndpoints).permitAll()
-                .anyRequest().authenticated());
-
-        httpSecurity.oauth2ResourceServer(oauth -> oauth
-                .jwt(jwt -> jwt.decoder(customJwtDecoder)
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
-
-        httpSecurity.csrf(AbstractHttpConfigurer::disable);
-        httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+        httpSecurity
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(publicEndpoints).permitAll()
+                        .anyRequest().authenticated())
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(jwt -> jwt.decoder(customJwtDecoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return httpSecurity.build();
     }

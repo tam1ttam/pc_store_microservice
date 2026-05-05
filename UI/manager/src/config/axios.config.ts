@@ -1,10 +1,10 @@
 // axios.config.ts
-import { isTokenValid } from "@/utils/token";
 import axios from "axios";
+import { toast } from "@/hooks/use-toast";
 
 const instance = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
-    withCredentials: true, // thử đổi thành true
+    withCredentials: false,
     headers: {
         "ngrok-skip-browser-warning": "true"
     }
@@ -14,10 +14,8 @@ const instance = axios.create({
 instance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
-        if (token && isTokenValid(token)) {
+        if (token) {
             config.headers["Authorization"] = `Bearer ${token}`;
-        } else {
-            localStorage.removeItem("token");
         }
         return config;
     },
@@ -29,15 +27,20 @@ instance.interceptors.request.use(
 
 // Response interceptor
 instance.interceptors.response.use(
-    (response) => {
-        return response;
-    },
+    (response) => response,
     (error) => {
-        console.error("Response Error:", {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-        });
+        console.log("error: ", error);
+        if (error.response?.status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+        }
+        if (error.response?.status === 403) {
+            toast({
+                variant: "destructive",
+                title: "Không có quyền truy cập",
+                description: "Bạn không có quyền thực hiện thao tác này."
+            });
+        }
         return Promise.reject(error);
     }
 );

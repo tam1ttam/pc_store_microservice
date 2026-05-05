@@ -1,21 +1,27 @@
 services:
 
   # ============================================================
-  # DATABASE — MongoDB (port 6000)
+  # DATABASE — MongoDB  (host port ${MONGO_HOST_PORT:-6000})
   # ============================================================
   mongodb:
     image: mongo:7.0
     container_name: mongodb
     restart: unless-stopped
     ports:
-      - "6000:27017"
+      - "${MONGO_HOST_PORT:-6000}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:-123456}
     volumes:
       - mongodb_data:/data/db
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 128M
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -23,16 +29,16 @@ services:
       retries: 5
 
   # ============================================================
-  # DATABASE — MySQL (port 6001)
+  # DATABASE — MySQL  (host port ${MYSQL_HOST_PORT:-6001})
   # ============================================================
   mysql:
     image: mysql:8.0
     container_name: mysql
     restart: unless-stopped
     ports:
-      - "6001:3306"
+      - "${MYSQL_HOST_PORT:-6001}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${IDENTITY_DB_PASS:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASS:-123456}
       MYSQL_DATABASE: ${IDENTITY_DB_NAME:-identityservice}
       MYSQL_USER: ${IDENTITY_DB_USER:-appuser}
       MYSQL_PASSWORD: ${IDENTITY_DB_PASS:-123456}
@@ -40,25 +46,37 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+        reservations:
+          memory: 150M
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${IDENTITY_DB_PASS:-123456}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASS:-123456}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ============================================================
-  # CACHE — Redis (port 6002)
+  # CACHE — Redis  (host port ${REDIS_PORT:-6002})
   # ============================================================
   redis:
     image: redis:7.2-alpine
     container_name: redis
     restart: unless-stopped
     ports:
-      - "6002:6379"
+      - "${REDIS_PORT:-6002}:6379"
     volumes:
       - redis_data:/data
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+        reservations:
+          memory: 32M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -66,32 +84,114 @@ services:
       retries: 5
 
   # ============================================================
-  # TRACING — Zipkin (port 9411)
+  # MESSAGE BROKER — Kafka  (host port ${KAFKA_EXTERNAL_PORT:-9094})
+  # Internal PLAINTEXT listener: kafka:9092
+  # ============================================================
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_EXTERNAL_PORT:-9094}:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ============================================================
+  # SEARCH — Elasticsearch  (host port ${ELASTICSEARCH_PORT:-9200})
+  # ============================================================
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    container_name: elasticsearch
+    restart: unless-stopped
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms256m -Xmx256m}
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # TRACING — Zipkin  (port ${ZIPKIN_PORT:-9411})
   # ============================================================
   zipkin:
     image: openzipkin/zipkin:latest
     container_name: zipkin
     restart: unless-stopped
     ports:
-      - "9411:9411"
+      - "${ZIPKIN_PORT:-9411}:9411"
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+        reservations:
+          memory: 64M
 
   # ============================================================
-  # LOGGING — Loki (port 3100)
+  # LOGGING — Loki  (port ${LOKI_PORT:-3100})
   # ============================================================
   loki:
     image: grafana/loki:2.9.4
     container_name: loki
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      - "${LOKI_PORT:-3100}:3100"
     volumes:
       - ./docker/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+        reservations:
+          memory: 64M
     healthcheck:
       test: ["CMD-SHELL", "wget -q --tries=1 -O- http://localhost:3100/ready || exit 1"]
       interval: 10s
@@ -99,7 +199,7 @@ services:
       retries: 5
 
   # ============================================================
-  # LOGGING — Promtail (scrapes Docker container logs)
+  # LOGGING — Promtail
   # ============================================================
   promtail:
     image: grafana/promtail:2.9.4
@@ -114,16 +214,22 @@ services:
         condition: service_healthy
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+        reservations:
+          memory: 32M
 
   # ============================================================
-  # VISUALIZATION — Grafana (port 3000)
+  # VISUALIZATION — Grafana  (port ${GRAFANA_PORT:-3000})
   # ============================================================
   grafana:
     image: grafana/grafana:10.4.2
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:-admin}
@@ -136,6 +242,12 @@ services:
         condition: service_healthy
     networks:
       - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+        reservations:
+          memory: 64M
 
 networks:
   ecommerce-network:
@@ -146,5 +258,7 @@ volumes:
   mongodb_data:
   mysql_data:
   redis_data:
+  kafka_data:
+  elasticsearch_data:
   loki_data:
   grafana_data:

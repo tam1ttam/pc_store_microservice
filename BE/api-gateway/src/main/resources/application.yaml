@@ -1,9 +1,11 @@
 server:
-  port: ${SERVER_PORT:6060}
+  port: ${API_GATEWAY_PORT:6060}
 
 spring:
   application:
     name: api-gateway
+  jmx:
+    enabled: false
   main:
     web-application-type: reactive
     allow-bean-definition-overriding: true

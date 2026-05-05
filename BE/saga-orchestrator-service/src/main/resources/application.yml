@@ -6,7 +6,21 @@ server:
 spring:
   application:
     name: saga-orchestrator-service
+  jmx:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - tam.common.config.BaseSecurityConfig
+      - tam.common.config.CustomJwtDecoder
+app:
+  security:
+    allowed-origins:
+      - http://localhost:3003
+      - http://localhost:3004
+    permit-all-endpoints: []
 
+jwt:
+  signerKey: placeholder-not-used
 grpc:
   client:
     user-service:

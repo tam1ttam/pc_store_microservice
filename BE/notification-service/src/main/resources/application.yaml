@@ -1,11 +1,13 @@
 server:
   port: ${NOTIFICATION_SERVICE_PORT:6068}
   servlet:
-    context-path: /notification
+    context-path: /notification-service
 
 spring:
   application:
     name: notification-service
+  jmx:
+    enabled: false
   data:
     mongodb:
       uri: ${NOTIFICATION_MONGO_URI:mongodb://localhost:27017/notification-service}
@@ -34,7 +36,7 @@ jwt:
 notification:
   email:
     brevo-url: https://api.brevo.com
-    brevo-apikey: ${BREVO_API_KEY}
+    brevo-apikey: ${BREVO_API_KEY:}
 
 eureka:
   client:
@@ -46,7 +48,7 @@ eureka:
 logging:
   level:
     root: INFO
-    com.devteria.notification: DEBUG
+    "[com.tam]": DEBUG
   pattern:
     console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
@@ -54,3 +56,9 @@ logging:
     name: logs/notification-service.log
     max-size: 10MB
     max-history: 7
+app:
+  security:
+    allowed-origins:
+      - http://localhost:3003
+      - http://localhost:3004
+    permit-all-endpoints: []

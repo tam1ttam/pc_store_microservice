@@ -3,18 +3,16 @@ package com.tam.file.service.impl;
 import java.util.Base64;
 import java.util.Map;
 
+import com.tam.file.dto.response.UploadImageResponse;
+import com.tam.file.dto.response.ValidateImageResponse;
+import com.tam.file.exception.FileUploadException;
+import com.tam.file.exception.ImageValidationException;
+import com.tam.file.exception.InvalidImageFormatException;
+import com.tam.file.service.ImageValidationService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
-import com.devteria.file.dto.response.UploadImageResponse;
-import com.devteria.file.dto.response.ValidateImageResponse;
-import com.devteria.file.exception.FileUploadException;
-import com.devteria.file.exception.ImageValidationException;
-import com.devteria.file.exception.InvalidImageFormatException;
-import com.devteria.file.service.FileService;
-import com.devteria.file.service.ImageValidationService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -22,21 +20,18 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
-public class FileServiceImpl implements FileService {
+public class FileServiceImpl {
 
     Cloudinary cloudinary;
     ImageValidationService imageValidationService;
 
-    @Override
     public UploadImageResponse uploadImage(String base64Image, String fileType) {
         log.info("Uploading image with fileType: {}", fileType);
 
         try {
-            // TODO: Validate image with Gemini API
             if (!imageValidationService.isImageSafe(base64Image)) {
                 throw new ImageValidationException("Image contains sensitive/unsafe content");
             }
@@ -44,8 +39,7 @@ public class FileServiceImpl implements FileService {
             String cleanBase64 = extractBase64Content(base64Image);
             byte[] imageBytes = Base64.getDecoder().decode(cleanBase64);
 
-            // Upload to Cloudinary
-            Map uploadResult = cloudinary
+            Map<?, ?> uploadResult = cloudinary
                     .uploader()
                     .upload(
                             imageBytes,
@@ -75,7 +69,6 @@ public class FileServiceImpl implements FileService {
         }
     }
 
-    @Override
     public ValidateImageResponse validateImage(String base64Image) {
         log.info("Validating image");
 
@@ -93,7 +86,6 @@ public class FileServiceImpl implements FileService {
         }
     }
 
-    @Override
     public void deleteImage(String publicId) {
         log.info("Deleting image: {}", publicId);
 

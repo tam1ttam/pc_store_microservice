@@ -1,7 +1,7 @@
 package com.tam.file.mapper;
 
-import com.devteria.file.dto.FileInfo;
-import com.devteria.file.entity.FileMgmt;
+import com.tam.file.dto.FileInfo;
+import com.tam.file.entity.FileMgmt;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

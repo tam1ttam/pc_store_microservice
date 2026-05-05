@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
 
+import jakarta.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -193,7 +195,8 @@ public class AuthenticationService {
         return signedJWT;
     }
 
-    private String buildScope(User user) {
+    @Transactional
+    protected String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
 
         if (!CollectionUtils.isEmpty(user.getRoles()))

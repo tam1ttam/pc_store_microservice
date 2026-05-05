@@ -1,6 +1,6 @@
 package com.tam.file.repository;
 
-import com.devteria.file.entity.FileMgmt;
+import com.tam.file.entity.FileMgmt;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

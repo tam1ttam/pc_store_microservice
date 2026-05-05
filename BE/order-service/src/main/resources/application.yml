@@ -6,6 +6,8 @@ server:
 spring:
   application:
     name: order-service
+  jmx:
+    enabled: false
   main:
     allow-bean-definition-overriding: true
   data:
@@ -36,7 +38,7 @@ app:
       - /swagger-ui/**
       - /actuator/health
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
 
 grpc:
   server:
@@ -62,3 +64,8 @@ logging:
     name: logs/order-service.log
     max-size: 10MB
     max-history: 7
+management:
+  endpoints:
+    web:
+      exposure:
+        include: beans

@@ -1,8 +1,8 @@
 package com.tam.file.controller;
 
-import com.devteria.file.dto.ApiResponse;
+import com.tam.file.dto.ApiResponse;
 import com.tam.file.dto.response.FileResponse;
-import com.devteria.file.service.FileService;
+import com.tam.file.service.FileService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
