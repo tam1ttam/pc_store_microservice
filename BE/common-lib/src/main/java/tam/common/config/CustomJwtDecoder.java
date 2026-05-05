@@ -19,7 +19,7 @@ import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@Component
+@Component("customJwtDecoder")
 @RequiredArgsConstructor
 public class CustomJwtDecoder implements JwtDecoder {
 

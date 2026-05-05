@@ -6,9 +6,11 @@ server:
 spring:
   application:
     name: identity-service
+  jmx:
+    enabled: false
   datasource:
     url: jdbc:mysql://${IDENTITY_DB_HOST:localhost}:${IDENTITY_DB_PORT:6001}/${IDENTITY_DB_NAME:identityservice}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-    username: ${IDENTITY_DB_USER:root}
+    username: ${IDENTITY_DB_USER:appuser}
     password: ${IDENTITY_DB_PASS:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:

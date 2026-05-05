@@ -1,7 +1,7 @@
 package com.tam.file.repository;
 
-import com.devteria.file.dto.FileInfo;
-import com.devteria.file.entity.FileMgmt;
+import com.tam.file.dto.FileInfo;
+import com.tam.file.entity.FileMgmt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;

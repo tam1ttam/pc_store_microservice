@@ -62,6 +62,8 @@ const Product = () => {
             setProducts(response.data.result.content);
             setTotalPages(response.data.result.totalPages);
         } catch (error) {
+            console.log('error at fetch poroduct: ', error);
+
             toast({
                 title: "Error",
                 description: "Failed to fetch products",

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { LogIn, Monitor, ShoppingCart, User, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { toast } from "@/hooks";
@@ -13,24 +13,9 @@ export default function Header() {
     const userModalRef = useRef<HTMLDivElement>(null);
     const { info: user } = useSelector((state: RootState) => state.user);
     const { isLogin, token } = useSelector((state: RootState) => state.auth);
-    const { cartCount } = useSelector((state: RootState) => state.cart);
     const isAdmin = user?.roles.some((role) => role.name === "ADMIN");
-    const [isScrolled, setIsScrolled] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            if (window.scrollY > 50) {
-                setIsScrolled(true);
-            } else {
-                setIsScrolled(false);
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -83,55 +68,13 @@ export default function Header() {
             });
         }
     };
-    const handleOrderList = () => {
-        setShowUserMenu(false);
-        navigate("/order");
-    };
-
     return (
         <>
-            <header
-                className={`flex justify-center items-center text-white fixed w-[90%] sm:w-[95%] top-2 z-50 max-h-16 rounded-full backdrop-blur-md left-1/2 -translate-x-1/2 transition-all duration-500  bg-black/50`}
-                style={{
-                    boxShadow: isScrolled
-                        ? ` 0 0 10px rgba(34,197,94,0.6),
-                            inset 0 0 40px rgba(34,197,94,0.3),
-                            0 0 20px rgba(34,197,94,0.2),
-                            0 0 30px rgba(34,197,94,0.15),
-                            0 0 40px rgba(34,197,94,0.1)
-                          `
-                        : "none",
-                    border: isScrolled ? `1px solid rgba(34,197,94,0.4)` : "none",
-                    backgroundImage: isScrolled
-                        ? `linear-gradient(135deg,
-                            rgba(34,197,94,0.18) 0%,
-                            rgba(34,197,94,0.18) 25%,
-                            rgba(16,185,129,0.18) 50%,
-                            rgba(34,197,94,0.18) 75%,
-                            rgba(34,197,94,0.18) 100%
-                          )`
-                        : "none",
-                    animation: isScrolled
-                        ? "pulseGlow 2s ease-in-out infinite, gradientShift 6s linear infinite, shimmer 3s linear infinite"
-                        : "none",
-                    backdropFilter: isScrolled ? "blur(16px)" : "blur(8px)",
-                    WebkitBackdropFilter: isScrolled ? "blur(16px)" : "blur(8px)",
-                    transform: "translateX(-50%)",
-                    transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
-                }}
-            >
-                <div className="container mx-auto px-3 sm:px-6 py-4">
-                    <nav className="flex items-center justify-between">
-                        <Link to="/">
-                            <Monitor className="h-6 w-6 sm:h-7 sm:w-7 text-white cursor-pointer hover:scale-110 transition-all" />
-                        </Link>
-
-                        {/* Spacer */}
-                        <div className="flex-1"></div>
-
+            <header className="fixed top-3 right-6 z-50">
+                <nav className="flex items-center">
                         {isLogin ? (
                             <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="relative">
+                                {/* <div className="relative">
                                     <Link
                                         to="/cart"
                                         className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-green-400 hover:scale-105 transition-all ${cartCount == 0
@@ -146,7 +89,7 @@ export default function Header() {
                                             {cartCount > 99 ? "99+" : cartCount}
                                         </div>
                                     )}
-                                </div>
+                                </div> */}
                                 <div className="relative" ref={userMenuRef}>
                                     <div
                                         className="w-8 h-8 sm:w-10 sm:h-10 p-1.5 sm:p-2 rounded-full cursor-pointer hover:ring-2 hover:ring-green-400 hover:scale-110 transition-all text-white bg-green-500/20 flex items-center justify-center"
@@ -166,14 +109,14 @@ export default function Header() {
                                             >
                                                 Thông tin cá nhân
                                             </button>
-                                            <button
+                                            {/* <button
                                                 onClick={() => {
                                                     handleOrderList();
                                                 }}
                                                 className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                             >
                                                 Lịch sử mua hàng
-                                            </button>
+                                            </button> */}
                                             {isAdmin && (
                                                 <>
                                                     <div className="h-[1px] bg-gray-200 my-1"></div>
@@ -217,30 +160,8 @@ export default function Header() {
                                     )}
                                 </div>
                             </div>
-                        ) : (
-                            <Link
-                                to="/login"
-                                className={`${isScrolled
-                                    ? "px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base gap-1.5 sm:gap-2"
-                                    : "p-2.5 sm:p-3"
-                                    } text-white rounded-md flex items-center group relative`}
-                            >
-                                <LogIn
-                                    className={`${isScrolled ? "w-4 h-4 sm:w-5 sm:h-5" : "w-5 h-5 sm:w-6 sm:h-6"}`}
-                                />
-                                {isScrolled ? (
-                                    <span>Đăng nhập</span>
-                                ) : (
-                                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-8">
-                                        <span className="bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
-                                            Đăng nhập
-                                        </span>
-                                    </div>
-                                )}
-                            </Link>
-                        )}
-                    </nav>
-                </div>
+                        ) : null}
+                </nav>
             </header>
 
             {showUserModal && (

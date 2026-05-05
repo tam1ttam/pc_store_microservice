@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,13 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProductServiceImpl implements ProductService {
-    @Autowired
     ProductRepository productRepository;
-
-    @Autowired
     ProductMapper productMapper;
-
-    @Autowired
     ProductDetailService productDetailService;
 
     final MongoTemplate mongoTemplate;
@@ -92,7 +86,6 @@ public class ProductServiceImpl implements ProductService {
     public Optional<ProductResponse> addProduct(ProductCreationRequest request) {
         Product product = Optional.ofNullable(productMapper.toProductV1(request))
                 .orElseThrow(() -> new RuntimeException("Error mapping ProductCreationRequest to Product"));
-
         product.setUpdateDetail(false);
 
         if (request.getImg() != null && !request.getImg().isEmpty()) {

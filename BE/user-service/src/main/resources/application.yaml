@@ -1,16 +1,18 @@
 server:
   port: ${USER_SERVICE_PORT:6063}
   servlet:
-    context-path: /profile
+    context-path: /user-service
 
 spring:
   application:
     name: user-service
+  jmx:
+    enabled: false
   main:
     allow-bean-definition-overriding: true
   data:
     mongodb:
-      uri: ${USER_MONGO_URI:mongodb://localhost:27017/wwwpcstore}
+      uri: ${USER_MONGO_URI:mongodb://localhost:27017/user-service}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6002}
@@ -43,7 +45,7 @@ app:
       - /internal/users
       - /internal/users/**
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
   services:
     file: ${FILE_SERVICE_URL:lb://FILE-SERVICE/file-service}
 
@@ -70,3 +72,8 @@ logging:
     name: logs/user-service.log
     max-size: 10MB
     max-history: 7
+management:
+  endpoints:
+    web:
+      exposure:
+        include: beans

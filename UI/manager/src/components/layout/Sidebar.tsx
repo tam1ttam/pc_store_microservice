@@ -56,7 +56,7 @@ export default function Sidebar() {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                                Admin
+                                STORE MANAGER
                             </h1>
                             <p className="text-xs text-slate-400">Panel</p>
                         </div>
@@ -73,8 +73,8 @@ export default function Sidebar() {
                                     to={item.href}
                                     onClick={() => setIsOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${active
-                                            ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-600/50 font-semibold"
-                                            : "text-slate-300 hover:bg-slate-700/50 hover:text-green-400 hover:translate-x-1"
+                                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-600/50 font-semibold"
+                                        : "text-slate-300 hover:bg-slate-700/50 hover:text-green-400 hover:translate-x-1"
                                         }`}
                                 >
                                     <Icon size={20} className={`transition-transform ${active ? "" : "group-hover:scale-110"}`} />

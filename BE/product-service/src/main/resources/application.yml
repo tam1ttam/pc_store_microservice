@@ -6,6 +6,8 @@ server:
 spring:
   application:
     name: product-service
+  jmx:
+    enabled: false
   main:
     allow-bean-definition-overriding: true
   data:
@@ -47,7 +49,7 @@ app:
       - /api/v1/products/**
       - /api/v1/categories/**
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
 
 grpc:
   server:
@@ -73,3 +75,8 @@ logging:
     name: logs/product-service.log
     max-size: 10MB
     max-history: 7
+management:
+  endpoints:
+    web:
+      exposure:
+        include: beans

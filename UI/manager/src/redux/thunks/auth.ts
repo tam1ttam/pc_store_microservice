@@ -43,6 +43,7 @@ export const register = createAsyncThunk(
 export const checkTokenValid = createAsyncThunk("auth/checkTokenValid", async (token: string, { rejectWithValue }) => {
     try {
         const response = await authApi.checkTokenValid(token);
+        console.log('check token valid manager: ', response);
 
         if (!response.data?.result?.valid) {
             throw new Error("Token không hợp lệ");

@@ -1,12 +1,12 @@
 package com.tam.file.service;
 
-import com.devteria.file.dto.response.FileData;
+import com.tam.file.dto.response.FileData;
 import com.tam.file.dto.response.FileResponse;
-import com.devteria.file.exception.AppException;
-import com.devteria.file.exception.ErrorCode;
-import com.devteria.file.mapper.FileMgmtMapper;
-import com.devteria.file.repository.FileMgmtRepository;
-import com.devteria.file.repository.FileRepository;
+import com.tam.file.exception.AppException;
+import com.tam.file.exception.ErrorCode;
+import com.tam.file.mapper.FileMgmtMapper;
+import com.tam.file.repository.FileMgmtRepository;
+import com.tam.file.repository.FileRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

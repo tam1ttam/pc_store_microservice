@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Schema cho Credentials
 export const CredentialsSchema = z.object({
   userName: z.string().min(4, 'Tên người dùng phải có ít nhất 4 ký tự'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  password: z.string().min(5, 'Mật khẩu phải có ít nhất 5 ký tự'),
 });
 
 // Schema cho LoginResponse

@@ -1,18 +1,20 @@
 server:
-  port: ${SERVER_PORT:8085}
+  port: ${CHAT_SERVICE_PORT:8085}
   servlet:
-    context-path: /chat
+    context-path: /chat-service
 
 spring:
   application:
     name: chat-service
+  jmx:
+    enabled: false
   data:
     mongodb:
-      uri: mongodb://root:root@localhost:27017/chat-service?authSource=admin
+      uri: ${CHAT_MONGO_URI:mongodb://localhost:27017/chat-service}
       auto-index-creation: true
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:6002}
       connect-timeout: 2s
       lettuce:
         pool:
@@ -21,7 +23,7 @@ spring:
           min-idle: 2
 
 jwt:
-  signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
 
 app:
   security:
@@ -30,7 +32,7 @@ app:
       - /swagger-ui/**
       - /actuator/health
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
   services:
     profile:
       url: lb://USER-SERVICE
