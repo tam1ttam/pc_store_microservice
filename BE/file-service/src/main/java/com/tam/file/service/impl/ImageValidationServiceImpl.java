@@ -42,7 +42,7 @@ public class ImageValidationServiceImpl implements ImageValidationService {
                 cleanBase64 = base64Image.split(",")[1];
             }
 
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model
+            String url = "https://generativelanguage.googleapis.com/v1/models/" + model
                     + ":generateContent?key=" + apiKey;
 
             String prompt = "Analyze this image strictly. Does it contain weapons, guns, tobacco, or explicit content? "
