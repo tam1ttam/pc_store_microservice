@@ -7,7 +7,7 @@ import tam.common.base.ApiResponse;
 import tam.common.constants.dto.IntrospectRequest;
 import tam.common.constants.dto.IntrospectResponse;
 
-@FeignClient(name = "IDENTITY-SERVICE", path = "/identity-service")
+@FeignClient(name = "IDENTITY-SERVICE", path = "/identity-service", configuration = IntrospectFeignConfig.class)
 public interface IntrospectClient {
     @PostMapping("/auth/introspect")
     ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request);

@@ -21,11 +21,11 @@ import com.devteria.identity.entity.User;
 import com.devteria.identity.event.UserDeletedEvent;
 import com.devteria.identity.exception.AppException;
 import com.devteria.identity.exception.ErrorCode;
+import com.devteria.identity.grpc.ProfileGrpcClient;
 import com.devteria.identity.mapper.ProfileMapper;
 import com.devteria.identity.mapper.UserMapper;
 import com.devteria.identity.repository.RoleRepository;
 import com.devteria.identity.repository.UserRepository;
-import com.devteria.identity.repository.httpclient.ProfileClient;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class UserService {
     UserMapper userMapper;
     ProfileMapper profileMapper;
     PasswordEncoder passwordEncoder;
-    ProfileClient profileClient;
+    ProfileGrpcClient profileGrpcClient;
     KafkaTemplate<String, Object> kafkaTemplate;
 
     public UserResponse createUser(UserCreationRequest request) {
@@ -64,7 +64,7 @@ public class UserService {
         var profileRequest = profileMapper.toProfileCreationRequest(request);
         profileRequest.setUserId(user.getId());
 
-        var profile = profileClient.createProfile(profileRequest);
+        var profile = profileGrpcClient.createProfile(profileRequest);
 
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .channel("EMAIL")
@@ -73,11 +73,10 @@ public class UserService {
                 .body("Hello, " + request.getUsername())
                 .build();
 
-        // Publish message to kafka
         kafkaTemplate.send("notification-delivery", notificationEvent);
 
         var userCreationReponse = userMapper.toUserResponse(user);
-        userCreationReponse.setId(profile.getResult().getId());
+        userCreationReponse.setId(profile.getId());
 
         return userCreationReponse;
     }

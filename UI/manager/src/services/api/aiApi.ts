@@ -8,19 +8,18 @@ export interface AIChatResponse {
 }
 
 export const aiApi = {
-    /**
-     * Gửi câu hỏi đến AI Assistant
-     */
     askQuestion: async (question: string): Promise<AIChatResponse> => {
-        const response = await axios.post<AIChatResponse>('/api/ai/ask', { question })
-        return response.data
+        const response = await axios.post<{ code: number; result: AIChatResponse }>(
+            '/api-gateway/chat-service/ai/ask',
+            { question }
+        )
+        return response.data.result
     },
 
-    /**
-     * Lấy thống kê nhanh từ hệ thống
-     */
     getStats: async (): Promise<AIChatResponse> => {
-        const response = await axios.get<AIChatResponse>('/api/ai/stats')
-        return response.data
+        const response = await axios.get<{ code: number; result: AIChatResponse }>(
+            '/api-gateway/chat-service/ai/stats'
+        )
+        return response.data.result
     }
 }

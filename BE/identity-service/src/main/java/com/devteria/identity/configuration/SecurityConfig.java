@@ -36,6 +36,21 @@ public class SecurityConfig {
         "/api/auth/refresh",
         "/users/registration",
         "/api/users/registration",
+        // Client portal
+        "/client/auth/token",
+        "/client/auth/introspect",
+        "/client/auth/logout",
+        "/client/auth/refresh",
+        // Manager portal
+        "/manager/auth/token",
+        "/manager/auth/introspect",
+        "/manager/auth/logout",
+        "/manager/auth/refresh",
+        // Admin portal
+        "/admin/auth/token",
+        "/admin/auth/introspect",
+        "/admin/auth/logout",
+        "/admin/auth/refresh",
     };
 
     private static final String[] PUBLIC_GET = {

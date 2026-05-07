@@ -41,7 +41,5 @@ public class CustomerCreationRequest {
     String avatar;
     String dob;
     String city;
-
-    // NOTE: Không có password field
-    // Password được quản lý bởi Identity Service
+    String userId;
 }

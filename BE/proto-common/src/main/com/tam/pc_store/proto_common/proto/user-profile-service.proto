@@ -36,6 +36,7 @@ message CreateCustomerRequest {
   string avatar = 6;
   string dob = 7; // Using string for LocalDate
   string city = 8;
+  string user_id = 9;
 }
 
 message CreateCustomerResponse {

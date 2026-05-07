@@ -10,12 +10,12 @@ const CHAT_SVC    = `${BASE_URL}/api-gateway/chat-service`;
 const FILE_SVC    = `${BASE_URL}/api-gateway/file-service`;
 
 const ENDPOINT = {
-    // ── Auth (identity-service) ──────────────────────────────────────────────
-    LOGIN:         `${IDENTITY}/auth/token`,
+    // ── Auth (identity-service / client portal) ──────────────────────────────
+    LOGIN:         `${IDENTITY}/client/auth/token`,
     REGISTER:      `${IDENTITY}/users/registration`,
-    LOGOUT:        `${IDENTITY}/auth/logout`,
-    REFRESH_TOKEN: `${IDENTITY}/auth/refresh`,
-    INTROSPECT:    `${IDENTITY}/auth/introspect`,
+    LOGOUT:        `${IDENTITY}/client/auth/logout`,
+    REFRESH_TOKEN: `${IDENTITY}/client/auth/refresh`,
+    INTROSPECT:    `${IDENTITY}/client/auth/introspect`,
     MY_INFO:       `${IDENTITY}/users/my-info`,
 
     // Identity-admin base (append e.g. /update-role/{userName})
