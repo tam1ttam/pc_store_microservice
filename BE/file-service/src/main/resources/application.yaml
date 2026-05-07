@@ -30,7 +30,7 @@ spring:
         access-key: ${AWS_ACCESS_KEY_ID:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
       region:
-        static: ${AWS_REGION:ap-southeast-1}
+        static: ${AWS_REGION:}
       s3:
         bucket: ${AWS_S3_BUCKET:}
 
@@ -40,7 +40,7 @@ jwt:
 gemini:
   api:
     key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_API_MODEL:gemini-1.5-flash}
+    model: ${GEMINI_API_MODEL:gemini-2.0-flash}
 
 app:
   file:

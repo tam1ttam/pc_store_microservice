@@ -33,8 +33,8 @@ const Customer = () => {
         }
     };
 
-    const checkIsAdmin = (roles: Role[]): boolean => {
-        return roles.some((role) => role.name === "ADMIN");
+    const checkIsAdmin = (roles: Role[] | undefined): boolean => {
+        return (roles ?? []).some((role) => role.name === "ADMIN");
     };
 
     useEffect(() => {
@@ -94,7 +94,7 @@ const Customer = () => {
                                             <td className="px-6 py-4 whitespace-nowrap">{customer.email}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">{customer.phoneNumber}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                {customer.roles.map((role: Role) => role.name).join(", ")}
+                                                {(customer.roles ?? []).map((role: Role) => role.name).join(", ")}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <Button
