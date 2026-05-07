@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\product-service\\\\src\\\\main\\\\java\\\\com\\\\tam\\\\product\" -Recurse -Name)",
+      "Bash(Sort-Object)",
+      "Bash(xargs grep -l -i \"fallback\")"
+    ]
+  }
+}

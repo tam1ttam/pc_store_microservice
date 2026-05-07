@@ -1,5 +1,6 @@
 package com.tam.product.service.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tam.product.dto.request.ProductCreationRequest;
 import com.tam.product.dto.response.ProductResponse;
 import com.tam.product.entity.Product;
+import com.tam.product.grpc.FileServiceGrpcClient;
 import com.tam.product.mapper.ProductMapper;
 import com.tam.product.repository.ProductRepository;
 import com.tam.product.service.ProductDetailService;
@@ -33,21 +35,15 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductServiceImpl implements ProductService {
     ProductRepository productRepository;
     ProductMapper productMapper;
     ProductDetailService productDetailService;
+    FileServiceGrpcClient fileServiceGrpcClient;
 
     final MongoTemplate mongoTemplate;
 
-    // TODO: Inject GeminiService từ File Service để kiểm tra ảnh độc hại
-    // @Autowired
-    // private GeminiService geminiService;
-
-    /**
-     * Lấy sản phẩm mới nhất (Dựa trên ObjectId vì nó chứa timestamp)
-     */
     @Override
     public List<Product> getNewestProducts(int limit) {
         Query query = new Query();
@@ -56,10 +52,6 @@ public class ProductServiceImpl implements ProductService {
         return mongoTemplate.find(query, Product.class);
     }
 
-    /**
-     * Lấy sản phẩm bán chạy nhất (Phân tích từ collection 'orders')
-     * TODO: Cần gọi Order Service để lấy dữ liệu bán hàng
-     */
     @Override
     public List<Product> getBestSellingProducts(int limit) {
         Aggregation aggregation = Aggregation.newAggregation(
@@ -72,15 +64,9 @@ public class ProductServiceImpl implements ProductService {
                 Aggregation.replaceRoot("productInfo"));
 
         AggregationResults<Product> results = mongoTemplate.aggregate(aggregation, "orders", Product.class);
-
         return results.getMappedResults();
     }
 
-    /**
-     * Thêm sản phẩm mới
-     * TODO: Gọi File Service để validate ảnh qua Gemini
-     * TODO: Gọi File Service để upload ảnh lên Cloudinary
-     */
     @Override
     @Transactional
     public Optional<ProductResponse> addProduct(ProductCreationRequest request) {
@@ -88,28 +74,36 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Error mapping ProductCreationRequest to Product"));
         product.setUpdateDetail(false);
 
-        if (request.getImg() != null && !request.getImg().isEmpty()) {
-            // TODO: boolean isSafe = geminiService.isImageSafe(request.getImg());
-            // TODO: if (!isSafe) {
-            // TODO: throw new AppException(ErrorCode.SENSITIVE_IMAGE_CONTENT);
-            // TODO: }
+        // Upload ALL images before any DB write — prevents duplicate products on client retry
+        if (isBase64(request.getImg())) {
+            try {
+                product.setImg(fileServiceGrpcClient.uploadFile(request.getImg(), "product"));
+            } catch (Exception e) {
+                log.warn("Main image upload via gRPC failed, keeping original value: {}", e.getMessage());
+            }
         }
 
+        var detailReq = request.getProductDetailCreationRequest();
+        if (detailReq != null
+                && detailReq.getImagesUpload() != null
+                && !detailReq.getImagesUpload().isEmpty()) {
+            detailReq.setImages(uploadImages(detailReq.getImagesUpload(), "detail"));
+            detailReq.setImagesUpload(null);
+        }
+
+        // All uploads done — safe to write to DB now
         Product savedProduct = productRepository.save(product);
         if (savedProduct == null) throw new RuntimeException("PRODUCT_NOT_CREATED_SUCCESSFULLY");
         log.info("Product created successfully with id: {}", savedProduct.getId());
 
-        if (request.getProductDetailCreationRequest() != null) {
+        if (detailReq != null) {
             try {
-                var detailResponse =
-                        productDetailService.addProductDetail(savedProduct, request.getProductDetailCreationRequest());
-
+                var detailResponse = productDetailService.addProductDetail(savedProduct, detailReq);
                 if (detailResponse != null) {
                     savedProduct.setUpdateDetail(true);
                     savedProduct = productRepository.save(savedProduct);
                     log.info("Product detail linked successfully to product: {}", savedProduct.getId());
                 }
-
             } catch (Exception e) {
                 log.error("Failed to create product detail: {}", e.getMessage());
                 throw e;
@@ -137,10 +131,6 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("PRODUCT_NOT_FOUND"));
     }
 
-    /**
-     * Cập nhật sản phẩm
-     * TODO: Gọi File Service để validate ảnh qua Gemini
-     */
     @Override
     @Transactional
     public Optional<ProductResponse> updateProduct(String productId, ProductCreationRequest request) {
@@ -148,9 +138,21 @@ public class ProductServiceImpl implements ProductService {
                 .findById(new ObjectId(productId))
                 .orElseThrow(() -> new RuntimeException("PRODUCT_NOT_FOUND"));
 
-        if (request.getImg() != null && !request.getImg().isEmpty()) {
-            // TODO: boolean isSafe = geminiService.isImageSafe(request.getImg());
-            // TODO: if (!isSafe) throw new AppException(ErrorCode.SENSITIVE_IMAGE_CONTENT);
+        // Upload ALL images before any DB write
+        if (isBase64(request.getImg())) {
+            try {
+                request.setImg(fileServiceGrpcClient.uploadFile(request.getImg(), "product"));
+            } catch (Exception e) {
+                log.warn("Image upload via gRPC failed, keeping original value: {}", e.getMessage());
+            }
+        }
+
+        var detailReq = request.getProductDetailCreationRequest();
+        if (detailReq != null
+                && detailReq.getImagesUpload() != null
+                && !detailReq.getImagesUpload().isEmpty()) {
+            detailReq.setImages(uploadImages(detailReq.getImagesUpload(), "detail"));
+            detailReq.setImagesUpload(null);
         }
 
         Product updatedProduct = productMapper.toProductV1(request);
@@ -159,21 +161,17 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(updatedProduct);
         if (savedProduct == null) throw new RuntimeException("PRODUCT_NOT_UPDATED_SUCCESSFULLY");
-
         log.info("Product updated successfully: {}", productId);
 
-        if (request.getProductDetailCreationRequest() != null) {
+        if (detailReq != null) {
             try {
                 productDetailService.deleteProductDetailByProductId(productId);
-                var detailResponse =
-                        productDetailService.addProductDetail(savedProduct, request.getProductDetailCreationRequest());
-
+                var detailResponse = productDetailService.addProductDetail(savedProduct, detailReq);
                 if (detailResponse != null) {
                     savedProduct.setUpdateDetail(true);
                     savedProduct = productRepository.save(savedProduct);
                     log.info("Product detail updated successfully for product: {}", productId);
                 }
-
             } catch (Exception e) {
                 log.error("Failed to update product detail: {}", e.getMessage());
                 throw new RuntimeException("PRODUCT_DETAIL_UPDATE_FAILED");
@@ -188,20 +186,15 @@ public class ProductServiceImpl implements ProductService {
     public boolean deleteProductById(String productId) {
         try {
             ObjectId id = new ObjectId(productId);
-
             productDetailService.deleteProductDetailByProductId(productId);
             log.info("Product detail deleted for product: {}", productId);
-
             productRepository.deleteById(id);
             log.info("Product deleted: {}", productId);
             boolean deleted = productRepository.findById(id).isEmpty();
-
             if (deleted) {
                 log.info("Product and detail successfully deleted: {}", productId);
             }
-
             return deleted;
-
         } catch (Exception e) {
             log.error("Error deleting product {}: {}", productId, e.getMessage());
             throw new RuntimeException("PRODUCT_DELETE_FAILED");
@@ -242,5 +235,22 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Page<Product> getProductByName(String name) {
         return (Page<Product>) productRepository.findAllByName(name);
+    }
+
+    private List<String> uploadImages(List<String> base64List, String folder) {
+        List<String> urls = new ArrayList<>();
+        for (String base64 : base64List) {
+            if (base64 == null || base64.isBlank()) continue;
+            try {
+                urls.add(fileServiceGrpcClient.uploadFile(base64, folder));
+            } catch (Exception e) {
+                log.warn("Failed to upload detail image via gRPC, skipping: {}", e.getMessage());
+            }
+        }
+        return urls;
+    }
+
+    private boolean isBase64(String s) {
+        return s != null && !s.isBlank() && !s.startsWith("http");
     }
 }

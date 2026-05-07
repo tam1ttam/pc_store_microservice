@@ -68,7 +68,7 @@ public class CustomerServiceImpl implements CustomerService {
         String userName = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Customer customer = customerRepository
-                .findByUserName(userName)
+                .findByUserId(userName)
                 .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
         return customerMapper.toCustomerResponse(customer);
@@ -95,6 +95,15 @@ public class CustomerServiceImpl implements CustomerService {
         customer = customerRepository.save(customer);
 
         log.info("Profile updated successfully for userName: {}", userName);
+        return customerMapper.toCustomerResponse(customer);
+    }
+
+    @Override
+    public CustomerResponse updateCustomer(String userName, CustomerUpdateRequest request) {
+        Customer customer =
+                customerRepository.findByUserName(userName).orElseThrow(() -> new RuntimeException("User not found"));
+        customerMapper.updateCustomerFromRequest(request, customer);
+        customer = customerRepository.save(customer);
         return customerMapper.toCustomerResponse(customer);
     }
 

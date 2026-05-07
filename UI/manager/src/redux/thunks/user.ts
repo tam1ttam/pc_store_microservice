@@ -17,3 +17,32 @@ export const getUserInfo = createAsyncThunk(
         }
     }
 );
+
+export const updateUserInfo = createAsyncThunk(
+    "user/updateUserInfo",
+    async (
+        {
+            userName,
+            data
+        }: {
+            userName: string;
+            data: {
+                firstName: string;
+                lastName: string;
+                email: string;
+                phoneNumber: string;
+            };
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const response = await userApi.updateUserInfo(userName, data);
+            return response.data;
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return rejectWithValue(error.errors);
+            }
+            return rejectWithValue((error as Error).message);
+        }
+    }
+);

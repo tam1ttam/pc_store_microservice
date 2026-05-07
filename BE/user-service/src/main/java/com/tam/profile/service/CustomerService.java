@@ -16,6 +16,8 @@ public interface CustomerService {
 
     CustomerResponse updateProfile(String userName, CustomerUpdateRequest request);
 
+    CustomerResponse updateCustomer(String userName, CustomerUpdateRequest request);
+
     Page<CustomerResponse> getAllCustomers(Pageable pageable);
 
     Page<CustomerResponse> searchCustomersByName(String searchKey, Pageable pageable);

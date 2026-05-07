@@ -150,4 +150,11 @@ public class OrderServiceImpl implements OrderService {
     public Optional<OrderResponse> getOrderResponse(ObjectId orderId) {
         return orderRepository.findById(orderId).map(orderMapper::toOrderResponse);
     }
+
+    @Override
+    public List<Order> getAll() {
+        List<Order> result;
+        result = orderRepository.findAll();
+        return result;
+    }
 }

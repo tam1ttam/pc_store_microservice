@@ -1,6 +1,6 @@
 import { BaseState, User, UserResponse } from "@/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { getUserInfo } from "../thunks/user";
+import { getUserInfo, updateUserInfo } from "../thunks/user";
 
 interface UserState extends BaseState {
     info: User | null;
@@ -28,11 +28,26 @@ const userSlice = createSlice({
                 state.status = "loading";
                 state.error = null;
             })
-            .addCase(getUserInfo.fulfilled, (state, action: PayloadAction<UserResponse>) => {
+            .addCase(getUserInfo.fulfilled, (state, action: PayloadAction<any>) => {
                 state.status = "succeeded";
-                state.info = action.payload.result;
+                state.info = action.payload.result ?? action.payload;
             })
             .addCase(getUserInfo.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload as string;
+            })
+            .addCase(updateUserInfo.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(updateUserInfo.fulfilled, (state, action: PayloadAction<any>) => {
+                state.status = "succeeded";
+                if (state.info) {
+                    const updatedData = action.payload.result ?? action.payload;
+                    state.info = { ...state.info, ...updatedData };
+                }
+            })
+            .addCase(updateUserInfo.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload as string;
             });

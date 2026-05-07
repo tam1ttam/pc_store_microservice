@@ -19,6 +19,9 @@ public class CustomerResponse {
     String lastName;
     String email;
     String phoneNumber;
+    String avatar;
+    String dob;
+    String city;
 
     // NOTE: Không trả về password
     // Password được quản lý bởi Identity Service

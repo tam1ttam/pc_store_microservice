@@ -20,5 +20,6 @@ public class UpdateProductDetailReq {
     String case_;
     String coolingSystem;
     String operatingSystem;
-    List<String> imagesUpload;
+    List<String> images; // existing image URLs to keep (null = keep all)
+    List<String> imagesUpload; // new files (base64) to upload and append
 }

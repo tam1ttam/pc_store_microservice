@@ -25,4 +25,6 @@ public interface CustomerRepository extends MongoRepository<Customer, ObjectId> 
     Page<Customer> findAllByFirstNameOrLastName(String searchKey, Pageable pageable);
 
     boolean existsByUserName(String userName);
+
+    Optional<Customer> findByUserId(String userName);
 }

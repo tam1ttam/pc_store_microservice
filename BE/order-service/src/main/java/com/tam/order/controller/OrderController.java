@@ -64,4 +64,11 @@ public class OrderController {
         boolean result = orderService.deleteOrder(new ObjectId(orderId));
         return ApiResponse.<Boolean>builder().result(result).build();
     }
+
+    @GetMapping
+    public ApiResponse<List<Order>> getAllOrder() {
+        return com.tam.order.dto.request.ApiResponse.<List<Order>>builder()
+                .result(orderService.getAll())
+                .build();
+    }
 }

@@ -33,6 +33,9 @@ message CreateCustomerRequest {
   string last_name = 3;
   string email = 4;
   string phone_number = 5;
+  string avatar = 6;
+  string dob = 7; // Using string for LocalDate
+  string city = 8;
 }
 
 message CreateCustomerResponse {
@@ -42,6 +45,9 @@ message CreateCustomerResponse {
   string last_name = 4;
   string email = 5;
   string phone_number = 6;
+  string avatar = 7;
+  string dob = 8;
+  string city = 9;
 }
 
 message GetCustomerRequest {
@@ -59,6 +65,9 @@ message GetCustomerResponse {
   string last_name = 4;
   string email = 5;
   string phone_number = 6;
+  string avatar = 7;
+  string dob = 8;
+  string city = 9;
 }
 
 message UpdateCustomerRequest {
@@ -67,6 +76,9 @@ message UpdateCustomerRequest {
   string last_name = 3;
   string email = 4;
   string phone_number = 5;
+  string avatar = 6;
+  string dob = 7;
+  string city = 8;
 }
 
 message UpdateCustomerResponse {

@@ -10,7 +10,7 @@ spring:
     enabled: false
   data:
     mongodb:
-      uri: ${NOTIFICATION_MONGO_URI:mongodb://localhost:27017/notification-service}
+      uri: ${NOTIFICATION_MONGO_URI:mongodb://root:123456@localhost:6000/notification-service?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6002}

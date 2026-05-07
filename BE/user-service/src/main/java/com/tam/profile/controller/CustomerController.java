@@ -7,11 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tam.profile.dto.request.CustomerCreationRequest;
+import com.tam.profile.dto.request.CustomerUpdateRequest;
 import com.tam.profile.dto.response.ApiResponse;
 import com.tam.profile.dto.response.CustomerResponse;
 import com.tam.profile.service.CustomerService;
@@ -65,6 +67,18 @@ public class CustomerController {
         return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
                 .code(1000)
                 .message("Lấy thông tin thành công")
+                .result(response)
+                .build());
+    }
+
+    @PutMapping("/{userName}")
+    public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
+            @PathVariable String userName, @RequestBody CustomerUpdateRequest request) {
+        log.info("Updating customer: {}", userName);
+        CustomerResponse response = customerService.updateCustomer(userName, request);
+        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+                .code(1000)
+                .message("Cập nhật thành công")
                 .result(response)
                 .build());
     }
