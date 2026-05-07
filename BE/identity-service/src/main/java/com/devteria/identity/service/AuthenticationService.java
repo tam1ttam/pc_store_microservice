@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
 
@@ -90,6 +91,22 @@ public class AuthenticationService {
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+
+        return buildAuthenticationResponse(generateToken(user), true);
+    }
+
+    public AuthenticationResponse authenticateForPortal(AuthenticationRequest request, Set<String> allowedRoles) {
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+        var user = userRepository
+                .findByUsername(request.getUsername())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+
+        boolean hasRequiredRole = user.getRoles() != null
+                && user.getRoles().stream().anyMatch(role -> allowedRoles.contains(role.getName()));
+        if (!hasRequiredRole) throw new AppException(ErrorCode.UNAUTHORIZED_FOR_PORTAL);
 
         return buildAuthenticationResponse(generateToken(user), true);
     }

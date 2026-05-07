@@ -18,6 +18,7 @@ public enum ErrorCode {
     INVALID_DOB(1008, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL(1009, "Invalid email address", HttpStatus.BAD_REQUEST),
     EMAIL_IS_REQUIRED(1009, "Email is required", HttpStatus.BAD_REQUEST),
+    UNAUTHORIZED_FOR_PORTAL(1010, "Your account does not have permission to access this portal", HttpStatus.FORBIDDEN),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

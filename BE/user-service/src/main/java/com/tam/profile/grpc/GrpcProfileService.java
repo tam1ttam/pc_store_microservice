@@ -42,6 +42,7 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
                     .lastName(request.getLastName())
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
+                    .userId(request.getUserId())
                     .build();
 
             CustomerResponse customer = customerService.createCustomer(creationRequest);

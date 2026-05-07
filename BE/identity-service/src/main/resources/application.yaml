@@ -41,3 +41,9 @@ eureka:
       defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
   instance:
     prefer-ip-address: true
+
+grpc:
+  client:
+    user-service:
+      address: static://${USER_SERVICE_HOST:localhost}:${USER_SERVICE_GRPC_PORT:6163}
+      negotiation-type: plaintext

@@ -43,6 +43,9 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         Customer customer = customerMapper.toCustomer(request);
+        if (request.getUserId() != null && !request.getUserId().isBlank()) {
+            customer.setUserId(request.getUserId());
+        }
         customer = customerRepository.save(customer);
 
         log.info("Customer created successfully with id: {}", customer.getId());
