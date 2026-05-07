@@ -1,5 +1,7 @@
 package com.tam.profile.entity;
 
+import java.time.LocalDate;
+
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -18,7 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
-@Document(collection = "customers")
+@Document(collection = "profiles")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -33,12 +35,17 @@ public class Customer {
     ObjectId id;
 
     @Indexed(unique = true)
+    String userId;
+
     String userName;
 
     String firstName;
     String lastName;
     String email;
     String phoneNumber;
+    String avatar;
+    LocalDate dob;
+    String city;
 
     // NOTE: Không lưu password trong Profile Service
     // Password được quản lý bởi Identity Service

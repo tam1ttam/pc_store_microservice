@@ -2,10 +2,13 @@ package com.tam.product.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tam.product.dto.request.ApiResponse;
+import com.tam.product.dto.request.UpdateProductDetailReq;
 import com.tam.product.dto.response.ProductDetailResponse;
 import com.tam.product.service.ProductDetailService;
 
@@ -27,5 +30,12 @@ public class ProductDetailController {
         return ApiResponse.<ProductDetailResponse>builder()
                 .result(productDetail)
                 .build();
+    }
+
+    @PutMapping("/{productId}")
+    public ApiResponse<ProductDetailResponse> updateProductDetail(
+            @PathVariable String productId, @RequestBody UpdateProductDetailReq request) {
+        var result = productDetailService.updateProductDetail(productId, request);
+        return ApiResponse.<ProductDetailResponse>builder().result(result).build();
     }
 }

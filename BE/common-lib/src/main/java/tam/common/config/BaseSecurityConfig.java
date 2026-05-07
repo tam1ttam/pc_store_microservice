@@ -51,7 +51,12 @@ public class BaseSecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         List<String> origins = securityProps.getAllowedOrigins();
         if (origins != null && !origins.isEmpty()) {
-            config.setAllowedOrigins(origins);
+            List<String> flatOrigins = origins.stream()
+                    .flatMap(o -> Arrays.stream(o.split(",")))
+                    .map(String::trim)
+                    .filter(o -> !o.isBlank())
+                    .toList();
+            config.setAllowedOriginPatterns(flatOrigins);
         } else {
             config.addAllowedOriginPattern("*");
         }

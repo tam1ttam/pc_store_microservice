@@ -1,18 +1,18 @@
 package com.tam.file.service.impl;
 
 import java.util.Base64;
-import java.util.Map;
+
+import org.springframework.stereotype.Service;
 
 import com.tam.file.dto.response.UploadImageResponse;
 import com.tam.file.dto.response.ValidateImageResponse;
+import com.tam.file.entity.UploadedFile;
 import com.tam.file.exception.FileUploadException;
 import com.tam.file.exception.ImageValidationException;
 import com.tam.file.exception.InvalidImageFormatException;
+import com.tam.file.repository.UploadedFileRepository;
 import com.tam.file.service.ImageValidationService;
-import org.springframework.stereotype.Service;
-
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
+import com.tam.file.service.S3FileUploadService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -25,88 +25,102 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class FileServiceImpl {
 
-    Cloudinary cloudinary;
-    ImageValidationService imageValidationService;
+	S3FileUploadService s3Service;
+	ImageValidationService imageValidationService;
+	UploadedFileRepository uploadedFileRepository;
 
-    public UploadImageResponse uploadImage(String base64Image, String fileType) {
-        log.info("Uploading image with fileType: {}", fileType);
+	public UploadImageResponse uploadImage(String base64Image, String fileType) {
+		log.info("Uploading file to S3 with fileType: {}", fileType);
 
-        try {
-            if (!imageValidationService.isImageSafe(base64Image)) {
-                throw new ImageValidationException("Image contains sensitive/unsafe content");
-            }
+		try {
+			boolean isVideo = isVideoContent(base64Image);
 
-            String cleanBase64 = extractBase64Content(base64Image);
-            byte[] imageBytes = Base64.getDecoder().decode(cleanBase64);
+			if (!isVideo && !imageValidationService.isImageSafe(base64Image)) {
+				throw new ImageValidationException("Image contains sensitive/unsafe content");
+			}
 
-            Map<?, ?> uploadResult = cloudinary
-                    .uploader()
-                    .upload(
-                            imageBytes,
-                            ObjectUtils.asMap(
-                                    "resource_type", "image",
-                                    "folder", "PC_Store/" + fileType));
+			String mimeType = extractMimeType(base64Image);
+			String cleanBase64 = extractBase64Content(base64Image);
+			byte[] fileBytes = Base64.getDecoder().decode(cleanBase64);
 
-            String url = uploadResult.get("url").toString();
-            String publicId = uploadResult.get("public_id").toString();
-            long fileSize = (long) uploadResult.get("bytes");
-            String format = uploadResult.get("format").toString();
+			String folder = "PC_Store/" + fileType;
+			S3FileUploadService.UploadResult result = s3Service.upload(fileBytes, folder, mimeType);
 
-            log.info("Image uploaded successfully. URL: {}", url);
+			try {
+				uploadedFileRepository.save(UploadedFile.builder()
+						.url(result.url())
+						.publicId(result.key())
+						.format(result.extension())
+						.fileSize(result.fileSize())
+						.fileType(fileType)
+						.resourceType(isVideo ? "video" : "image")
+						.build());
+			} catch (Exception dbEx) {
+				log.warn("Failed to save file metadata to DB (upload succeeded): {}", dbEx.getMessage());
+			}
 
-            return UploadImageResponse.builder()
-                    .url(url)
-                    .publicId(publicId)
-                    .fileSize(fileSize)
-                    .format(format)
-                    .build();
+			return UploadImageResponse.builder()
+					.url(result.url())
+					.publicId(result.key())
+					.fileSize(result.fileSize())
+					.format(result.extension())
+					.build();
 
-        } catch (ImageValidationException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Upload failed: ", e);
-            throw new FileUploadException("Failed to upload image: " + e.getMessage(), e);
-        }
-    }
+		} catch (ImageValidationException e) {
+			throw e;
+		} catch (Exception e) {
+			log.error("S3 upload failed: ", e);
+			throw new FileUploadException("Failed to upload file: " + e.getMessage(), e);
+		}
+	}
 
-    public ValidateImageResponse validateImage(String base64Image) {
-        log.info("Validating image");
+	public ValidateImageResponse validateImage(String base64Image) {
+		log.info("Validating image");
+		try {
+			boolean isSafe = imageValidationService.isImageSafe(base64Image);
+			return ValidateImageResponse.builder()
+					.safe(isSafe)
+					.message(isSafe ? "Image is safe" : "Image contains unsafe content")
+					.build();
+		} catch (Exception e) {
+			log.error("Validation failed: ", e);
+			throw new ImageValidationException("Failed to validate image: " + e.getMessage(), e);
+		}
+	}
 
-        try {
-            boolean isSafe = imageValidationService.isImageSafe(base64Image);
+	public void deleteImage(String key) {
+		log.info("Deleting file from S3: {}", key);
+		try {
+			s3Service.delete(key);
+			log.info("File deleted from S3 successfully: {}", key);
+		} catch (Exception e) {
+			log.error("S3 delete failed: ", e);
+			throw new FileUploadException("Failed to delete file: " + e.getMessage(), e);
+		}
+	}
 
-            return ValidateImageResponse.builder()
-                    .safe(isSafe)
-                    .message(isSafe ? "Image is safe" : "Image contains unsafe content")
-                    .build();
+	private String extractMimeType(String base64Data) {
+		if (base64Data != null && base64Data.startsWith("data:")) {
+			int semicolonIdx = base64Data.indexOf(';');
+			if (semicolonIdx > 5) {
+				return base64Data.substring(5, semicolonIdx);
+			}
+		}
+		return "application/octet-stream";
+	}
 
-        } catch (Exception e) {
-            log.error("Validation failed: ", e);
-            throw new ImageValidationException("Failed to validate image: " + e.getMessage(), e);
-        }
-    }
+	private String extractBase64Content(String base64Data) {
+		if (base64Data.startsWith("data:")) {
+			int commaIndex = base64Data.indexOf(',');
+			if (commaIndex >= 0) {
+				return base64Data.substring(commaIndex + 1);
+			}
+			throw new InvalidImageFormatException("Invalid base64 data format");
+		}
+		return base64Data;
+	}
 
-    public void deleteImage(String publicId) {
-        log.info("Deleting image: {}", publicId);
-
-        try {
-            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
-            log.info("Image deleted successfully: {}", publicId);
-
-        } catch (Exception e) {
-            log.error("Delete failed: ", e);
-            throw new FileUploadException("Failed to delete image: " + e.getMessage(), e);
-        }
-    }
-
-    private String extractBase64Content(String base64Image) {
-        if (base64Image.startsWith("data:image")) {
-            String[] parts = base64Image.split(",");
-            if (parts.length > 1) {
-                return parts[1];
-            }
-            throw new InvalidImageFormatException("Invalid base64 image format");
-        }
-        return base64Image;
-    }
+	private boolean isVideoContent(String base64Data) {
+		return base64Data != null && base64Data.startsWith("data:video");
+	}
 }

@@ -19,10 +19,8 @@ export const adminApi = {
         return put(`${ENDPOINTS.UPDATE_PRODUCT}/${productId}`, formData);
     },
 
-    // Backend has no standalone "update product detail" endpoint.
-    // Product detail is included in the full product update request body.
     updateProductDetail: (productId: string, updateData: any) => {
-        return put(`${ENDPOINTS.UPDATE_PRODUCT}/${productId}`, updateData);
+        return put(`${ENDPOINTS.PRODUCT_DETAIL}/${productId}`, updateData);
     },
 
     deleteProduct: (productId: string, token: string) => {

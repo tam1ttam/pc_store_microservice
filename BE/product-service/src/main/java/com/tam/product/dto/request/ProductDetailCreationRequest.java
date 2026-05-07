@@ -1,5 +1,7 @@
 package com.tam.product.dto.request;
 
+import java.util.List;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -20,4 +22,6 @@ public class ProductDetailCreationRequest {
     String case_;
     String coolingSystem;
     String operatingSystem;
+    List<String> images; // pre-uploaded URLs (set internally before DB save)
+    List<String> imagesUpload; // raw base64 from client
 }

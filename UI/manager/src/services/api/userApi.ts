@@ -1,4 +1,5 @@
 import { ENDPOINTS } from "@/constants";
+import { CustomerUpdateRequest, CustomerUpdateResponse } from "@/types";
 import { get, put } from "../api.service";
 
 export const userApi = {
@@ -20,6 +21,12 @@ export const userApi = {
     // PUT /api-gateway/user-service/users/my-profile
     updateMyProfile: (data: any) => {
         return put(ENDPOINTS.UPDATE_PROFILE, data);
+    },
+    updateUserInfo: (
+        userName: string,
+        data: CustomerUpdateRequest
+    ): Promise<{ data: CustomerUpdateResponse }> => {
+        return put(`${ENDPOINTS.CUSTOMERS}/${userName}`, data);
     },
 
     // POST /api-gateway/user-service/users/search

@@ -29,6 +29,10 @@ public class CustomerUpdateRequest {
     @Pattern(regexp = "^0[0-9]{9}$", message = "Số điện thoại phải bắt đầu bằng 0 và có 10 chữ số")
     String phoneNumber;
 
+    String avatar;
+    String dob;
+    String city;
+
     // NOTE: Không thể cập nhật password qua endpoint này
     // Để thay đổi password, sử dụng Identity Service
 }

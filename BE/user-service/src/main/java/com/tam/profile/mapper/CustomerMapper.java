@@ -2,6 +2,7 @@ package com.tam.profile.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 import com.tam.profile.dto.request.CustomerCreationRequest;
 import com.tam.profile.dto.request.CustomerUpdateRequest;
@@ -21,5 +22,8 @@ public interface CustomerMapper {
     @Mapping(source = "request.lastName", target = "lastName")
     @Mapping(source = "request.email", target = "email")
     @Mapping(source = "request.phoneNumber", target = "phoneNumber")
-    Customer updateCustomerFromRequest(CustomerUpdateRequest request, Customer customer);
+    @Mapping(source = "request.avatar", target = "avatar")
+    @Mapping(source = "request.dob", target = "dob")
+    @Mapping(source = "request.city", target = "city")
+    Customer updateCustomerFromRequest(CustomerUpdateRequest request, @MappingTarget Customer customer);
 }

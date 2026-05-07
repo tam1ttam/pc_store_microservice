@@ -5,7 +5,6 @@ import java.util.List;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import lombok.*;
@@ -26,9 +25,8 @@ public class ProductDetail {
 
     List<String> images;
 
-    @DocumentReference
     @Field("productId")
-    Product product;
+    ObjectId productId;
 
     String processor;
     String ram;

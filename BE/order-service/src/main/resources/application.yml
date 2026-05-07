@@ -12,7 +12,7 @@ spring:
     allow-bean-definition-overriding: true
   data:
     mongodb:
-      uri: ${ORDER_MONGO_URI:mongodb://localhost:27017/order-service}
+      uri: ${ORDER_MONGO_URI:mongodb://root:123456@localhost:6000/order-service?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6002}
@@ -38,7 +38,7 @@ app:
       - /swagger-ui/**
       - /actuator/health
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
 
 grpc:
   server:

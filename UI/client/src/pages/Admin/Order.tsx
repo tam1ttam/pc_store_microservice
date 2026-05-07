@@ -17,8 +17,8 @@ const OrderPage = () => {
     const fetchOrders = async () => {
         try {
             const response = await adminApi.listOrders(page);
-            setOrders(response.data.result.content);
-            setTotalPages(response.data.result.totalPages);
+            setOrders(response.data.result?.content ?? []);
+            setTotalPages(response.data.result?.totalPages ?? 0);
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -50,8 +50,8 @@ const OrderPage = () => {
     }, [page]);
 
     const getOrderStats = () => {
-        const total = orders.length;
-        const paid = orders.filter((order) => order.paid).length;
+        const total = orders?.length ?? 0;
+        const paid = orders?.filter((order) => order.paid).length ?? 0;
         const unpaid = total - paid;
         return { total, paid, unpaid };
     };

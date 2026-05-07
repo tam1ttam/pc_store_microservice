@@ -26,6 +26,10 @@ public class ImageValidationServiceImpl implements ImageValidationService {
 
     @Override
     public boolean isImageSafe(String base64Image) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Gemini API key not configured — skipping image validation, treating as safe");
+            return true;
+        }
         try {
             log.info("Validating image with Gemini API");
 

@@ -23,4 +23,6 @@ public interface OrderService {
     boolean deleteOrder(ObjectId orderId);
 
     Optional<OrderResponse> getOrderResponse(ObjectId orderId);
+
+    List<Order> getAll();
 }

@@ -7,23 +7,33 @@ import { toast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { adminApi } from "@/services/api/adminApi";
 import { ProductDetail, ProductResponse, Product as ProductType } from "@/types";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Settings, Trash } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const Product = () => {
     const [products, setProducts] = useState<ProductType[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductType | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isDetailLoading, setIsDetailLoading] = useState(false);
+    const [isReadOnly, setIsReadOnly] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const { token } = useSelector((state: RootState) => state.auth);
 
-    const [detailFormData, setDetailFormData] = useState<ProductDetail>({
+    const initialFormData = {
+        name: "",
+        img: "",
+        originalPrice: 0,
+        discountPercent: 0,
+        inStock: 0,
+        supplier: { name: "", address: "" },
+        priceAfterDiscount: 0,
+        priceDiscount: 0,
+        // Detail fields
         processor: "",
         ram: "",
         storage: "",
@@ -33,24 +43,11 @@ const Product = () => {
         case_: "",
         coolingSystem: "",
         operatingSystem: "",
-        images: [],
-        productId: "",
-        id: "",
-        imagesUpload: []
-    });
-    const [formData, setFormData] = useState<ProductType>({
-        name: "",
-        img: "",
-        originalPrice: 0,
-        discountPercent: 0,
-        inStock: 0,
-        supplier: {
-            name: "",
-            address: ""
-        },
-        priceAfterDiscount: 0,
-        priceDiscount: 0
-    });
+        images: [] as string[],
+        imagesUpload: [] as string[]
+    };
+
+    const [formData, setFormData] = useState<any>(initialFormData);
 
     useEffect(() => {
         fetchProducts();
@@ -71,20 +68,16 @@ const Product = () => {
     };
 
     const handlePrevPage = () => {
-        if (page > 0) {
-            setPage(page - 1);
-        }
+        if (page > 0) setPage(page - 1);
     };
 
     const handleNextPage = () => {
-        if (page < totalPages - 1) {
-            setPage(page + 1);
-        }
+        if (page < totalPages - 1) setPage(page + 1);
     };
 
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement>,
-        field: keyof ProductType | "supplierName" | "supplierAddress"
+        field: keyof typeof formData | "supplierName" | "supplierAddress"
     ) => {
         if (field === "supplierName" || field === "supplierAddress") {
             setFormData({
@@ -110,61 +103,72 @@ const Product = () => {
                 const discountPercent = field === "discountPercent" ? Number(e.target.value) : formData.discountPercent;
                 const priceDiscount = (originalPrice * discountPercent) / 100;
                 const priceAfterDiscount = originalPrice - priceDiscount;
-
-                setFormData({
-                    ...formData,
-                    [field]: value,
-                    priceDiscount,
-                    priceAfterDiscount
-                });
+                setFormData({ ...formData, [field]: value, priceDiscount, priceAfterDiscount });
             } else {
-                setFormData({
-                    ...formData,
-                    [field]: value
-                });
+                setFormData({ ...formData, [field]: value });
             }
         }
     };
 
-    const handleDetailInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof ProductDetail) => {
-        if (field === "images") {
-            setDetailFormData({
-                ...detailFormData,
-                images: e.target.value.split(",").map((url) => url.trim())
+    const validateFileSize = (file: File): boolean => {
+        if (file.size > MAX_FILE_SIZE) {
+            toast({
+                title: "File quá lớn",
+                description: `${file.name} vượt quá 5MB`,
+                variant: "destructive"
             });
-        } else {
-            setDetailFormData({
-                ...detailFormData,
-                [field]: e.target.value
-            });
+            return false;
         }
+        return true;
     };
+
+    const readFileAsBase64 = (file: File): Promise<string> =>
+        new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
+
     const handleSubmit = async () => {
         try {
             setIsLoading(true);
+
+            const { images, imagesUpload, ...productData } = formData;
+
+            const detailRequest = {
+                processor: formData.processor,
+                ram: formData.ram,
+                storage: formData.storage,
+                graphicsCard: formData.graphicsCard,
+                powerSupply: formData.powerSupply,
+                motherboard: formData.motherboard,
+                case_: formData.case_,
+                coolingSystem: formData.coolingSystem,
+                operatingSystem: formData.operatingSystem,
+                images: formData.images,
+                imagesUpload: formData.imagesUpload ?? []
+            };
+
             if (editingProduct) {
-                await adminApi.updateProduct(editingProduct.id, formData);
-                toast({
-                    title: "Success",
-                    description: "Product updated successfully"
+                await adminApi.updateProduct(editingProduct.id, {
+                    ...productData,
+                    productDetailCreationRequest: detailRequest
                 });
+                toast({ title: "Success", description: "Product updated successfully" });
             } else {
-                const newProduct = { ...formData, img: formData.img.split(",")[1] };
-                await adminApi.addProduct(newProduct);
-                toast({
-                    title: "Success",
-                    description: "Product created successfully"
+                await adminApi.addProduct({
+                    ...productData,
+                    productDetailCreationRequest: detailRequest
                 });
+                toast({ title: "Success", description: "Product created successfully" });
             }
             setIsOpen(false);
             fetchProducts();
             resetForm();
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || "Có lỗi xảy ra";
-
             toast({
                 title: "Thất bại",
-                description: errorMessage,
+                description: error.response?.data?.message || "Có lỗi xảy ra",
                 variant: "destructive"
             });
         } finally {
@@ -172,63 +176,22 @@ const Product = () => {
         }
     };
 
-    const handleDetailSubmit = async () => {
-        try {
-            setIsDetailLoading(true);
-            if (!detailFormData) return;
-            if (detailFormData.imagesUpload === undefined) detailFormData.imagesUpload = [];
-
-            const imagesUpload = detailFormData.imagesUpload.map((url) => url.split(",")[1]);
-            const updateData = {
-                ...detailFormData,
-                imagesUpload: imagesUpload
-            };
-
-            await adminApi.updateProductDetail(updateData);
-
-            toast({
-                title: "Success",
-                description: "Product detail updated successfully"
-            });
-
-            setIsDetailOpen(false);
-            fetchProducts();
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to update product detail",
-                variant: "destructive"
-            });
-        } finally {
-            setIsDetailLoading(false);
-        }
-    };
-
-    const handleEdit = (product: ProductType) => {
+    const handleEdit = async (product: ProductType, readOnly = false) => {
         setEditingProduct(product);
-        setFormData({
-            name: product.name,
-            img: product.img,
-            originalPrice: product.originalPrice,
-            discountPercent: product.discountPercent,
-            inStock: product.inStock,
-            supplier: {
-                name: product.supplier.name,
-                address: product.supplier.address
-            },
-            priceAfterDiscount: product.priceAfterDiscount,
-            priceDiscount: product.priceDiscount
-        });
-        setIsOpen(true);
-    };
-
-    const fetchProductDetail = async (id: string) => {
+        setIsReadOnly(readOnly);
+        setIsLoading(true);
         try {
-            const response = await adminApi.getProductDetail(id);
-
-            const detail = response.data.result;
-
-            setDetailFormData({
+            const detailResponse = await adminApi.getProductDetail(product.id as string);
+            const detail = detailResponse.data.result;
+            setFormData({
+                name: product.name,
+                img: product.img,
+                originalPrice: product.originalPrice,
+                discountPercent: product.discountPercent,
+                inStock: product.inStock,
+                supplier: { name: product.supplier.name, address: product.supplier.address },
+                priceAfterDiscount: product.priceAfterDiscount,
+                priceDiscount: product.priceDiscount,
                 processor: detail.processor || "",
                 ram: detail.ram || "",
                 storage: detail.storage || "",
@@ -239,18 +202,24 @@ const Product = () => {
                 coolingSystem: detail.coolingSystem || "",
                 operatingSystem: detail.operatingSystem || "",
                 images: detail.images || [],
-                productId: id,
-                id: detail.id || "",
                 imagesUpload: []
             });
-
-            setIsDetailOpen(true);
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to fetch product detail",
-                variant: "destructive"
+            // If no detail, just load the main product data
+            setFormData({
+                ...initialFormData,
+                name: product.name,
+                img: product.img,
+                originalPrice: product.originalPrice,
+                discountPercent: product.discountPercent,
+                inStock: product.inStock,
+                supplier: { name: product.supplier.name, address: product.supplier.address },
+                priceAfterDiscount: product.priceAfterDiscount,
+                priceDiscount: product.priceDiscount
             });
+        } finally {
+            setIsLoading(false);
+            setIsOpen(true);
         }
     };
 
@@ -259,17 +228,10 @@ const Product = () => {
             try {
                 setIsDeleting(id);
                 await adminApi.deleteProduct(id, token as string);
-                toast({
-                    title: "Success",
-                    description: "Product deleted successfully"
-                });
+                toast({ title: "Success", description: "Product deleted successfully" });
                 fetchProducts();
             } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "Failed to delete product",
-                    variant: "destructive"
-                });
+                toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
             } finally {
                 setIsDeleting(null);
             }
@@ -277,71 +239,38 @@ const Product = () => {
     };
 
     const resetForm = () => {
-        setFormData({
-            name: "",
-            img: "",
-            originalPrice: 0,
-            discountPercent: 0,
-            inStock: 0,
-            supplier: {
-                name: "",
-                address: ""
-            },
-            priceAfterDiscount: 0,
-            priceDiscount: 0
-        });
+        setFormData(initialFormData);
         setEditingProduct(null);
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const reader = new FileReader();
-
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                setDetailFormData({
-                    ...detailFormData,
-                    images: [...detailFormData.images],
-                    imagesUpload: [...(detailFormData.imagesUpload || []), base64String]
-                });
-            };
-
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleRemoveImage = (index: number, type: string) => {
-        if (type === "image") {
-            setDetailFormData({
-                ...detailFormData,
-                images: detailFormData.images.filter((_, i) => i !== index)
-            });
-        } else if (type === "imagesUpload" && detailFormData.imagesUpload) {
-            setDetailFormData({
-                ...detailFormData,
-                imagesUpload: detailFormData.imagesUpload.filter((_, i) => i !== index)
-            });
-        }
+        setIsReadOnly(false);
     };
 
     const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            setFormData({
-                ...formData,
-                img: base64String
-            });
-        };
-        reader.readAsDataURL(file);
+        if (!file || !validateFileSize(file)) return;
+        const base64 = await readFileAsBase64(file);
+        setFormData({ ...formData, img: base64 });
     };
+
+    const handleProductMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+        const validFiles = Array.from(files).filter(validateFileSize);
+        const base64List = await Promise.all(validFiles.map(readFileAsBase64));
+        setFormData((prev: any) => ({
+            ...prev,
+            imagesUpload: [...(prev.imagesUpload ?? []), ...base64List]
+        }));
+        e.target.value = "";
+    };
+
+    const handleRemoveImage = (index: number, type: "images" | "imagesUpload") => {
+        setFormData((prev: any) => ({
+            ...prev,
+            [type]: prev[type].filter((_: any, i: number) => i !== index)
+        }));
+    };
+
+    const isVideoBase64 = (b64: string) => b64.startsWith("data:video");
 
     return (
         <div className="container mx-auto py-6 pt-24">
@@ -361,7 +290,13 @@ const Product = () => {
                     </DialogTrigger>
                     <DialogContent className="max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+                            <DialogTitle>
+                                {isReadOnly
+                                    ? "Product Details"
+                                    : editingProduct
+                                        ? "Edit Product"
+                                        : "Add New Product"}
+                            </DialogTitle>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
@@ -371,37 +306,44 @@ const Product = () => {
                                     value={formData.name}
                                     onChange={(e) => handleInputChange(e, "name")}
                                     placeholder="Product name"
+                                    readOnly={isReadOnly}
                                 />
                             </div>
+
+                            {/* Thumbnail */}
                             <div className="grid gap-2">
-                                <Label>Product Image</Label>
+                                <Label>Thumbnail Image</Label>
                                 <div className="space-y-2">
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            id="product-image-upload"
-                                            onChange={handleProductImageUpload}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="w-full"
-                                            onClick={() => document.getElementById("product-image-upload")?.click()}
-                                        >
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Choose Image
-                                        </Button>
-                                    </div>
+                                    {!isReadOnly && (
+                                        <>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                id="product-image-upload"
+                                                onChange={handleProductImageUpload}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={() =>
+                                                    document.getElementById("product-image-upload")?.click()
+                                                }
+                                            >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Choose Thumbnail
+                                            </Button>
+                                        </>
+                                    )}
                                     {formData.img && (
-                                        <div className="relative max-h-[200px] overflow-auto">
-                                            <div className="relative w-[200px] mx-auto">
-                                                <img
-                                                    src={formData.img}
-                                                    alt="Product preview"
-                                                    className="w-full object-contain rounded-md"
-                                                />
+                                        <div className="relative w-[200px] mx-auto">
+                                            <img
+                                                src={formData.img}
+                                                alt="Thumbnail"
+                                                className="w-full object-contain rounded-md"
+                                            />
+                                            {!isReadOnly && (
                                                 <Button
                                                     type="button"
                                                     variant="destructive"
@@ -411,11 +353,92 @@ const Product = () => {
                                                 >
                                                     <Trash className="h-4 w-4" />
                                                 </Button>
-                                            </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             </div>
+
+                            {/* Additional images / short videos */}
+                            <div className="grid gap-2">
+                                <Label>Additional Images / Videos (max 5MB each)</Label>
+                                <div className="space-y-2">
+                                    {!isReadOnly && (
+                                        <input
+                                            type="file"
+                                            accept="image/*,video/*"
+                                            multiple
+                                            className="hidden"
+                                            id="product-media-upload"
+                                            onChange={handleProductMediaUpload}
+                                        />
+                                    )}
+                                    {!isReadOnly && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full"
+                                            onClick={() => document.getElementById("product-media-upload")?.click()}
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Images / Videos
+                                        </Button>
+                                    )}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {/* Existing Images */}
+                                        {formData.images.map((src: string, i: number) => (
+                                            <div key={`existing-${i}`} className="relative group">
+                                                <img
+                                                    src={src}
+                                                    alt={`media ${i}`}
+                                                    className="w-full aspect-square object-cover rounded-md"
+                                                />
+                                                {!isReadOnly && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                                                        onClick={() => handleRemoveImage(i, "images")}
+                                                    >
+                                                        <Trash className="h-3 w-3" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {/* New Uploads */}
+                                        {formData.imagesUpload.map((src: string, i: number) => (
+                                            <div key={`new-${i}`} className="relative group">
+                                                {isVideoBase64(src) ? (
+                                                    <video
+                                                        src={src}
+                                                        className="w-full aspect-square object-cover rounded-md"
+                                                        muted
+                                                    />
+                                                ) : (
+                                                    <img
+                                                        src={src}
+                                                        alt={`media ${i}`}
+                                                        className="w-full aspect-square object-cover rounded-md"
+                                                    />
+                                                )}
+                                                {!isReadOnly && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                                                        onClick={() => handleRemoveImage(i, "imagesUpload")}
+                                                    >
+                                                        <Trash className="h-3 w-3" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="originalPrice">Original Price</Label>
                                 <Input
@@ -424,6 +447,7 @@ const Product = () => {
                                     value={formData.originalPrice}
                                     onChange={(e) => handleInputChange(e, "originalPrice")}
                                     placeholder="Enter original price"
+                                    readOnly={isReadOnly}
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -436,6 +460,7 @@ const Product = () => {
                                     value={formData.discountPercent}
                                     onChange={(e) => handleInputChange(e, "discountPercent")}
                                     placeholder="Enter discount percentage"
+                                    readOnly={isReadOnly}
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -472,6 +497,7 @@ const Product = () => {
                                     value={formData.inStock}
                                     onChange={(e) => handleInputChange(e, "inStock")}
                                     placeholder="Enter stock quantity"
+                                    readOnly={isReadOnly}
                                 />
                             </div>
                             <div className="grid gap-4">
@@ -481,17 +507,48 @@ const Product = () => {
                                         placeholder="Supplier name"
                                         value={formData.supplier.name}
                                         onChange={(e) => handleInputChange(e, "supplierName")}
+                                        readOnly={isReadOnly}
                                     />
                                     <Input
                                         placeholder="Supplier address"
                                         value={formData.supplier.address}
                                         onChange={(e) => handleInputChange(e, "supplierAddress")}
+                                        readOnly={isReadOnly}
                                     />
                                 </div>
                             </div>
-                            <Button onClick={handleSubmit} disabled={isLoading}>
-                                {isLoading ? "Loading..." : editingProduct ? "Update Product" : "Add Product"}
-                            </Button>
+
+                            {/* Spec fields */}
+                            <h3 className="text-lg font-semibold mt-4 pt-4 border-t">Product Specifications</h3>
+                            {(
+                                [
+                                    { id: "processor", label: "Processor" },
+                                    { id: "ram", label: "RAM" },
+                                    { id: "storage", label: "Storage" },
+                                    { id: "graphicsCard", label: "Graphics Card" },
+                                    { id: "powerSupply", label: "Power Supply" },
+                                    { id: "motherboard", label: "Motherboard" },
+                                    { id: "case_", label: "Case" },
+                                    { id: "coolingSystem", label: "Cooling System" },
+                                    { id: "operatingSystem", label: "Operating System" }
+                                ] as { id: keyof typeof formData; label: string }[]
+                            ).map(({ id, label }) => (
+                                <div key={id} className="grid gap-2">
+                                    <Label htmlFor={id}>{label}</Label>
+                                    <Input
+                                        id={id}
+                                        value={(formData[id] as string) || ""}
+                                        onChange={(e) => handleInputChange(e, id)}
+                                        readOnly={isReadOnly}
+                                    />
+                                </div>
+                            ))}
+
+                            {!isReadOnly && (
+                                <Button onClick={handleSubmit} disabled={isLoading}>
+                                    {isLoading ? "Loading..." : editingProduct ? "Update Product" : "Add Product"}
+                                </Button>
+                            )}
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -530,21 +587,18 @@ const Product = () => {
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        onClick={() => handleEdit(product)}
+                                        onClick={() => handleEdit(product, true)}
                                         disabled={isLoading}
                                     >
-                                        <Pencil className="h-4 w-4" />
+                                        <Eye className="h-4 w-4" />
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        onClick={() => {
-                                            setEditingProduct(product);
-                                            fetchProductDetail(product.id as string);
-                                        }}
-                                        disabled={isDetailLoading}
+                                        onClick={() => handleEdit(product)}
+                                        disabled={isLoading}
                                     >
-                                        <Settings className="h-4 w-4" />
+                                        <Pencil className="h-4 w-4" />
                                     </Button>
                                     <Button
                                         variant="destructive"
@@ -571,175 +625,6 @@ const Product = () => {
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
-
-            <Dialog
-                open={isDetailOpen}
-                onOpenChange={(open) => {
-                    setIsDetailOpen(open);
-                    if (!open) {
-                        setDetailFormData({
-                            id: "",
-                            processor: "",
-                            ram: "",
-                            storage: "",
-                            graphicsCard: "",
-                            powerSupply: "",
-                            motherboard: "",
-                            case_: "",
-                            coolingSystem: "",
-                            operatingSystem: "",
-                            images: [],
-                            imagesUpload: [],
-                            productId: ""
-                        });
-                    }
-                }}
-            >
-                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Product Details</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <Label>Product Images</Label>
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="hidden"
-                                        id="image-upload"
-                                        onChange={handleFileUpload}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => document.getElementById("image-upload")?.click()}
-                                    >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Images
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                {detailFormData.images.map((image, index) => (
-                                    <div key={index} className="relative group">
-                                        <img
-                                            src={image}
-                                            alt={`Product ${index + 1}`}
-                                            className="w-full aspect-square object-cover rounded-md"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => handleRemoveImage(index, "image")}
-                                        >
-                                            <Trash className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-                                {detailFormData.imagesUpload &&
-                                    detailFormData.imagesUpload.map((image, index) => (
-                                        <div key={index} className="relative group">
-                                            <img
-                                                src={image}
-                                                alt={`Product ${index + 1}`}
-                                                className="w-full aspect-square object-cover rounded-md"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => handleRemoveImage(index, "imagesUpload")}
-                                            >
-                                                <Trash className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="processor">Processor</Label>
-                            <Input
-                                id="processor"
-                                value={detailFormData.processor}
-                                onChange={(e) => handleDetailInputChange(e, "processor")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="ram">RAM</Label>
-                            <Input
-                                id="ram"
-                                value={detailFormData.ram}
-                                onChange={(e) => handleDetailInputChange(e, "ram")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="storage">Storage</Label>
-                            <Input
-                                id="storage"
-                                value={detailFormData.storage}
-                                onChange={(e) => handleDetailInputChange(e, "storage")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="graphicsCard">Graphics Card</Label>
-                            <Input
-                                id="graphicsCard"
-                                value={detailFormData.graphicsCard}
-                                onChange={(e) => handleDetailInputChange(e, "graphicsCard")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="powerSupply">Power Supply</Label>
-                            <Input
-                                id="powerSupply"
-                                value={detailFormData.powerSupply}
-                                onChange={(e) => handleDetailInputChange(e, "powerSupply")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="motherboard">Motherboard</Label>
-                            <Input
-                                id="motherboard"
-                                value={detailFormData.motherboard}
-                                onChange={(e) => handleDetailInputChange(e, "motherboard")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="case">Case</Label>
-                            <Input
-                                id="case"
-                                value={detailFormData.case_}
-                                onChange={(e) => handleDetailInputChange(e, "case_")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="coolingSystem">Cooling System</Label>
-                            <Input
-                                id="coolingSystem"
-                                value={detailFormData.coolingSystem}
-                                onChange={(e) => handleDetailInputChange(e, "coolingSystem")}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="operatingSystem">Operating System</Label>
-                            <Input
-                                id="operatingSystem"
-                                value={detailFormData.operatingSystem}
-                                onChange={(e) => handleDetailInputChange(e, "operatingSystem")}
-                            />
-                        </div>
-                        <Button onClick={handleDetailSubmit}>Update Details</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

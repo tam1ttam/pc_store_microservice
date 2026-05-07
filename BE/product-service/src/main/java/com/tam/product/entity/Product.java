@@ -31,5 +31,6 @@ public class Product {
     double priceDiscount;
     int inStock;
     Supplier supplier;
+    ProductDetail productDetail;
     boolean isUpdateDetail;
 }

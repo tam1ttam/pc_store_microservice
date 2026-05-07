@@ -10,7 +10,7 @@ spring:
     enabled: false
   data:
     mongodb:
-      uri: ${CHAT_MONGO_URI:mongodb://localhost:27017/chat-service}
+      uri: ${CHAT_MONGO_URI:mongodb://root:123456@localhost:6000/chat-service?authSource=admin}
       auto-index-creation: true
     redis:
       host: ${REDIS_HOST:localhost}
@@ -32,7 +32,7 @@ app:
       - /swagger-ui/**
       - /actuator/health
     allowed-origins:
-      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
   services:
     profile:
       url: lb://USER-SERVICE

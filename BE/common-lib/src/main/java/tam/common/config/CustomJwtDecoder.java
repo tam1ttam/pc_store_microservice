@@ -57,35 +57,47 @@ public class CustomJwtDecoder implements JwtDecoder {
     }
 
     private void callIntrospectAndCache(String token, String cacheKey) {
-        try {
-            var response = introspectClient.introspect(
-                    IntrospectRequest.builder().token(token).build());
+        int maxRetries = 3;
+        Exception lastException = null;
 
-            if (!response.isValid()) {
-                // Cache invalid ngắn thôi (5 phút) để tránh cache rác quá lâu
-                redisTemplate.opsForValue().set(cacheKey, INVALID, 5, TimeUnit.MINUTES);
-                throw new JwtException("Token is invalid or revoked");
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                var response = introspectClient.introspect(
+                        IntrospectRequest.builder().token(token).build());
+
+                if (response.getResult() == null || !response.getResult().isValid()) {
+                    redisTemplate.opsForValue().set(cacheKey, INVALID, 5, TimeUnit.MINUTES);
+                    throw new JwtException("Token is invalid or revoked");
+                }
+
+                com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(token);
+                Instant expiry = signedJWT.getJWTClaimsSet()
+                        .getExpirationTime().toInstant();
+                long ttlSeconds = expiry.getEpochSecond() - Instant.now().getEpochSecond();
+
+                if (ttlSeconds > 0) {
+                    redisTemplate.opsForValue().set(cacheKey, VALID, ttlSeconds, TimeUnit.SECONDS);
+                }
+                return;
+
+            } catch (JwtException e) {
+                throw e;
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Introspect attempt {}/{} failed: {}", attempt, maxRetries, e.getMessage());
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(300L * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
-
-            // Parse expiry từ JWT để tính TTL cache
-            // Dùng Nimbus parse nhanh, không verify ở đây (verify ở bước sau)
-            com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(token);
-            Instant expiry = signedJWT.getJWTClaimsSet()
-                    .getExpirationTime().toInstant();
-            long ttlSeconds = expiry.getEpochSecond() - Instant.now().getEpochSecond();
-
-            if (ttlSeconds > 0) {
-                redisTemplate.opsForValue().set(cacheKey, VALID, ttlSeconds, TimeUnit.SECONDS);
-            }
-
-        } catch (JwtException e) {
-            throw e;
-        } catch (Exception e) {
-            // Identity-service không liên lạc được — fail open hay fail closed?
-            // Hiện tại: fail closed (an toàn hơn)
-            log.error("Cannot reach identity-service for introspect", e);
-            throw new JwtException("Cannot validate token: identity-service unavailable");
         }
+
+        log.error("Cannot reach identity-service for introspect after {} attempts", maxRetries, lastException);
+        throw new JwtException("Cannot validate token: identity-service unavailable");
     }
 
     private NimbusJwtDecoder getNimbusDecoder() {
