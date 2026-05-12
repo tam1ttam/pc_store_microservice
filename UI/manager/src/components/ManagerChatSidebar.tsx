@@ -175,25 +175,25 @@ const CustomerChatWindow = ({
 }) => {
     const [input, setInput] = useState("");
     const [loadingMsgs, setLoadingMsgs] = useState(false);
-    const [canViewMessages, setCanViewMessages] = useState(true);
     const [showTransfer, setShowTransfer] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [managerList, setManagerList] = useState<ManagerInfo[]>([]);
     const [loadingManagers, setLoadingManagers] = useState(false);
-    const endRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const dispatch = useAppDispatch();
     const messages = useAppSelector((state: RootState) => state.chat.messages[conversation.id] || []);
     const token = useAppSelector((state: RootState) => state.auth.token);
     const currentUserId = useMemo(() => getIdentityUserIdFromToken(token), [token]);
+    const onlineUserIds = useAppSelector((state: RootState) => state.presence.onlineUserIds);
 
     const isDirect = conversation.type !== "SUPPORT";
     const isAssignedToMe = !isDirect && !!conversation.assignedManagerId && conversation.assignedManagerId === currentUserId;
     const isUnassigned = !isDirect && !conversation.assignedManagerId;
+    // Only the assigned manager can send in SUPPORT; both sides in DIRECT
     const canSend = isDirect || isAssignedToMe;
 
     useEffect(() => {
         setLoadingMsgs(true);
-        setCanViewMessages(true);
         messageApi
             .getMessages(conversation.id)
             .then((msgs) => {
@@ -210,13 +210,15 @@ const CustomerChatWindow = ({
                 }));
                 dispatch(setMessages({ conversationId: conversation.id, messages: formatted }));
             })
-            .catch(() => setCanViewMessages(false))
+            .catch(console.error)
             .finally(() => setLoadingMsgs(false));
     }, [conversation.id, dispatch]);
 
     useEffect(() => {
-        endRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        if (containerRef.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+    }, [messages, loadingMsgs]);
 
     const send = async () => {
         if (!input.trim() || !canSend) return;
@@ -319,7 +321,7 @@ const CustomerChatWindow = ({
 
             {/* Action bar — only for SUPPORT conversations */}
             {!isDirect && (
-                <div className="px-3 py-2 border-b bg-orange-50 flex gap-2 flex-shrink-0">
+                <div className="px-3 py-2 border-b bg-orange-50 flex items-center gap-2 flex-shrink-0">
                     {isUnassigned && (
                         <button
                             onClick={handleClaim}
@@ -341,7 +343,13 @@ const CustomerChatWindow = ({
                         </button>
                     )}
                     {!isUnassigned && !isAssignedToMe && (
-                        <span className="text-xs text-gray-500 py-1">Chỉ xem — {conversation.assignedManagerName} đang phụ trách</span>
+                        <span className="text-xs text-gray-400 py-1 flex items-center gap-1">
+                            <Shield className="w-3 h-3" />
+                            {conversation.assignedManagerName ?? "Manager khác"} đang phụ trách
+                        </span>
+                    )}
+                    {isUnassigned && (
+                        <span className="text-xs text-yellow-600 py-1 ml-auto">Chưa có người phụ trách</span>
                     )}
                 </div>
             )}
@@ -356,34 +364,37 @@ const CustomerChatWindow = ({
                     ) : managerList.length === 0 ? (
                         <p className="text-xs text-gray-400 text-center py-3">Không có manager nào</p>
                     ) : (
-                        managerList.map((m) => (
-                            <button
-                                key={m.id}
-                                onClick={() => handleTransfer(m.id)}
-                                disabled={actionLoading}
-                                className="w-full text-left px-4 py-2 text-xs hover:bg-orange-50 transition-colors disabled:opacity-60 flex items-center gap-2"
-                            >
-                                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                                    <User className="w-3 h-3 text-gray-600" />
-                                </div>
-                                <span className="font-medium text-gray-700">{m.username}</span>
-                            </button>
-                        ))
+                        managerList.map((m) => {
+                            const isOnline = onlineUserIds.includes(m.id);
+                            return (
+                                <button
+                                    key={m.id}
+                                    onClick={() => handleTransfer(m.id)}
+                                    disabled={actionLoading}
+                                    className="w-full text-left px-4 py-2 text-xs hover:bg-orange-50 transition-colors disabled:opacity-60 flex items-center gap-2"
+                                >
+                                    <div className="relative w-6 h-6 flex-shrink-0">
+                                        <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
+                                            <User className="w-3 h-3 text-gray-600" />
+                                        </div>
+                                        {isOnline && (
+                                            <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border border-white rounded-full" />
+                                        )}
+                                    </div>
+                                    <span className="font-medium text-gray-700">{m.username}</span>
+                                    {isOnline && <span className="ml-auto text-green-500 text-[10px]">Online</span>}
+                                </button>
+                            );
+                        })
                     )}
                 </div>
             )}
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
+            <div ref={containerRef} className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
                 {loadingMsgs ? (
                     <div className="flex justify-center pt-8">
                         <Loader2 className="w-5 h-5 animate-spin text-orange-400" />
-                    </div>
-                ) : !canViewMessages ? (
-                    <div className="flex flex-col items-center pt-10 gap-2 text-center px-4">
-                        <Shield className="w-8 h-8 text-gray-300" />
-                        <p className="text-sm text-gray-400">Nhận xử lý để xem tin nhắn</p>
-                        <p className="text-xs text-gray-300">Chỉ manager được phân công mới đọc được nội dung</p>
                     </div>
                 ) : messages.length === 0 ? (
                     <p className="text-center text-sm text-gray-400 pt-8">Chưa có tin nhắn nào</p>
@@ -414,32 +425,26 @@ const CustomerChatWindow = ({
                         );
                     })
                 )}
-                <div ref={endRef} />
             </div>
 
             {/* Input */}
-            {canSend ? (
-                <div className="p-3 bg-white border-t flex gap-2 flex-shrink-0">
-                    <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && send()}
-                        placeholder="Nhắn tin..."
-                        className="flex-1 h-9 rounded-full text-sm"
-                    />
-                    <Button
-                        onClick={send}
-                        disabled={!input.trim()}
-                        className={`w-9 h-9 rounded-full p-0 hover:opacity-90 ${isDirect ? "bg-gradient-to-r from-indigo-500 to-purple-600" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
-                    >
-                        <Send className="w-4 h-4" />
-                    </Button>
-                </div>
-            ) : (
-                <div className="p-3 bg-gray-50 border-t text-center text-xs text-gray-400 flex-shrink-0">
-                    {isUnassigned ? "Nhận xử lý để có thể trả lời" : "Chỉ xem — không thể trả lời"}
-                </div>
-            )}
+            <div className="p-3 bg-white border-t flex gap-2 flex-shrink-0">
+                <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && canSend && send()}
+                    placeholder={canSend ? "Nhắn tin..." : `${conversation.assignedManagerName ?? "Manager khác"} đang phụ trách`}
+                    className="flex-1 h-9 rounded-full text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                    disabled={!canSend}
+                />
+                <Button
+                    onClick={send}
+                    disabled={!input.trim() || !canSend}
+                    className={`w-9 h-9 rounded-full p-0 hover:opacity-90 ${isDirect ? "bg-gradient-to-r from-indigo-500 to-purple-600" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
+                >
+                    <Send className="w-4 h-4" />
+                </Button>
+            </div>
         </div>
     );
 };
@@ -460,6 +465,7 @@ const ManagerChatSidebar = () => {
     const currentManagerId = useMemo(() => getIdentityUserIdFromToken(token), [token]);
     const conversations = useAppSelector((state: RootState) => state.chat.conversations ?? []);
     const unreadIds = useAppSelector((state: RootState) => state.chat.unreadConversationIds ?? []);
+    const onlineUserIds = useAppSelector((state: RootState) => state.presence.onlineUserIds);
 
     const fetchConversations = useCallback(async () => {
         try {
@@ -578,20 +584,29 @@ const ManagerChatSidebar = () => {
                             ) : managerListForNew.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-3">Không có manager nào khác</p>
                             ) : (
-                                managerListForNew.map((m) => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => handleStartDirectChat(m.id)}
-                                        disabled={creatingChat}
-                                        className="w-full text-left px-4 py-2 text-xs hover:bg-indigo-100 transition-colors disabled:opacity-60 flex items-center gap-2"
-                                    >
-                                        <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center flex-shrink-0">
-                                            <User className="w-3 h-3 text-white" />
-                                        </div>
-                                        <span className="font-medium text-gray-700">{m.username}</span>
-                                        {creatingChat && <Loader2 className="w-3 h-3 animate-spin text-indigo-400 ml-auto" />}
-                                    </button>
-                                ))
+                                managerListForNew.map((m) => {
+                                    const isOnline = onlineUserIds.includes(m.id);
+                                    return (
+                                        <button
+                                            key={m.id}
+                                            onClick={() => handleStartDirectChat(m.id)}
+                                            disabled={creatingChat}
+                                            className="w-full text-left px-4 py-2 text-xs hover:bg-indigo-100 transition-colors disabled:opacity-60 flex items-center gap-2"
+                                        >
+                                            <div className="relative w-6 h-6 flex-shrink-0">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center">
+                                                    <User className="w-3 h-3 text-white" />
+                                                </div>
+                                                {isOnline && (
+                                                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border border-white rounded-full" />
+                                                )}
+                                            </div>
+                                            <span className="font-medium text-gray-700">{m.username}</span>
+                                            {isOnline && <span className="text-green-500 text-[10px]">Online</span>}
+                                            {creatingChat && <Loader2 className="w-3 h-3 animate-spin text-indigo-400 ml-auto" />}
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     )}

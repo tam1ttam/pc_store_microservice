@@ -50,6 +50,7 @@ const ENDPOINT = {
         MY_CONVERSATIONS: `${CHAT_SVC}/conversations/my-conversations`,
         SUPPORT_ALL: `${CHAT_SVC}/conversations/support-all`,
         MANAGERS: `${CHAT_SVC}/conversations/managers`,
+        MANAGERS_ONLINE: `${CHAT_SVC}/conversations/managers/online`,
         CREATE_CONVERSATION: `${CHAT_SVC}/conversations/create`,
         CREATE_MESSAGE: `${CHAT_SVC}/messages/create`,
         GET_CONVERSATION_MESSAGES: (conversationId: string) =>

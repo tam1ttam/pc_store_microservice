@@ -75,10 +75,13 @@ const chatSlice = createSlice({
 
         setMessages: (state, action: PayloadAction<{ conversationId: string; messages: ChatMessage[] }>) => {
             const { conversationId, messages } = action.payload;
-            console.log(`📥 Setting ${messages.length} messages for conversation ${conversationId}`);
-
-            // ✅ Sort và tạo array mới
-            state.messages[conversationId] = [...messages].sort((a, b) => a.createdDate - b.createdDate);
+            const existing = state.messages[conversationId] || [];
+            const existingIds = new Set(existing.map(m => m.id));
+            const merged = [
+                ...existing,
+                ...messages.filter(m => !existingIds.has(m.id)),
+            ].sort((a, b) => a.createdDate - b.createdDate);
+            state.messages[conversationId] = merged;
         },
 
         clearMessages: (state, action: PayloadAction<string>) => {

@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tam.chat.dto.request.ChatMessageRequest;
 import com.tam.chat.dto.response.ChatMessageResponse;
 import com.tam.chat.dto.response.ConversationResponse;
+import com.tam.chat.dto.response.ManagerInfoResponse;
 import com.tam.chat.entity.ChatMessage;
 import com.tam.chat.entity.Conversation;
 import com.tam.chat.entity.ParticipantInfo;
@@ -29,7 +30,9 @@ import com.tam.chat.repository.ChatMessageRepository;
 import com.tam.chat.repository.ConversationRepository;
 import com.tam.chat.repository.WebSocketSessionRepository;
 import com.tam.chat.repository.grpc.ProfileGrpcClient;
+import com.tam.chat.repository.httpclient.IdentityClient;
 
+import feign.FeignException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -46,6 +49,7 @@ public class ChatMessageService {
     ConversationRepository conversationRepository;
     WebSocketSessionRepository webSocketSessionRepository;
     ProfileGrpcClient profileGrpcClient;
+    IdentityClient identityClient;
 
     ObjectMapper objectMapper;
     ChatMessageMapper chatMessageMapper;
@@ -58,10 +62,15 @@ public class ChatMessageService {
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
 
         if ("SUPPORT".equals(conversation.getType())) {
+            // Client can always read their own conversation.
+            // Any manager can read SUPPORT conversations — store conversation is shared.
             boolean isClient = userId.equals(conversation.getClientId());
-            boolean isAssignedManager = userId.equals(conversation.getAssignedManagerId());
-            if (!isClient && !isAssignedManager) {
-                throw new AppException(ErrorCode.CONVERSATION_NOT_FOUND);
+            if (!isClient) {
+                List<String> managerIds = fetchManagerIds();
+                // Fail-open: if manager list unavailable, allow access (identity-service may be slow)
+                if (!managerIds.isEmpty() && !managerIds.contains(userId)) {
+                    throw new AppException(ErrorCode.CONVERSATION_NOT_FOUND);
+                }
             }
         } else {
             boolean isParticipant = conversation.getParticipants().stream().anyMatch(p -> userId.equals(p.getUserId()));
@@ -96,9 +105,8 @@ public class ChatMessageService {
             }
         }
 
+        // Build sender info
         var userInfo = profileGrpcClient.getProfileByUserId(userId);
-
-        // Build sender info; fall back to userId-only if profile not found (e.g. manager accounts)
         ParticipantInfo.ParticipantInfoBuilder senderBuilder =
                 ParticipantInfo.builder().userId(userId);
         if (userInfo != null) {
@@ -108,17 +116,23 @@ public class ChatMessageService {
                     .lastName(userInfo.getLastName())
                     .avatar(userInfo.getAvatar());
         } else {
-            // Try to use existing participant info for this user if already stored
-            conversation.getParticipants().stream()
+            // Try participants list first (for DIRECT participants or client in SUPPORT)
+            boolean found = conversation.getParticipants().stream()
                     .filter(p -> userId.equals(p.getUserId()))
                     .findFirst()
-                    .ifPresent(p -> {
+                    .map(p -> {
                         senderBuilder
                                 .username(p.getUsername())
                                 .firstName(p.getFirstName())
                                 .lastName(p.getLastName())
                                 .avatar(p.getAvatar());
-                    });
+                        return true;
+                    })
+                    .orElse(false);
+            if (!found) {
+                // Manager not in participants (SUPPORT) — fetch username from identity-service
+                senderBuilder.username(fetchManagerUsernameById(userId));
+            }
         }
 
         ChatMessage chatMessage = chatMessageMapper.toChatMessage(request);
@@ -132,13 +146,18 @@ public class ChatMessageService {
         conversation.setModifiedDate(chatMessage.getCreatedDate());
         conversationRepository.save(conversation);
 
-        // Broadcast message to conversation participants via socket
-        // Also include assignedManagerId in case they're not yet in the participants list
-        List<String> userIds = new ArrayList<>(conversation.getParticipants().stream()
-                .map(ParticipantInfo::getUserId)
-                .toList());
-        if (conversation.getAssignedManagerId() != null && !userIds.contains(conversation.getAssignedManagerId())) {
-            userIds.add(conversation.getAssignedManagerId());
+        // Determine recipients for socket broadcast
+        List<String> userIds;
+        if ("SUPPORT".equals(conversation.getType())) {
+            // SUPPORT: deliver to client + ALL managers (any manager may be watching)
+            userIds = new ArrayList<>();
+            userIds.add(conversation.getClientId());
+            userIds.addAll(fetchManagerIds());
+        } else {
+            // DIRECT: deliver to conversation participants only
+            userIds = conversation.getParticipants().stream()
+                    .map(ParticipantInfo::getUserId)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
 
         Map<String, WebSocketSession> webSocketSessions = webSocketSessionRepository.findAllByUserIdIn(userIds).stream()
@@ -169,7 +188,7 @@ public class ChatMessageService {
             }
         });
 
-        // Also broadcast conversation_updated to all managers so sidebar refreshes
+        // Broadcast conversation_updated so all managers' sidebars refresh
         broadcastConversationUpdate(conversation);
 
         return toChatMessageResponse(chatMessage);
@@ -187,18 +206,30 @@ public class ChatMessageService {
 
     private ConversationResponse buildBroadcastResponse(Conversation conversation) {
         ConversationResponse response = conversationMapper.toConversationResponse(conversation);
+
         if (conversation.getAssignedManagerId() != null) {
-            conversation.getParticipants().stream()
-                    .filter(p -> conversation.getAssignedManagerId().equals(p.getUserId()))
-                    .findFirst()
-                    .ifPresent(p -> response.setAssignedManagerName(p.getUsername()));
+            if ("SUPPORT".equals(conversation.getType())) {
+                // Managers not stored in participants for SUPPORT — fetch from identity
+                response.setAssignedManagerName(fetchManagerUsernameById(conversation.getAssignedManagerId()));
+            } else {
+                String name = conversation.getParticipants().stream()
+                        .filter(p -> conversation.getAssignedManagerId().equals(p.getUserId()))
+                        .map(ParticipantInfo::getUsername)
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElseGet(() -> fetchManagerUsernameById(conversation.getAssignedManagerId()));
+                response.setAssignedManagerName(name);
+            }
         }
+
+        // For SUPPORT: participants[0] is always the client
         if (conversation.getParticipants() != null
                 && !conversation.getParticipants().isEmpty()) {
             var first = conversation.getParticipants().get(0);
             response.setConversationName(first.getUsername());
             response.setConversationAvatar(first.getAvatar());
         }
+
         return response;
     }
 
@@ -207,5 +238,33 @@ public class ChatMessageService {
         var response = chatMessageMapper.toChatMessageResponse(chatMessage);
         response.setMe(userId.equals(chatMessage.getSender().getUserId()));
         return response;
+    }
+
+    private List<String> fetchManagerIds() {
+        try {
+            var response = identityClient.getManagerIds();
+            if (response != null && response.getResult() != null) {
+                return response.getResult();
+            }
+        } catch (FeignException e) {
+            log.warn("Could not fetch manager IDs: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    private String fetchManagerUsernameById(String managerId) {
+        try {
+            var response = identityClient.getManagerDetails();
+            if (response != null && response.getResult() != null) {
+                return response.getResult().stream()
+                        .filter(m -> managerId.equals(m.getId()))
+                        .map(ManagerInfoResponse::getUsername)
+                        .findFirst()
+                        .orElse(null);
+            }
+        } catch (FeignException e) {
+            log.warn("Could not fetch manager username: {}", e.getMessage());
+        }
+        return null;
     }
 }

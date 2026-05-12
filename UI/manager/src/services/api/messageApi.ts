@@ -75,6 +75,11 @@ export const messageApi = {
         return res.data.result;
     },
 
+    getOnlineManagers: async (): Promise<string[]> => {
+        const res = await get<ApiResponse<string[]>>(ENDPOINT.CHAT.MANAGERS_ONLINE);
+        return res.data.result;
+    },
+
     claimConversation: async (conversationId: string): Promise<Conversation> => {
         const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.CLAIM(conversationId), {});
         return res.data.result;
