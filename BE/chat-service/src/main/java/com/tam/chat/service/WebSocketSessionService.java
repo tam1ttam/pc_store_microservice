@@ -1,5 +1,7 @@
 package com.tam.chat.service;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.tam.chat.entity.WebSocketSession;
@@ -21,7 +23,15 @@ public class WebSocketSessionService {
         return webSocketSessionRepository.save(webSocketSession);
     }
 
-    public void deleteSession(String sessionId) {
-        webSocketSessionRepository.deleteBySocketSessionId(sessionId);
+    public void deleteSession(String socketSessionId) {
+        webSocketSessionRepository.deleteBySocketSessionId(socketSessionId);
+    }
+
+    public Optional<String> getUserIdBySocketId(String socketSessionId) {
+        return webSocketSessionRepository.findBySocketSessionId(socketSessionId).map(WebSocketSession::getUserId);
+    }
+
+    public boolean isUserOnline(String userId) {
+        return webSocketSessionRepository.existsByUserId(userId);
     }
 }

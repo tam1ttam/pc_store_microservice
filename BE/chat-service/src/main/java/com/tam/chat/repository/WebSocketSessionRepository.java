@@ -1,6 +1,7 @@
 package com.tam.chat.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -12,4 +13,8 @@ public interface WebSocketSessionRepository extends MongoRepository<WebSocketSes
     void deleteBySocketSessionId(String socketId);
 
     List<WebSocketSession> findAllByUserIdIn(List<String> userIds);
+
+    Optional<WebSocketSession> findBySocketSessionId(String socketSessionId);
+
+    boolean existsByUserId(String userId);
 }

@@ -77,4 +77,12 @@ public class ConversationController {
                 .result(conversationService.getManagerList())
                 .build();
     }
+
+    // Manager: get IDs of managers currently online (active socket session)
+    @GetMapping("/managers/online")
+    ApiResponse<List<String>> getOnlineManagers() {
+        return ApiResponse.<List<String>>builder()
+                .result(conversationService.getOnlineManagerIds())
+                .build();
+    }
 }

@@ -43,6 +43,8 @@ public class SocketHandler {
                     .build();
             session = webSocketSessionService.create(session);
             log.info("WebSocketSession created: id={}", session.getId());
+            String connectedUserId = userId;
+            server.getAllClients().forEach(c -> c.sendEvent("user_online", connectedUserId));
         } else {
             log.error("Socket auth failed: sessionId={}", client.getSessionId());
             client.disconnect();
@@ -51,8 +53,13 @@ public class SocketHandler {
 
     @OnDisconnect
     public void clientDisconnected(SocketIOClient client) {
-        log.info("Socket disconnected: sessionId={}", client.getSessionId());
-        webSocketSessionService.deleteSession(client.getSessionId().toString());
+        String socketId = client.getSessionId().toString();
+        log.info("Socket disconnected: sessionId={}", socketId);
+        webSocketSessionService.getUserIdBySocketId(socketId).ifPresent(userId -> {
+            log.info("Broadcasting user_offline: userId={}", userId);
+            server.getAllClients().forEach(c -> c.sendEvent("user_offline", userId));
+        });
+        webSocketSessionService.deleteSession(socketId);
     }
 
     @PostConstruct
