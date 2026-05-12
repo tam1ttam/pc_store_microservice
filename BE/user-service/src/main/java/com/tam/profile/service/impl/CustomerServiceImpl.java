@@ -64,6 +64,17 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public CustomerResponse getCustomerByUserId(String userId) {
+        log.info("Getting customer with userId: {}", userId);
+
+        Customer customer = customerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+
+        return customerMapper.toCustomerResponse(customer);
+    }
+
+    @Override
     public CustomerResponse getInfo() {
         log.info("Getting current user info from SecurityContext");
 

@@ -12,6 +12,8 @@ public interface CustomerService {
 
     CustomerResponse getCustomerByUserName(String userName);
 
+    CustomerResponse getCustomerByUserId(String userId);
+
     CustomerResponse getInfo();
 
     CustomerResponse updateProfile(String userName, CustomerUpdateRequest request);

@@ -5,7 +5,7 @@ import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { MessageCircle, X, Send, User, Loader2 } from "lucide-react";
 import { messageApi, Conversation as ApiConversation } from "@/services/api/messageApi";
-import { setMessages } from "@/redux/slices/chat";
+import { setMessages, addMessage } from "@/redux/slices/chat";
 import { Seller } from "../assets/logo";
 
 interface Message {
@@ -40,7 +40,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
 
     const messages: Message[] = messagesFromRedux.map((msg) => ({
         id: msg.id,
-        type: msg.sender?.userName === currentUsername ? "user" : "seller",
+        type: msg.me ? "user" : "seller",
         message: msg.message || msg.content,
         timestamp: new Date(msg.createdDate)
     }));
@@ -54,34 +54,26 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
 
         try {
             hasFetchedRef.current = true;
-            const conversations = await messageApi.getMyConversations();
+            const conv = await messageApi.startStoreChat();
+            setConversation(conv);
 
-            if (conversations && conversations.length > 0) {
-                setConversation(conversations[0]);
-                const msgs = await messageApi.getMessages(conversations[0].id);
-
+            const msgs = await messageApi.getMessages(conv.id);
+            if (msgs && msgs.length > 0) {
                 const formattedMsgs = msgs.map((msg: any) => ({
                     id: msg.id,
-                    conversationId: conversations[0].id,
+                    conversationId: conv.id,
                     sender: msg.sender,
                     content: msg.message || msg.content,
                     message: msg.message || msg.content,
-                    createdDate: msg.createdDate > 1e12 ? msg.createdDate : msg.createdDate * 1000,
-                    me: msg.sender?.userName === currentUsername
+                    createdDate: typeof msg.createdDate === "number"
+                        ? (msg.createdDate > 1e12 ? msg.createdDate : msg.createdDate * 1000)
+                        : new Date(msg.createdDate).getTime(),
+                    me: msg.me ?? false
                 }));
-
-                dispatch(
-                    setMessages({
-                        conversationId: conversations[0].id,
-                        messages: formattedMsgs
-                    })
-                );
-            } else {
-                setConversation(null);
+                dispatch(setMessages({ conversationId: conv.id, messages: formattedMsgs }));
             }
         } catch (error) {
             console.error("Error fetching conversation:", error);
-            setConversation(null);
         }
     };
 
@@ -102,8 +94,25 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
 
         setIsLoading(true);
         try {
-            await messageApi.sendMessage(conversation.id, inputValue.trim());
+            const response = await messageApi.sendMessage(conversation.id, inputValue.trim());
             setInputValue("");
+            if (response) {
+                const createdDate = typeof response.createdDate === "number"
+                    ? response.createdDate
+                    : new Date(response.createdDate).getTime();
+                dispatch(addMessage({
+                    conversationId: conversation.id,
+                    message: {
+                        id: response.id,
+                        conversationId: conversation.id,
+                        sender: response.sender,
+                        content: response.message || "",
+                        message: response.message,
+                        createdDate,
+                        me: true
+                    }
+                }));
+            }
         } catch (error) {
             console.error("Error sending message:", error);
         } finally {

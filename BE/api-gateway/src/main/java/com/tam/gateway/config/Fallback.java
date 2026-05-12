@@ -15,8 +15,7 @@ import java.net.URI;
 @Slf4j
 public class Fallback {
 
-    @Value("${app.frontend.url:http://localhost:3003}")
-    private String frontendUrl;
+
 
 
     @RequestMapping("/fallback/unavailble")
@@ -34,7 +33,7 @@ public class Fallback {
         }
 
         // 3. Nếu vẫn null thì dùng cấu hình mặc định
-        String finalRedirectBase = (origin != null) ? origin : frontendUrl;
+        String finalRedirectBase = (origin != null) ? origin : "";
 
         log.info("Fallback redirecting to: {}", finalRedirectBase);
 

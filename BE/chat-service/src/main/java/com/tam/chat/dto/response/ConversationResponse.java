@@ -15,11 +15,16 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ConversationResponse {
     String id;
-    String type; // GROUP, DIRECT
+    String type;
     String participantsHash;
     String conversationAvatar;
     String conversationName;
     List<ParticipantInfo> participants;
+    String clientId;
+    String assignedManagerId;
+    String assignedManagerName;
+    String lastMessage;
+    Instant lastMessageAt;
     Instant createdDate;
     Instant modifiedDate;
 }

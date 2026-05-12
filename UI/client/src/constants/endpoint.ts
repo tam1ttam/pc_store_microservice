@@ -48,6 +48,7 @@ const ENDPOINT = {
     CHAT: {
         MY_CONVERSATIONS: `${CHAT_SVC}/conversations/my-conversations`,
         CREATE_CONVERSATION: `${CHAT_SVC}/conversations/create`,
+        WITH_STORE: `${CHAT_SVC}/conversations/with-store`,
         CREATE_MESSAGE: `${CHAT_SVC}/messages/create`,
         GET_CONVERSATION_MESSAGES: (conversationId: string) =>
             `${CHAT_SVC}/messages?conversationId=${conversationId}`,

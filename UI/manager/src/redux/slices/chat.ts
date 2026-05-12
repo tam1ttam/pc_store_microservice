@@ -17,14 +17,32 @@ export interface ChatMessage {
     me?: boolean;
 }
 
+export interface SupportConversation {
+    id: string;
+    type?: string;
+    clientId?: string;
+    assignedManagerId?: string;
+    assignedManagerName?: string;
+    conversationName?: string;
+    conversationAvatar?: string;
+    lastMessage?: string;
+    lastMessageAt?: string;
+    participants?: any[];
+    modifiedDate?: string;
+}
+
 export interface ChatState {
     messages: Record<string, ChatMessage[]>;
+    conversations: SupportConversation[];
     notifications: any[];
+    unreadConversationIds: string[];
 }
 
 const initialState: ChatState = {
     messages: {},
+    conversations: [],
     notifications: [],
+    unreadConversationIds: [],
 };
 
 const chatSlice = createSlice({
@@ -67,6 +85,19 @@ const chatSlice = createSlice({
             delete state.messages[action.payload];
         },
 
+        setConversations: (state, action: PayloadAction<SupportConversation[]>) => {
+            state.conversations = action.payload;
+        },
+
+        updateConversation: (state, action: PayloadAction<SupportConversation>) => {
+            const idx = state.conversations.findIndex(c => c.id === action.payload.id);
+            if (idx >= 0) {
+                state.conversations[idx] = action.payload;
+            } else {
+                state.conversations.push(action.payload);
+            }
+        },
+
         addNotification: (state, action: PayloadAction<any>) => {
             state.notifications.push(action.payload);
         },
@@ -74,8 +105,18 @@ const chatSlice = createSlice({
         clearNotifications: (state) => {
             state.notifications = [];
         },
+
+        addUnread: (state, action: PayloadAction<string>) => {
+            if (!state.unreadConversationIds.includes(action.payload)) {
+                state.unreadConversationIds.push(action.payload);
+            }
+        },
+
+        clearUnread: (state, action: PayloadAction<string>) => {
+            state.unreadConversationIds = state.unreadConversationIds.filter(id => id !== action.payload);
+        },
     },
 });
 
-export const { addMessage, setMessages, clearMessages, addNotification, clearNotifications } = chatSlice.actions;
+export const { addMessage, setMessages, clearMessages, setConversations, updateConversation, addNotification, clearNotifications, addUnread, clearUnread } = chatSlice.actions;
 export default chatSlice.reducer;

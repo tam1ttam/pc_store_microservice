@@ -40,7 +40,8 @@ app:
       - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
   services:
     profile:
-      url: lb://USER-SERVICE
+      grpc-host: ${USER_SERVICE_HOST:localhost}
+      grpc-port: ${USER_SERVICE_GRPC_PORT:6163}
     identity:
       url: lb://IDENTITY-SERVICE
 

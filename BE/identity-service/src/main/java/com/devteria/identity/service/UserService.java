@@ -136,7 +136,7 @@ public class UserService {
     public void assignRoleToUser(String userName, String roleName) {
         User user =
                 userRepository.findByUsername(userName).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        Role role = roleRepository.findById(roleName).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        Role role = roleRepository.findById(roleName).orElseThrow(() -> new AppException(ErrorCode.INVALID_ROLE));
 
         if (user.getRoles() == null) {
             user.setRoles(new HashSet<>());

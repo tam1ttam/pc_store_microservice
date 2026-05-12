@@ -48,10 +48,14 @@ const ENDPOINT = {
     // ── Chat-service ─────────────────────────────────────────────────────────
     CHAT: {
         MY_CONVERSATIONS: `${CHAT_SVC}/conversations/my-conversations`,
+        SUPPORT_ALL: `${CHAT_SVC}/conversations/support-all`,
+        MANAGERS: `${CHAT_SVC}/conversations/managers`,
         CREATE_CONVERSATION: `${CHAT_SVC}/conversations/create`,
         CREATE_MESSAGE: `${CHAT_SVC}/messages/create`,
         GET_CONVERSATION_MESSAGES: (conversationId: string) =>
             `${CHAT_SVC}/messages?conversationId=${conversationId}`,
+        CLAIM: (id: string) => `${CHAT_SVC}/conversations/${id}/claim`,
+        TRANSFER: (id: string) => `${CHAT_SVC}/conversations/${id}/transfer`,
     },
 
     // ── File-service ─────────────────────────────────────────────────────────
