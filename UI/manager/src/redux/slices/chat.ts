@@ -1,18 +1,24 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface Attachment {
+    url: string;
+    originalFileName: string;
+    fileType: string; // "image" | "video" | "audio" | "document"
+}
+
 export interface ChatMessage {
     id: string;
     conversationId: string;
     sender: {
-        id: string;
-        userName: string;
+        userId?: string;
+        username?: string;
         firstName?: string;
         lastName?: string;
-        email?: string;
-        roles?: Array<{ name: string; description?: string }>;
+        avatar?: string;
     };
     content: string;
     message?: string;
+    attachments?: Attachment[];
     createdDate: number;
     me?: boolean;
 }

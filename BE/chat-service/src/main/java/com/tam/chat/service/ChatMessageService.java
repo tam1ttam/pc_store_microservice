@@ -91,6 +91,14 @@ public class ChatMessageService {
                 .findById(request.getConversationId())
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
 
+        // Validate: must have message text or at least one attachment
+        boolean hasText = request.getMessage() != null && !request.getMessage().isBlank();
+        boolean hasAttachments =
+                request.getAttachments() != null && !request.getAttachments().isEmpty();
+        if (!hasText && !hasAttachments) {
+            throw new AppException(ErrorCode.SEND_NOT_ALLOWED);
+        }
+
         // Validate sender access
         if ("SUPPORT".equals(conversation.getType())) {
             boolean isClient = userId.equals(conversation.getClientId());
@@ -130,8 +138,13 @@ public class ChatMessageService {
                     })
                     .orElse(false);
             if (!found) {
-                // Manager not in participants (SUPPORT) — fetch username from identity-service
-                senderBuilder.username(fetchManagerUsernameById(userId));
+                // Manager not in participants (SUPPORT) — use username cached in WebSocketSession,
+                // fall back to identity-service Feign call if session not found
+                String cachedUsername = webSocketSessionRepository
+                        .findFirstByUserId(userId)
+                        .map(WebSocketSession::getUsername)
+                        .orElse(null);
+                senderBuilder.username(cachedUsername != null ? cachedUsername : fetchManagerUsernameById(userId));
             }
         }
 
@@ -139,9 +152,16 @@ public class ChatMessageService {
         chatMessage.setSender(senderBuilder.build());
         chatMessage.setCreatedDate(Instant.now());
         chatMessage = chatMessageRepository.save(chatMessage);
-
+        final ChatMessage savedMessage = chatMessage;
         // Update lastMessage preview on conversation
-        conversation.setLastMessage(chatMessage.getMessage());
+        String lastMsgPreview =
+                (chatMessage.getMessage() != null && !chatMessage.getMessage().isBlank())
+                        ? chatMessage.getMessage()
+                        : (chatMessage.getAttachments() != null
+                                        && !chatMessage.getAttachments().isEmpty())
+                                ? "📎 " + chatMessage.getAttachments().get(0).getOriginalFileName()
+                                : "";
+        conversation.setLastMessage(lastMsgPreview);
         conversation.setLastMessageAt(chatMessage.getCreatedDate());
         conversation.setModifiedDate(chatMessage.getCreatedDate());
         conversationRepository.save(conversation);
@@ -169,7 +189,6 @@ public class ChatMessageService {
                 webSocketSessions.size(),
                 socketIOServer.getAllClients().size());
 
-        ChatMessageResponse chatMessageResponse = chatMessageMapper.toChatMessageResponse(chatMessage);
         socketIOServer.getAllClients().forEach(client -> {
             var session = webSocketSessions.get(client.getSessionId().toString());
             log.debug(
@@ -178,8 +197,9 @@ public class ChatMessageService {
                     session != null ? session.getUserId() : "NO MATCH");
             if (Objects.nonNull(session)) {
                 try {
-                    chatMessageResponse.setMe(session.getUserId().equals(userId));
-                    String message = objectMapper.writeValueAsString(chatMessageResponse);
+                    ChatMessageResponse perRecipient = chatMessageMapper.toChatMessageResponse(savedMessage);
+                    perRecipient.setMe(session.getUserId().equals(userId));
+                    String message = objectMapper.writeValueAsString(perRecipient);
                     client.sendEvent("message", message);
                     log.debug("  -> sent to userId={}", session.getUserId());
                 } catch (JsonProcessingException e) {

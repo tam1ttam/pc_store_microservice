@@ -2,12 +2,53 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api/aiApi";
-import { messageApi, Conversation, ManagerInfo } from "@/services/api/messageApi";
+import { messageApi, Conversation, ManagerInfo, Attachment } from "@/services/api/messageApi";
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { setMessages, addMessage, ChatMessage, setConversations, updateConversation, clearUnread, SupportConversation } from "@/redux/slices/chat";
 import { AILogo } from "@/assets/logo";
-import { Send, X, Loader2, User, Shield, ArrowRightLeft, Plus, MessageSquare, Search } from "lucide-react";
+import { Send, X, Loader2, User, Shield, ArrowRightLeft, Plus, MessageSquare, Search, Paperclip, FileText, Music, Video } from "lucide-react";
+
+function detectFileType(fileName: string): Attachment["fileType"] {
+    const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext)) return "image";
+    if (["mp4", "webm", "ogg", "mov", "avi"].includes(ext)) return "video";
+    if (["mp3", "wav", "flac", "aac", "m4a"].includes(ext)) return "audio";
+    return "document";
+}
+
+function AttachmentBubble({ att, isMe, isDirect }: { att: Attachment; isMe: boolean; isDirect: boolean }) {
+    const textClass = isMe ? (isDirect ? "text-indigo-100" : "text-orange-100") : "text-gray-500";
+    if (att.fileType === "image") {
+        return (
+            <a href={att.url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+                <img src={att.url} alt={att.originalFileName} className="max-w-[180px] max-h-[140px] rounded-lg object-cover" />
+            </a>
+        );
+    }
+    if (att.fileType === "video") {
+        return (
+            <video controls className="mt-1 max-w-[180px] rounded-lg">
+                <source src={att.url} />
+            </video>
+        );
+    }
+    if (att.fileType === "audio") {
+        return (
+            <div className="mt-1 flex items-center gap-1.5">
+                <Music className={`w-3.5 h-3.5 flex-shrink-0 ${textClass}`} />
+                <audio controls className="h-7 max-w-[160px]"><source src={att.url} /></audio>
+            </div>
+        );
+    }
+    return (
+        <a href={att.url} target="_blank" rel="noopener noreferrer"
+            className={`mt-1 flex items-center gap-1 underline text-xs ${textClass}`}>
+            <FileText className="w-3 h-3 flex-shrink-0" />
+            {att.originalFileName}
+        </a>
+    );
+}
 
 function getIdentityUserIdFromToken(token: string | null): string {
     if (!token) return "";
@@ -116,11 +157,10 @@ const AIChatWindow = ({ onClose }: { onClose: () => void }) => {
                             )}
                             <div className={`max-w-[75%] flex flex-col gap-0.5 ${msg.type === "user" ? "items-end" : "items-start"}`}>
                                 <div
-                                    className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
-                                        msg.type === "user"
-                                            ? "bg-blue-600 text-white rounded-br-sm"
-                                            : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"
-                                    }`}
+                                    className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${msg.type === "user"
+                                        ? "bg-blue-600 text-white rounded-br-sm"
+                                        : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"
+                                        }`}
                                 >
                                     {msg.content}
                                 </div>
@@ -176,10 +216,16 @@ const CustomerChatWindow = ({
     const [input, setInput] = useState("");
     const [loadingMsgs, setLoadingMsgs] = useState(false);
     const [showTransfer, setShowTransfer] = useState(false);
+    const [transferFilter, setTransferFilter] = useState<"online" | "all">("all");
     const [actionLoading, setActionLoading] = useState(false);
     const [managerList, setManagerList] = useState<ManagerInfo[]>([]);
     const [loadingManagers, setLoadingManagers] = useState(false);
+    const [onlineManagerIds, setOnlineManagerIds] = useState<string[]>([]);
+    const [pendingAttachment, setPendingAttachment] = useState<Attachment | null>(null);
+    const [uploadingFile, setUploadingFile] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const prevConvIdRef = useRef<string>("");
     const dispatch = useAppDispatch();
     const messages = useAppSelector((state: RootState) => state.chat.messages[conversation.id] || []);
     const token = useAppSelector((state: RootState) => state.auth.token);
@@ -189,11 +235,24 @@ const CustomerChatWindow = ({
     const isDirect = conversation.type !== "SUPPORT";
     const isAssignedToMe = !isDirect && !!conversation.assignedManagerId && conversation.assignedManagerId === currentUserId;
     const isUnassigned = !isDirect && !conversation.assignedManagerId;
-    // Only the assigned manager can send in SUPPORT; both sides in DIRECT
     const canSend = isDirect || isAssignedToMe;
+    const isClientOnline = !isDirect && !!conversation.clientId && onlineUserIds.includes(conversation.clientId);
+
+    // Bootstrap client online status on mount
+    useEffect(() => {
+        if (!isDirect && conversation.clientId) {
+            messageApi.isUserOnline(conversation.clientId)
+                .then(online => { if (online) dispatch({ type: "presence/setUserOnline", payload: conversation.clientId }); })
+                .catch(() => { });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation.id]);
 
     useEffect(() => {
-        setLoadingMsgs(true);
+        const isNewConv = prevConvIdRef.current !== conversation.id;
+        prevConvIdRef.current = conversation.id;
+        if (isNewConv) setLoadingMsgs(true);
+
         messageApi
             .getMessages(conversation.id)
             .then((msgs) => {
@@ -203,6 +262,7 @@ const CustomerChatWindow = ({
                     sender: msg.sender,
                     content: msg.message || msg.content || "",
                     message: msg.message || msg.content || "",
+                    attachments: msg.attachments,
                     createdDate: typeof msg.createdDate === "number"
                         ? (msg.createdDate > 1e12 ? msg.createdDate : msg.createdDate * 1000)
                         : new Date(msg.createdDate).getTime(),
@@ -211,8 +271,9 @@ const CustomerChatWindow = ({
                 dispatch(setMessages({ conversationId: conversation.id, messages: formatted }));
             })
             .catch(console.error)
-            .finally(() => setLoadingMsgs(false));
-    }, [conversation.id, dispatch]);
+            .finally(() => { if (isNewConv) setLoadingMsgs(false); });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation.id, conversation.lastMessageAt, dispatch]);
 
     useEffect(() => {
         if (containerRef.current) {
@@ -220,11 +281,29 @@ const CustomerChatWindow = ({
         }
     }, [messages, loadingMsgs]);
 
-    const send = async () => {
-        if (!input.trim() || !canSend) return;
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingFile(true);
         try {
-            const response = await messageApi.sendMessage(conversation.id, input.trim());
+            const result = await messageApi.uploadFile(file);
+            const fileType = detectFileType(result.originalFileName || file.name);
+            setPendingAttachment({ url: result.url, originalFileName: result.originalFileName || file.name, fileType });
+        } catch {
+            alert("Tải file lên thất bại.");
+        } finally {
+            setUploadingFile(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const send = async () => {
+        if ((!input.trim() && !pendingAttachment) || !canSend) return;
+        try {
+            const attachments = pendingAttachment ? [pendingAttachment] : undefined;
+            const response = await messageApi.sendMessage(conversation.id, input.trim(), attachments);
             setInput("");
+            setPendingAttachment(null);
             if (response) {
                 const createdDate = typeof response.createdDate === "number"
                     ? response.createdDate
@@ -237,9 +316,10 @@ const CustomerChatWindow = ({
                         sender: response.sender,
                         content: response.message || "",
                         message: response.message,
+                        attachments: response.attachments,
                         createdDate,
-                        me: true
-                    }
+                        me: true,
+                    },
                 }));
             }
         } catch (err) {
@@ -275,14 +355,16 @@ const CustomerChatWindow = ({
     const handleShowTransfer = async () => {
         if (showTransfer) { setShowTransfer(false); return; }
         setShowTransfer(true);
-        if (managerList.length === 0) {
-            setLoadingManagers(true);
-            try {
-                const list = await messageApi.getManagerList();
-                setManagerList(list.filter(m => m.id !== currentUserId));
-            } catch { /* ignore */ } finally {
-                setLoadingManagers(false);
-            }
+        setLoadingManagers(true);
+        try {
+            const [list, onlineIds] = await Promise.all([
+                managerList.length === 0 ? messageApi.getManagerList() : Promise.resolve(managerList),
+                messageApi.getOnlineManagers(),
+            ]);
+            if (managerList.length === 0) setManagerList((list as ManagerInfo[]).filter(m => m.id !== currentUserId));
+            setOnlineManagerIds(onlineIds);
+        } catch { /* ignore */ } finally {
+            setLoadingManagers(false);
         }
     };
 
@@ -293,28 +375,33 @@ const CustomerChatWindow = ({
     const headerSubtitle = isDirect
         ? "Nhắn tin nội bộ"
         : isUnassigned
-        ? "Chưa có người phụ trách"
-        : isAssignedToMe
-        ? "Bạn đang phụ trách"
-        : `${conversation.assignedManagerName ?? "Manager khác"} đang phụ trách`;
+            ? "Chưa có người phụ trách"
+            : isAssignedToMe
+                ? "Bạn đang phụ trách"
+                : `${conversation.assignedManagerName ?? "Manager khác"} đang phụ trách`;
+
+    const onlineManagers = managerList.filter(m => onlineManagerIds.includes(m.id));
 
     return (
         <div className="fixed bottom-0 right-72 z-50 w-96 h-[620px] bg-white rounded-t-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
             {/* Header */}
             <div className={`${headerGradient} text-white px-4 py-3 flex items-center justify-between flex-shrink-0`}>
                 <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <div className="relative w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                         {isDirect ? <MessageSquare className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-white" />}
+                        {isClientOnline && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
+                        )}
                     </div>
                     <div className="min-w-0">
                         <p className="font-semibold text-sm truncate">{clientName(conversation)}</p>
-                        <p className="text-xs text-white/70 truncate">{headerSubtitle}</p>
+                        <p className="text-xs text-white/70 truncate">
+                            {!isDirect && isClientOnline ? "Đang hoạt động · " : ""}
+                            {headerSubtitle}
+                        </p>
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
-                >
+                <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0">
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -323,23 +410,15 @@ const CustomerChatWindow = ({
             {!isDirect && (
                 <div className="px-3 py-2 border-b bg-orange-50 flex items-center gap-2 flex-shrink-0">
                     {isUnassigned && (
-                        <button
-                            onClick={handleClaim}
-                            disabled={actionLoading}
-                            className="flex items-center gap-1 text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-full transition-colors disabled:opacity-60"
-                        >
-                            <Shield className="w-3 h-3" />
-                            Nhận xử lý
+                        <button onClick={handleClaim} disabled={actionLoading}
+                            className="flex items-center gap-1 text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-full transition-colors disabled:opacity-60">
+                            <Shield className="w-3 h-3" />Nhận xử lý
                         </button>
                     )}
                     {isAssignedToMe && (
-                        <button
-                            onClick={handleShowTransfer}
-                            disabled={actionLoading}
-                            className="flex items-center gap-1 text-xs bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-full transition-colors disabled:opacity-60"
-                        >
-                            <ArrowRightLeft className="w-3 h-3" />
-                            Chuyển giao
+                        <button onClick={handleShowTransfer} disabled={actionLoading}
+                            className="flex items-center gap-1 text-xs bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-full transition-colors disabled:opacity-60">
+                            <ArrowRightLeft className="w-3 h-3" />Chuyển giao
                         </button>
                     )}
                     {!isUnassigned && !isAssignedToMe && (
@@ -354,39 +433,48 @@ const CustomerChatWindow = ({
                 </div>
             )}
 
-            {/* Transfer picker */}
+            {/* Transfer picker — tabs: Đang hoạt động / Tất cả */}
             {!isDirect && showTransfer && (
-                <div className="border-b bg-gray-50 flex-shrink-0 max-h-40 overflow-y-auto">
-                    {loadingManagers ? (
-                        <div className="flex justify-center py-3">
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                        </div>
-                    ) : managerList.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center py-3">Không có manager nào</p>
-                    ) : (
-                        managerList.map((m) => {
-                            const isOnline = onlineUserIds.includes(m.id);
-                            return (
-                                <button
-                                    key={m.id}
-                                    onClick={() => handleTransfer(m.id)}
-                                    disabled={actionLoading}
-                                    className="w-full text-left px-4 py-2 text-xs hover:bg-orange-50 transition-colors disabled:opacity-60 flex items-center gap-2"
-                                >
-                                    <div className="relative w-6 h-6 flex-shrink-0">
-                                        <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                                            <User className="w-3 h-3 text-gray-600" />
+                <div className="border-b bg-gray-50 flex-shrink-0 max-h-52 flex flex-col overflow-hidden">
+                    {/* Tab toggle */}
+                    <div className="flex gap-1 px-3 pt-2 pb-1.5 flex-shrink-0">
+                        {(["online", "all"] as const).map(tab => (
+                            <button key={tab} onClick={() => setTransferFilter(tab)}
+                                className={`flex-1 text-[11px] py-1 rounded-full font-medium transition-colors ${transferFilter === tab ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-200"}`}>
+                                {tab === "online" ? "Đang hoạt động" : "Tất cả"}
+                            </button>
+                        ))}
+                    </div>
+                    {/* List */}
+                    <div className="overflow-y-auto flex-1">
+                        {loadingManagers ? (
+                            <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /></div>
+                        ) : (() => {
+                            const filtered = transferFilter === "online" ? onlineManagers : managerList;
+                            console.log('online manager: ', onlineManagers);
+
+                            return filtered.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-3">
+                                    {transferFilter === "online" ? "Không có manager nào đang online" : "Không có manager nào"}
+                                </p>
+                            ) : filtered.map(m => {
+                                const isOnline = onlineManagerIds.includes(m.id);
+                                return (
+                                    <button key={m.id} onClick={() => handleTransfer(m.id)} disabled={actionLoading}
+                                        className="w-full text-left px-4 py-2 text-xs hover:bg-orange-50 transition-colors disabled:opacity-60 flex items-center gap-2">
+                                        <div className="relative w-6 h-6 flex-shrink-0">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isOnline ? "bg-green-100" : "bg-gray-200"}`}>
+                                                <User className={`w-3 h-3 ${isOnline ? "text-green-700" : "text-gray-500"}`} />
+                                            </div>
+                                            {isOnline && <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border border-white rounded-full" />}
                                         </div>
-                                        {isOnline && (
-                                            <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border border-white rounded-full" />
-                                        )}
-                                    </div>
-                                    <span className="font-medium text-gray-700">{m.username}</span>
-                                    {isOnline && <span className="ml-auto text-green-500 text-[10px]">Online</span>}
-                                </button>
-                            );
-                        })
-                    )}
+                                        <span className="font-medium text-gray-700">{m.username}</span>
+                                        {isOnline && <span className="ml-auto text-green-500 text-[10px]">Online</span>}
+                                    </button>
+                                );
+                            });
+                        })()}
+                    </div>
                 </div>
             )}
 
@@ -401,25 +489,38 @@ const CustomerChatWindow = ({
                 ) : (
                     messages.map((msg) => {
                         const content = msg.content || msg.message || "";
-                        const isMe = msg.me || msg.sender?.userName === currentUsername;
+                        const isMe = msg.me ?? false;
+                        const senderName = msg.sender?.username;
+                        const avatarUrl = msg.sender?.avatar;
                         const time = msg.createdDate
                             ? new Date(msg.createdDate).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
                             : "";
                         return (
-                            <div key={msg.id} className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
-                                <div className={`max-w-[78%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
-                                    <div
-                                        className={`px-3 py-2 rounded-2xl text-sm break-words ${
-                                            isMe
-                                                ? isDirect
-                                                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-sm"
-                                                    : "bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-br-sm"
-                                                : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"
-                                        }`}
-                                    >
-                                        {content}
+                            <div key={msg.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+                                {isMe ? (
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${isDirect ? "bg-indigo-100" : "bg-orange-100"}`}>
+                                        <User className={`w-4 h-4 ${isDirect ? "text-indigo-500" : "text-orange-500"}`} />
                                     </div>
-                                    {time && <span className="text-[10px] text-gray-400 px-1">{time}</span>}
+                                ) : (
+                                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                        {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-gray-500" />}
+                                    </div>
+                                )}
+                                <div className={`max-w-[72%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
+                                    <div className={`px-3 py-2 rounded-2xl text-sm break-words ${isMe
+                                        ? isDirect
+                                            ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-sm"
+                                            : "bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-br-sm"
+                                        : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"}`}>
+                                        {content && <span className="whitespace-pre-wrap">{content}</span>}
+                                        {(msg.attachments ?? []).map((att, i) => (
+                                            <AttachmentBubble key={i} att={att} isMe={isMe} isDirect={isDirect} />
+                                        ))}
+                                    </div>
+                                    <div className={`flex items-center gap-1.5 px-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                        {senderName && <span className="text-[10px] text-gray-500 font-medium">{senderName}</span>}
+                                        {time && <span className="text-[10px] text-gray-400">{time}</span>}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -427,8 +528,31 @@ const CustomerChatWindow = ({
                 )}
             </div>
 
+            {/* Pending attachment preview */}
+            {pendingAttachment && (
+                <div className="px-3 py-2 bg-orange-50 border-t flex items-center gap-2 flex-shrink-0">
+                    {pendingAttachment.fileType === "video" ? <Video className="w-4 h-4 text-orange-500" />
+                        : pendingAttachment.fileType === "audio" ? <Music className="w-4 h-4 text-orange-500" />
+                            : pendingAttachment.fileType === "document" ? <FileText className="w-4 h-4 text-orange-500" />
+                                : <User className="w-4 h-4 text-orange-500" />}
+                    <span className="text-xs text-gray-700 truncate flex-1">{pendingAttachment.originalFileName}</span>
+                    <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500">
+                        <X className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            )}
+
             {/* Input */}
-            <div className="p-3 bg-white border-t flex gap-2 flex-shrink-0">
+            <div className="p-3 bg-white border-t flex gap-2 items-center flex-shrink-0">
+                <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange}
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" />
+                {canSend && (
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
+                        className="w-8 h-8 rounded-full border border-gray-200 hover:bg-gray-100 flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-50"
+                        title="Đính kèm file">
+                        {uploadingFile ? <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" /> : <Paperclip className="w-3.5 h-3.5 text-gray-500" />}
+                    </button>
+                )}
                 <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -439,8 +563,8 @@ const CustomerChatWindow = ({
                 />
                 <Button
                     onClick={send}
-                    disabled={!input.trim() || !canSend}
-                    className={`w-9 h-9 rounded-full p-0 hover:opacity-90 ${isDirect ? "bg-gradient-to-r from-indigo-500 to-purple-600" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
+                    disabled={(!input.trim() && !pendingAttachment) || !canSend}
+                    className={`w-9 h-9 rounded-full p-0 hover:opacity-90 flex-shrink-0 ${isDirect ? "bg-gradient-to-r from-indigo-500 to-purple-600" : "bg-gradient-to-r from-orange-400 to-red-500"}`}
                 >
                     <Send className="w-4 h-4" />
                 </Button>
@@ -631,11 +755,10 @@ const ManagerChatSidebar = () => {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveFilter(tab.key)}
-                                className={`flex-1 text-xs py-1 rounded-full transition-colors font-medium ${
-                                    activeFilter === tab.key
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-500 hover:bg-gray-100"
-                                }`}
+                                className={`flex-1 text-xs py-1 rounded-full transition-colors font-medium ${activeFilter === tab.key
+                                    ? "bg-blue-600 text-white"
+                                    : "text-gray-500 hover:bg-gray-100"
+                                    }`}
                             >
                                 {tab.label}
                             </button>
@@ -647,9 +770,8 @@ const ManagerChatSidebar = () => {
                         {showAI && (
                             <button
                                 onClick={() => setActiveChat((prev) => (prev === "ai" ? null : "ai"))}
-                                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-                                    activeChat === "ai" ? "bg-blue-50" : ""
-                                }`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${activeChat === "ai" ? "bg-blue-50" : ""
+                                    }`}
                             >
                                 <div className="relative flex-shrink-0">
                                     <img src={AILogo} alt="AI" className="w-10 h-10 rounded-full border-2 border-blue-200" />
@@ -681,9 +803,8 @@ const ManagerChatSidebar = () => {
                                                 setActiveChat((prev) => (prev === conv.id ? null : conv.id));
                                                 dispatch(clearUnread(conv.id));
                                             }}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-                                                activeChat === conv.id ? "bg-orange-50" : ""
-                                            }`}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${activeChat === conv.id ? "bg-orange-50" : ""
+                                                }`}
                                         >
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-300 to-red-400 flex items-center justify-center flex-shrink-0">
                                                 <User className="w-5 h-5 text-white" />
@@ -728,9 +849,8 @@ const ManagerChatSidebar = () => {
                                                 setActiveChat((prev) => (prev === conv.id ? null : conv.id));
                                                 dispatch(clearUnread(conv.id));
                                             }}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-                                                activeChat === conv.id ? "bg-indigo-50" : ""
-                                            }`}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${activeChat === conv.id ? "bg-indigo-50" : ""
+                                                }`}
                                         >
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
                                                 <User className="w-5 h-5 text-white" />

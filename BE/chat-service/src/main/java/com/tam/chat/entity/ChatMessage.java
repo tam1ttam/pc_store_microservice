@@ -1,6 +1,7 @@
 package com.tam.chat.entity;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -26,6 +27,8 @@ public class ChatMessage {
     String message;
 
     ParticipantInfo sender;
+
+    List<Attachment> attachments;
 
     @Indexed
     Instant createdDate;

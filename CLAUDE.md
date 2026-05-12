@@ -107,6 +107,26 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 **FE — `UI/client/src/SocketClient.tsx` & `UI/manager/src/SocketClient.tsx`**
 - Bỏ `currentUserId` (user-service ID) khỏi useEffect deps — không liên quan đến socket, chỉ gây reconnect thừa khi user profile load.
 
+### [DONE] Batch 4 — quyền gửi tin, real-time chat window, avatar/username
+
+**BE — `chat-service`**
+- `ChatMessageService.create` (SUPPORT): chỉ `clientId` hoặc `assignedManagerId` mới được gửi — manager không phụ trách không gửi được (trước đây bất kỳ manager nào cũng gửi được).
+- `ConversationService.toConversationResponse`: fallback gọi `fetchManagerUsername()` riêng lẻ khi batch `getManagerNameMap()` trả null cho một `assignedManagerId` — đảm bảo `assignedManagerName` luôn được fill.
+
+**FE — `UI/manager/src/redux/slices/chat.ts`**
+- Fix `ChatMessage.sender` type: đổi sang đúng field của BE `ParticipantInfo` (`userId`, `username`, `avatar`) thay vì field cũ sai (`id`, `userName`).
+- `setMessages` giờ **merge** thay vì replace: message đã add qua socket event không bị ghi đè khi API response về sau — fix race condition.
+
+**FE — `UI/manager/src/components/ManagerChatSidebar.tsx`**
+- `canSend = isDirect || isAssignedToMe`: chỉ manager đang phụ trách mới nhắn được trong SUPPORT. Input bị `disabled` + placeholder hiện `"{tên} đang phụ trách"` khi không có quyền.
+- `useEffect` fetch messages thêm dep `conversation.lastMessageAt`: khi `conversation_updated` socket event về → `lastMessageAt` thay đổi → tự refetch messages (silent, không hiện loading spinner). Fix real-time cho manager không phụ trách.
+- `prevConvIdRef`: phân biệt lần đầu mở conversation (hiện spinner) với update sau (silent refresh).
+- Thêm **avatar** cho mỗi tin nhắn: `isMe=true` → User icon màu cam/indigo; `isMe=false` → avatar thật (nếu có) hoặc User icon xám.
+- Thêm **username** dưới mỗi bubble (cạnh timestamp) lấy từ `msg.sender.username`.
+
+**FE — `UI/manager/src/constants/endpoint.ts`**
+- `CHAT.MANAGERS` đổi sang trỏ thẳng `identity-service/internal/managers/details` thay vì qua chat-service.
+
 ### [DONE] Batch 3 — manager-to-manager chat, filter/search UI, assignedManagerName fix
 
 **BE — `chat-service`**
@@ -159,13 +179,53 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - Thêm `ManagerInfo` interface `{id, username}`.
 
 **FE — `UI/manager/src/constants/endpoint.ts`**
-- Thêm `CHAT.MANAGERS`.
+- Thêm `CHAT.MANAGERS` (ban đầu trỏ chat-service, sau đổi sang identity-service ở Batch 4).
 
 #### Kiến trúc quan trọng cần nhớ
 - Manager là user của **identity-service**, KHÔNG có profile trong **user-service** → `profileGrpcClient.getProfileByUserId(managerId)` luôn trả `null` cho manager.
 - `WebSocketSession.userId` = identity user ID (JWT `sub` claim), KHÔNG phải user-service profile ID.
 - `ParticipantInfo.userId` trong Conversation = identity user ID (vì `ProfileGrpcClient.getProfileByUserId` trả `UserProfileResponse.userId = userId` truyền vào).
 - Mọi so sánh user ID trong chat phải dùng identity ID (decode JWT), không dùng `state.user.info?.id`.
+
+### [DONE] Batch 5 — gửi file, online indicator, transfer tabs
+
+**BE — `chat-service`**
+- `Attachment.java` (entity mới): embedded value object `{ url, originalFileName, fileType }`.
+- `ChatMessage.java`: thêm `List<Attachment> attachments`.
+- `ChatMessageRequest.java`: bỏ `@NotBlank` trên `message`, thêm `List<Attachment> attachments`.
+- `ChatMessageResponse.java`: thêm `List<Attachment> attachments`.
+- `ChatMessageService.create`: validate ít nhất `message` hoặc `attachments` phải có; `lastMessage` preview dùng `📎 fileName` khi không có text.
+- `ConversationController`: thêm `GET /conversations/users/{userId}/online` → `ApiResponse<Boolean>`.
+- `ConversationService`: thêm `isUserOnline(userId)` dùng `WebSocketSessionRepository.existsByUserId`.
+
+**FE Client**
+- `presence.ts` (mới): Redux slice giống manager, track `onlineUserIds[]`.
+- `store.tsx`: thêm `presenceReducer`.
+- `SocketClient.tsx`: lắng nghe `user_online`/`user_offline`, gọi `getOnlineManagers()` khi connect.
+- `chat.ts`: fix sender type (`userId/username/avatar`), thêm `attachments`, `setMessages` merge thay vì replace.
+- `endpoint.ts`: thêm `CHAT.MANAGERS_ONLINE`, `CHAT.USER_ONLINE`.
+- `messageApi.ts`: thêm `uploadFile`, `getOnlineManagers`, cập nhật `sendMessage` hỗ trợ `attachments`.
+- `SellerChatModal.tsx`: green dot + "Đang hoạt động" khi `onlineUserIds.length > 0`; nút paperclip upload file; preview file trước khi gửi; render `AttachmentPreview` (ảnh/video/audio/tài liệu) trong bubble.
+
+**FE Manager**
+- `endpoint.ts`: thêm `CHAT.USER_ONLINE`.
+- `messageApi.ts`: thêm `uploadFile`, `isUserOnline`, cập nhật `sendMessage` hỗ trợ `attachments`.
+- `chat.ts` (manager): thêm `Attachment` interface + `attachments` field trên `ChatMessage`.
+- `ManagerChatSidebar.tsx`:
+  - `CustomerChatWindow`: green dot trên avatar header khi client online; bootstrap client online status via `isUserOnline` API khi window mở; nút paperclip + pending attachment preview + `AttachmentBubble` render; `send()` truyền attachments.
+  - Transfer picker: 2 tab "Đang hoạt động" / "Tất cả" với chấm xanh.
+
+### [DONE] Batch 6 — fix transfer picker "Đang hoạt động" luôn rỗng
+
+**Root cause**: `ConversationService.getOnlineManagerIds()` gọi `fetchManagerIds()` qua Feign tới identity-service. Nếu Eureka chậm → Feign throw → trả `List.of()` rỗng → tab "Đang hoạt động" luôn empty.
+
+**BE — `chat-service`**
+- `ConversationService.getOnlineManagerIds()`: bỏ Feign, dùng `webSocketSessionRepository.findAll()` lấy tất cả active session userIds trực tiếp từ MongoDB. FE tự lọc ra manager qua `managerList`.
+- Import `WebSocketSession` entity vào `ConversationService`.
+
+**FE Manager — `ManagerChatSidebar.tsx`**
+- `handleShowTransfer`: luôn gọi `getOnlineManagers()` HTTP fresh mỗi lần mở picker (không dùng Redux cache stale). Dùng `Promise.all` song song với fetch manager list.
+- Thêm local state `onlineManagerIds` thay thế `onlineUserIds` từ Redux cho transfer picker.
 
 ---
 

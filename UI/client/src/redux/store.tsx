@@ -7,6 +7,7 @@ import adminReducer from "@/redux/slices/admin";
 import userReducer from "@/redux/slices/user";
 import orderReducer from "@/redux/slices/order";
 import chatReducer from "@/redux/slices/chat";
+import presenceReducer from "@/redux/slices/presence";
 
 const store = configureStore({
     reducer: {
@@ -16,7 +17,8 @@ const store = configureStore({
         admin: adminReducer,
         user: userReducer,
         order: orderReducer,
-        chat: chatReducer
+        chat: chatReducer,
+        presence: presenceReducer,
     }
 });
 

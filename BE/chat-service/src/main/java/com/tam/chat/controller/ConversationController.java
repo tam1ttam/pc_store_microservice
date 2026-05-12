@@ -85,4 +85,12 @@ public class ConversationController {
                 .result(conversationService.getOnlineManagerIds())
                 .build();
     }
+
+    // Check if a specific user is currently online
+    @GetMapping("/users/{userId}/online")
+    ApiResponse<Boolean> isUserOnline(@PathVariable String userId) {
+        return ApiResponse.<Boolean>builder()
+                .result(conversationService.isUserOnline(userId))
+                .build();
+    }
 }

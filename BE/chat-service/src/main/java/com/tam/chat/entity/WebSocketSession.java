@@ -23,5 +23,7 @@ public class WebSocketSession {
 
     String userId;
 
+    String username;
+
     Instant createdAt;
 }

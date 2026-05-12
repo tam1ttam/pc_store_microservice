@@ -1,7 +1,9 @@
 package com.tam.chat.dto.response;
 
 import java.time.Instant;
+import java.util.List;
 
+import com.tam.chat.entity.Attachment;
 import com.tam.chat.entity.ParticipantInfo;
 
 import lombok.*;
@@ -18,5 +20,6 @@ public class ChatMessageResponse {
     boolean me;
     String message;
     ParticipantInfo sender;
+    List<Attachment> attachments;
     Instant createdDate;
 }

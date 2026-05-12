@@ -1,29 +1,30 @@
 package com.tam.file.controller;
 
 import com.tam.file.dto.ApiResponse;
-import com.tam.file.dto.response.FileResponse;
-import com.tam.file.service.FileService;
+import com.tam.file.dto.response.UploadImageResponse;
+import com.tam.file.service.impl.FileServiceImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Base64;
 
 @RestController
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FileController {
-    FileService fileService;
+    FileServiceImpl fileServiceImpl;
 
     @PostMapping("/media/upload")
-    ApiResponse<FileResponse> uploadMedia(@RequestParam("file") MultipartFile file) throws IOException {
-        return ApiResponse.<FileResponse>builder()
-                .result(fileService.uploadFile(file))
+    ApiResponse<UploadImageResponse> uploadMedia(@RequestParam("file") MultipartFile file) throws IOException {
+        String base64Image = "data:" + file.getContentType() + ";base64," + Base64.getEncoder().encodeToString(file.getBytes());
+        return ApiResponse.<UploadImageResponse>builder()
+                .result(fileServiceImpl.uploadImage(base64Image, "chat-attachments"))
                 .build();
     }
 

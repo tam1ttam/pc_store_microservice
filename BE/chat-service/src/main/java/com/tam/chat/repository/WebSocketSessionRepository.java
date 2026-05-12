@@ -17,4 +17,6 @@ public interface WebSocketSessionRepository extends MongoRepository<WebSocketSes
     Optional<WebSocketSession> findBySocketSessionId(String socketSessionId);
 
     boolean existsByUserId(String userId);
+
+    Optional<WebSocketSession> findFirstByUserId(String userId);
 }

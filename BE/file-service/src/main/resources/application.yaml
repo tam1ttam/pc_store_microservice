@@ -51,6 +51,7 @@ app:
       - /v3/api-docs/**
       - /swagger-ui/**
       - /actuator/health
+      - /file-service/media/**
     allowed-origins:
       - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
 

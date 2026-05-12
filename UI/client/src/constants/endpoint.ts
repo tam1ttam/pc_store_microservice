@@ -52,6 +52,8 @@ const ENDPOINT = {
         CREATE_MESSAGE: `${CHAT_SVC}/messages/create`,
         GET_CONVERSATION_MESSAGES: (conversationId: string) =>
             `${CHAT_SVC}/messages?conversationId=${conversationId}`,
+        MANAGERS_ONLINE: `${CHAT_SVC}/conversations/managers/online`,
+        USER_ONLINE: (userId: string) => `${CHAT_SVC}/conversations/users/${userId}/online`,
     },
 
     // ── File-service ─────────────────────────────────────────────────────────

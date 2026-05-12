@@ -1,18 +1,24 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface Attachment {
+    url: string;
+    originalFileName: string;
+    fileType: string; // "image" | "video" | "audio" | "document"
+}
+
 export interface ChatMessage {
     id: string;
     conversationId: string;
     sender: {
-        id: string;
-        userName: string;
+        userId?: string;
+        username?: string;
         firstName?: string;
         lastName?: string;
-        email?: string;
-        roles?: Array<{ name: string; description?: string }>;
+        avatar?: string;
     };
     content: string;
     message?: string;
+    attachments?: Attachment[];
     createdDate: number;
     me?: boolean;
 }
@@ -33,34 +39,26 @@ const chatSlice = createSlice({
     reducers: {
         addMessage: (state, action: PayloadAction<{ conversationId: string; message: ChatMessage }>) => {
             const { conversationId, message } = action.payload;
-
-            // ✅ Khởi tạo array nếu chưa có
             if (!state.messages[conversationId]) {
                 state.messages[conversationId] = [];
             }
-
-            // ✅ Kiểm tra duplicate
             const exists = state.messages[conversationId].some(m => m.id === message.id);
-            if (exists) {
-                console.log('⚠️ Message already exists, skipping:', message.id);
-                return;
-            }
-
-            console.log('✅ Adding message to Redux:', message);
-
-            // ✅ Tạo mảng mới thay vì mutate (force re-render)
+            if (exists) return;
             state.messages[conversationId] = [
                 ...state.messages[conversationId],
-                message
+                message,
             ].sort((a, b) => a.createdDate - b.createdDate);
         },
 
         setMessages: (state, action: PayloadAction<{ conversationId: string; messages: ChatMessage[] }>) => {
             const { conversationId, messages } = action.payload;
-            console.log(`📥 Setting ${messages.length} messages for conversation ${conversationId}`);
-
-            // ✅ Sort và tạo array mới
-            state.messages[conversationId] = [...messages].sort((a, b) => a.createdDate - b.createdDate);
+            const existing = state.messages[conversationId] || [];
+            const existingIds = new Set(existing.map(m => m.id));
+            const merged = [
+                ...existing,
+                ...messages.filter(m => !existingIds.has(m.id)),
+            ].sort((a, b) => a.createdDate - b.createdDate);
+            state.messages[conversationId] = merged;
         },
 
         clearMessages: (state, action: PayloadAction<string>) => {

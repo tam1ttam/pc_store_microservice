@@ -1,5 +1,3 @@
-﻿// src/services/api/messageApi.ts
-
 import { get, post } from "@/services/api.service";
 import ENDPOINT from "@/constants/endpoint";
 
@@ -7,6 +5,12 @@ interface ApiResponse<T> {
     code?: number;
     result: T;
     message?: string;
+}
+
+export interface Attachment {
+    url: string;
+    originalFileName: string;
+    fileType: string; // "image" | "video" | "audio" | "document"
 }
 
 export interface Conversation {
@@ -28,7 +32,9 @@ export interface Message {
     conversationId: string;
     sender: any;
     message: string;
+    attachments?: Attachment[];
     createdDate: string;
+    me?: boolean;
 }
 
 export interface ManagerInfo {
@@ -65,8 +71,26 @@ export const messageApi = {
         return res.data.result;
     },
 
-    sendMessage: async (conversationId: string, message: string): Promise<Message> => {
-        const res = await post<ApiResponse<Message>>(ENDPOINT.CHAT.CREATE_MESSAGE, { conversationId, message });
+    sendMessage: async (
+        conversationId: string,
+        message: string,
+        attachments?: Attachment[],
+    ): Promise<Message> => {
+        const res = await post<ApiResponse<Message>>(ENDPOINT.CHAT.CREATE_MESSAGE, {
+            conversationId,
+            message,
+            ...(attachments && attachments.length > 0 ? { attachments } : {}),
+        });
+        return res.data.result;
+    },
+
+    uploadFile: async (file: File): Promise<{ url: string; originalFileName: string }> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await post<ApiResponse<{ url: string; originalFileName: string }>>(
+            ENDPOINT.FILE.UPLOAD,
+            formData,
+        );
         return res.data.result;
     },
 
@@ -77,6 +101,11 @@ export const messageApi = {
 
     getOnlineManagers: async (): Promise<string[]> => {
         const res = await get<ApiResponse<string[]>>(ENDPOINT.CHAT.MANAGERS_ONLINE);
+        return res.data.result;
+    },
+
+    isUserOnline: async (userId: string): Promise<boolean> => {
+        const res = await get<ApiResponse<boolean>>(ENDPOINT.CHAT.USER_ONLINE(userId));
         return res.data.result;
     },
 

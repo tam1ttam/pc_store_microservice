@@ -19,6 +19,7 @@ import com.tam.chat.dto.response.ConversationResponse;
 import com.tam.chat.dto.response.ManagerInfoResponse;
 import com.tam.chat.entity.Conversation;
 import com.tam.chat.entity.ParticipantInfo;
+import com.tam.chat.entity.WebSocketSession;
 import com.tam.chat.exception.AppException;
 import com.tam.chat.exception.ErrorCode;
 import com.tam.chat.mapper.ConversationMapper;
@@ -121,11 +122,17 @@ public class ConversationService {
         return List.of();
     }
 
-    // Manager: get IDs of managers who currently have an active socket session
+    // Returns all userIds with an active socket session — FE filters by manager list
     public List<String> getOnlineManagerIds() {
-        return fetchManagerIds().stream()
-                .filter(webSocketSessionRepository::existsByUserId)
+        return webSocketSessionRepository.findAll().stream()
+                .map(WebSocketSession::getUserId)
+                .distinct()
                 .collect(Collectors.toList());
+    }
+
+    // Check if any user (client or manager) is currently online
+    public boolean isUserOnline(String userId) {
+        return webSocketSessionRepository.existsByUserId(userId);
     }
 
     // DIRECT conversation between two users (supports managers without user-service profile)
