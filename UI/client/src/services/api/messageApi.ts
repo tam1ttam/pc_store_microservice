@@ -44,5 +44,10 @@ export const messageApi = {
     sendMessage: async (conversationId: string, message: string): Promise<Message> => {
         const res = await post<ApiResponse<Message>>(ENDPOINT.CHAT.CREATE_MESSAGE, { conversationId, message });
         return res.data.result;
-    }
+    },
+
+    startStoreChat: async (): Promise<Conversation> => {
+        const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.WITH_STORE, {});
+        return res.data.result;
+    },
 };

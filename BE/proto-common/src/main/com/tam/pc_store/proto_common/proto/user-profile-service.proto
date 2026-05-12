@@ -10,6 +10,7 @@ service ProfileService {
   rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
   rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
   rpc GetCustomerInfo(GetCustomerInfoRequest) returns (GetCustomerResponse);
+  rpc GetCustomerByUserId(GetCustomerByUserIdRequest) returns (GetCustomerResponse);
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
   rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse);
   rpc SearchCustomers(SearchCustomersRequest) returns (SearchCustomersResponse);
@@ -53,6 +54,10 @@ message CreateCustomerResponse {
 
 message GetCustomerRequest {
   string user_name = 1;
+}
+
+message GetCustomerByUserIdRequest {
+  string user_id = 1;
 }
 
 message GetCustomerInfoRequest {

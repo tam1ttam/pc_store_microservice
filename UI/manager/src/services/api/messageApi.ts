@@ -1,4 +1,4 @@
-// src/services/api/messageApi.ts
+﻿// src/services/api/messageApi.ts
 
 import { get, post } from "@/services/api.service";
 import ENDPOINT from "@/constants/endpoint";
@@ -11,10 +11,16 @@ interface ApiResponse<T> {
 
 export interface Conversation {
     id: string;
+    type?: string;
     participants: any[];
+    clientId?: string;
+    assignedManagerId?: string;
+    assignedManagerName?: string;
     lastMessage?: string;
+    lastMessageAt?: string;
     modifiedDate?: string;
     conversationName?: string;
+    conversationAvatar?: string;
 }
 
 export interface Message {
@@ -25,9 +31,19 @@ export interface Message {
     createdDate: string;
 }
 
+export interface ManagerInfo {
+    id: string;
+    username: string;
+}
+
 export const messageApi = {
     getMyConversations: async (): Promise<Conversation[]> => {
         const res = await get<ApiResponse<Conversation[]>>(ENDPOINT.CHAT.MY_CONVERSATIONS);
+        return res.data.result;
+    },
+
+    getAllSupportConversations: async (): Promise<Conversation[]> => {
+        const res = await get<ApiResponse<Conversation[]>>(ENDPOINT.CHAT.SUPPORT_ALL);
         return res.data.result;
     },
 
@@ -41,8 +57,31 @@ export const messageApi = {
         return res.data.result;
     },
 
+    createDirectConversation: async (participantId: string): Promise<Conversation> => {
+        const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.CREATE_CONVERSATION, {
+            participantIds: [participantId],
+            type: "DIRECT",
+        });
+        return res.data.result;
+    },
+
     sendMessage: async (conversationId: string, message: string): Promise<Message> => {
         const res = await post<ApiResponse<Message>>(ENDPOINT.CHAT.CREATE_MESSAGE, { conversationId, message });
         return res.data.result;
-    }
+    },
+
+    getManagerList: async (): Promise<ManagerInfo[]> => {
+        const res = await get<ApiResponse<ManagerInfo[]>>(ENDPOINT.CHAT.MANAGERS);
+        return res.data.result;
+    },
+
+    claimConversation: async (conversationId: string): Promise<Conversation> => {
+        const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.CLAIM(conversationId), {});
+        return res.data.result;
+    },
+
+    transferConversation: async (conversationId: string, toManagerId: string): Promise<Conversation> => {
+        const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.TRANSFER(conversationId), { toManagerId });
+        return res.data.result;
+    },
 };

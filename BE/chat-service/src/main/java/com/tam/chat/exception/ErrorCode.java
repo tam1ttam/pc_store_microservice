@@ -17,6 +17,9 @@ public enum ErrorCode {
     UNAUTHORIZED(1007, "You do not have permission", HttpStatus.FORBIDDEN),
     INVALID_DOB(1008, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
     CONVERSATION_NOT_FOUND(1009, "Chat conversation not found", HttpStatus.NOT_FOUND),
+    NO_MANAGER_AVAILABLE(1010, "No manager available for assignment", HttpStatus.SERVICE_UNAVAILABLE),
+    SEND_NOT_ALLOWED(1011, "You are not allowed to send messages in this conversation", HttpStatus.FORBIDDEN),
+    CONVERSATION_ALREADY_CLAIMED(1012, "This conversation is already claimed by another manager", HttpStatus.CONFLICT),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

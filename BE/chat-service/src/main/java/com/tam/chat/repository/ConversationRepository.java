@@ -15,4 +15,9 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
 
     @Query("{'participants.userId' : ?0}")
     List<Conversation> findAllByParticipantIdsContains(String userId);
+
+    List<Conversation> findAllByType(String type);
+
+    @Query("{'type': 'SUPPORT', 'clientId': ?0}")
+    Optional<Conversation> findSupportConversationByClientId(String clientId);
 }

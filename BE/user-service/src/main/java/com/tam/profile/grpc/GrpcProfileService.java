@@ -7,18 +7,7 @@ import com.tam.profile.dto.request.CustomerCreationRequest;
 import com.tam.profile.dto.request.CustomerUpdateRequest;
 import com.tam.profile.dto.response.CustomerResponse;
 import com.tam.profile.service.CustomerService;
-import com.tam.proto.profile.v1.CreateCustomerRequest;
-import com.tam.proto.profile.v1.CreateCustomerResponse;
-import com.tam.proto.profile.v1.DeleteCustomerRequest;
-import com.tam.proto.profile.v1.DeleteCustomerResponse;
-import com.tam.proto.profile.v1.GetCustomerInfoRequest;
-import com.tam.proto.profile.v1.GetCustomerRequest;
-import com.tam.proto.profile.v1.GetCustomerResponse;
-import com.tam.proto.profile.v1.ProfileServiceGrpc;
-import com.tam.proto.profile.v1.SearchCustomersRequest;
-import com.tam.proto.profile.v1.SearchCustomersResponse;
-import com.tam.proto.profile.v1.UpdateCustomerRequest;
-import com.tam.proto.profile.v1.UpdateCustomerResponse;
+import com.tam.proto.profile.v1.*;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -146,6 +135,20 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
             log.error("searchCustomers gRPC error", e);
             responseObserver.onError(
                     Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getCustomerByUserId(
+            GetCustomerByUserIdRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
+        try {
+            CustomerResponse customer = customerService.getCustomerByUserId(request.getUserId());
+            responseObserver.onNext(toGetCustomerResponse(customer));
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("getCustomerByUserId gRPC error", e);
+            responseObserver.onError(
+                    Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
         }
     }
 

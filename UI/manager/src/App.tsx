@@ -3,14 +3,13 @@ import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoutes from "./config/routers/ProtectedRoutes";
 import { Toaster } from "./components/ui/toaster";
 import Header from "./components/layout/Header";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "./redux/slices/cart";
 import { RootState } from "./redux/store";
 import { useAppSelector } from "./hooks";
 import SocketClient from "./SocketClient";
-import AIChatModal from "./components/AIChatModal";
-import SellerChatModal from "./components/SellerChatModal";
+import ManagerChatSidebar from "./components/ManagerChatSidebar";
 import { managerRoutes } from "./config/routers/routes";
 import { cartApi } from "./services/api/cartApi";
 import { orderApi } from "./services/api/orderApi";
@@ -19,8 +18,6 @@ import { Customer, OrderPage, Product } from "./pages/Admin";
 
 function App() {
     const dispatch = useDispatch();
-    const [activeChat, setActiveChat] = useState<"ai" | "seller" | null>(null);
-
     const { info: user } = useSelector((state: RootState) => state.user);
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
 
@@ -107,20 +104,7 @@ function App() {
             </ProtectedRoutes>
             <Toaster />
 
-            <div className="flex">
-                <AIChatModal
-                    isOpen={activeChat === "ai"}
-                    onOpen={() => setActiveChat("ai")}
-                    onClose={() => setActiveChat(null)}
-                    isHidden={activeChat === "seller"}
-                />
-                <SellerChatModal
-                    isOpen={activeChat === "seller"}
-                    onOpen={() => setActiveChat("seller")}
-                    onClose={() => setActiveChat(null)}
-                    isHidden={activeChat === "ai"}
-                />
-            </div>
+            {isLogin && <ManagerChatSidebar />}
         </BrowserRouter>
     );
 }

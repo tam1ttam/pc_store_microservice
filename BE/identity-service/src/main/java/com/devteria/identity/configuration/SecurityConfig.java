@@ -54,7 +54,7 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_GET = {
-        "/v3/api-docs/**", "/swagger-ui/**", "/actuator/health",
+        "/v3/api-docs/**", "/swagger-ui/**", "/actuator/health", "/internal/**",
     };
 
     @Bean

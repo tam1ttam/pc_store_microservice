@@ -11,9 +11,8 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.annotation.OnConnect;
 import com.corundumstudio.socketio.annotation.OnDisconnect;
-import com.tam.chat.dto.request.IntrospectRequest;
 import com.tam.chat.entity.WebSocketSession;
-import com.tam.chat.service.IdentityService;
+import com.tam.chat.service.JwtService;
 import com.tam.chat.service.WebSocketSessionService;
 
 import lombok.AccessLevel;
@@ -27,52 +26,45 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SocketHandler {
     SocketIOServer server;
-    IdentityService identityService;
+    JwtService jwtService;
     WebSocketSessionService webSocketSessionService;
 
     @OnConnect
     public void clientConnected(SocketIOClient client) {
-        // Get Token from request param
         String token = client.getHandshakeData().getSingleUrlParam("token");
+        String userId = jwtService.extractUserIdFromToken(token);
 
-        // Verify token
-        var introspectResponse = identityService.introspect(
-                IntrospectRequest.builder().token(token).build());
-
-        // If Token is invalid disconnect
-        if (introspectResponse.isValid()) {
-            log.info("Client connected: {}", client.getSessionId());
-            // Persist webSocketSession
-            WebSocketSession webSocketSession = WebSocketSession.builder()
+        if (userId != null) {
+            log.info("Socket connected: sessionId={}, userId={}", client.getSessionId(), userId);
+            WebSocketSession session = WebSocketSession.builder()
                     .socketSessionId(client.getSessionId().toString())
-                    .userId(introspectResponse.getUserId())
+                    .userId(userId)
                     .createdAt(Instant.now())
                     .build();
-            webSocketSession = webSocketSessionService.create(webSocketSession);
-
-            log.info("WebSocketSession created with id: {}", webSocketSession.getId());
+            session = webSocketSessionService.create(session);
+            log.info("WebSocketSession created: id={}", session.getId());
         } else {
-            log.error("Authentication fail: {}", client.getSessionId());
+            log.error("Socket auth failed: sessionId={}", client.getSessionId());
             client.disconnect();
         }
     }
 
     @OnDisconnect
     public void clientDisconnected(SocketIOClient client) {
-        log.info("Client disConnected: {}", client.getSessionId());
+        log.info("Socket disconnected: sessionId={}", client.getSessionId());
         webSocketSessionService.deleteSession(client.getSessionId().toString());
     }
 
     @PostConstruct
     public void startServer() {
-        server.start();
         server.addListeners(this);
-        log.info("Socket server started");
+        server.start();
+        log.info("Socket server started on port 8099");
     }
 
     @PreDestroy
     public void stopServer() {
         server.stop();
-        log.info("Socket server stoped");
+        log.info("Socket server stopped");
     }
 }

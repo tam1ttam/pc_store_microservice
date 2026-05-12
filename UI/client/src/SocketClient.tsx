@@ -7,7 +7,6 @@ const SocketClient = () => {
     const dispatch = useAppDispatch();
     const isLogin = useAppSelector(state => state.auth.isLogin);
     const token = useAppSelector(state => state.auth.token);
-    const currentUserId = useAppSelector(state => state.user.info?.id);
 
     useEffect(() => {
         console.log(`Client connected to socket server with token: ${token}`);
@@ -17,7 +16,7 @@ const SocketClient = () => {
         if (!socket) return;
 
         // ✅ Nhận tin nhắn mới và dispatch vào Redux
-        socket.on("send_message", (data: any) => {
+        socket.on("message", (data: any) => {
             // console.log('🔔 SocketClient received RAW data:', data);
 
             // Lấy dữ liệu thực tế
@@ -49,10 +48,10 @@ const SocketClient = () => {
         });
 
         return () => {
-            socket.off("send_message");
+            socket.off("message");
             disconnectSocket();
         };
-    }, [isLogin, token, currentUserId, dispatch]);
+    }, [isLogin, token, dispatch]);
 
     return null;
 };
