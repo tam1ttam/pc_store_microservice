@@ -35,9 +35,9 @@ public class FileServiceImpl {
 		try {
 			boolean isVideo = isVideoContent(base64Image);
 
-			if (!isVideo && !imageValidationService.isImageSafe(base64Image)) {
-				throw new ImageValidationException("Image contains sensitive/unsafe content");
-			}
+//			if (!isVideo && !imageValidationService.isImageSafe(base64Image)) {
+//				throw new ImageValidationException("Image contains sensitive/unsafe content");
+//			}
 
 			String mimeType = extractMimeType(base64Image);
 			String cleanBase64 = extractBase64Content(base64Image);

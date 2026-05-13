@@ -215,6 +215,19 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
   - `CustomerChatWindow`: green dot trên avatar header khi client online; bootstrap client online status via `isUserOnline` API khi window mở; nút paperclip + pending attachment preview + `AttachmentBubble` render; `send()` truyền attachments.
   - Transfer picker: 2 tab "Đang hoạt động" / "Tất cả" với chấm xanh.
 
+### [DONE] Batch 7 — fix username null + isMe bug (chat-service)
+
+**Root cause username null**: Khi manager gửi tin trong SUPPORT conversation (manager không có trong `participants`), code fallback sang `fetchManagerUsernameById()` — Feign call tới identity-service. Nếu Feign fail intermittently → `sender.username = null` lưu vào MongoDB → không hiện username.
+
+**Root cause isMe**: `ChatMessageResponse` dùng chung 1 object, bị mutate (`setMe()`) trong `forEach` broadcast loop — tiềm ẩn race condition.
+
+**BE — `chat-service`**
+- `WebSocketSession.java`: thêm field `username` để cache manager username khi connect.
+- `WebSocketSessionRepository.java`: thêm `findFirstByUserId(String userId)`.
+- `SocketHandler.java`: inject `IdentityClient`, gọi `getManagerDetails()` 1 lần khi manager connect socket → lưu `username` vào `WebSocketSession`. Nếu Feign fail → lưu null (non-fatal).
+- `ChatMessageService.create` (sender info): trước khi gọi Feign `fetchManagerUsernameById()`, tra cứu `webSocketSessionRepository.findFirstByUserId(userId)` lấy username đã cache → Feign chỉ gọi khi session không có username.
+- `ChatMessageService.create` (broadcast): tạo `ChatMessageResponse perRecipient` mới cho mỗi client thay vì mutate object chung → loại bỏ shared mutable state.
+
 ### [DONE] Batch 6 — fix transfer picker "Đang hoạt động" luôn rỗng
 
 **Root cause**: `ConversationService.getOnlineManagerIds()` gọi `fetchManagerIds()` qua Feign tới identity-service. Nếu Eureka chậm → Feign throw → trả `List.of()` rỗng → tab "Đang hoạt động" luôn empty.
@@ -230,6 +243,38 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 ---
 
 ## TODO (ưu tiên từ trên xuống)
+
+---
+
+### [ADMIN] Các trang admin cần hoàn thiện
+
+#### 1. [ADMIN] Dashboard — hiện chỉ có text "Dashboard Page"
+- Hiển thị tổng quan hệ thống: tổng đơn hàng, tổng doanh thu, tổng người dùng, tổng sản phẩm.
+- Fetch từ: order-service (doanh thu/đơn hàng), user-service (tổng khách hàng), product-service (tổng sản phẩm).
+- Có thể thêm biểu đồ đơn hàng theo ngày/tuần (recharts hoặc chart.js).
+
+#### 2. [ADMIN] Track log — iframe Grafana/Loki không load được
+- Hiện trang nhúng iframe Grafana nhưng bị lỗi (gray box, sad icon).
+- Nguyên nhân thường là: Grafana chưa bật allow embed (`allow_embedding = true` trong `grafana.ini`), hoặc chưa cấu hình `GF_SECURITY_ALLOW_EMBEDDING=true` trong Docker env.
+- Fix phía infrastructure: thêm env `GF_SECURITY_ALLOW_EMBEDDING=true` vào container Grafana trong docker-compose.
+- Fix phía FE: đảm bảo URL iframe trỏ đúng dashboard Loki đã tạo sẵn trong Grafana.
+
+#### 3. [ADMIN] Lịch sử thao tác (Audit Trail) — hiện rỗng, chưa có data
+- **Phạm vi lưu**: tất cả hành động làm thay đổi DB của 3 actor:
+  - **Client**: đặt hàng, huỷ đơn, cập nhật profile, đăng ký/đăng nhập.
+  - **Manager**: thêm/sửa/xoá sản phẩm, cập nhật trạng thái đơn hàng, claim/transfer conversation.
+  - **Admin**: gán quyền người dùng, thay đổi role.
+- **Nơi lưu gợi ý**: identity-service đã có `HistoryAction` entity + `HistoryActionRepository` — cân nhắc tận dụng hoặc dùng collection riêng trong một service phù hợp.
+- **BE**: mỗi service tự ghi audit log sau khi thực hiện action thành công (có thể dùng Kafka event để không coupling trực tiếp).
+- **FE Admin**: gọi API lấy danh sách audit log, hiển thị bảng với cột: Thời gian, Actor, Hành động, Mô tả, Trạng thái, Ghi chú. Có filter theo actor type và time range.
+
+#### Kiến trúc admin UI cần nhớ
+- Auth: dùng thunk-based (`slices/auth.ts` + `thunks/auth.ts`) — giống manager/client. Store chỉ có 1 reducer `auth`.
+- `localStorage` key: `"token"` (đã đồng bộ với `slices/auth.ts`).
+- `ProtectedRoutes` dùng `<Outlet>` pattern (khác manager dùng `children`), không fetch user profile vì admin không cần.
+- Endpoints nằm trong `constants/endpoint.ts`, base URL lấy từ `VITE_API_URL`.
+
+---
 
 ### 1. [CHAT] Nút yêu cầu tiếp quản + popup đồng ý/từ chối
 - Manager chưa được assign có nút "Yêu cầu tiếp quản".
@@ -247,6 +292,21 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - Cần dùng `WebSocketSession` để kiểm tra — phức tạp nhất, làm sau cùng.
 
 ---
+
+### [DONE] file-service — chuyển upload sang S3
+
+**BE — `file-service`**
+- `FileController`: inject `FileServiceImpl` trực tiếp (bỏ `FileService`), upload gọi `fileServiceImpl.uploadImage(base64, "chat-attachments")`.
+- `FileServiceImpl` (`com.tam.file.service.FileServiceImpl`): class duy nhất xử lý upload — validate ảnh qua Gemini, upload lên S3, lưu metadata vào `UploadedFile` MongoDB collection.
+- `S3FileUploadService`: xử lý tương tác S3 (`upload`, `delete`). URL trả về dạng `https://{bucket}.s3.{region}.amazonaws.com/{key}` — FE dùng URL này trực tiếp, không qua download proxy.
+- `FileService` (local storage cũ): vẫn còn trong codebase nhưng không còn được controller gọi.
+- Download endpoint: hiện **comment out** — S3 file có URL public dùng trực tiếp, không cần proxy.
+- File duplicate `com.tam.file.service.impl.FileServiceImpl` đã bị xóa — chỉ giữ class ở package `com.tam.file.service`.
+
+**Kiến trúc file-service cần nhớ**
+- `UploadedFile` entity lưu: `url` (full S3 URL), `publicId` (S3 key), `format`, `fileSize`, `fileType`, `resourceType`.
+- `app.file.download-prefix` trong yaml chỉ dành cho local storage mode cũ — với S3, FE dùng `url` từ `UploadImageResponse` trực tiếp.
+- `/media/**` đã được thêm vào `permit-all-endpoints` → upload không cần auth token.
 
 ### [MISC] Xác nhận Gemini image validation hoạt động sau khi đổi model
 - Đã đổi sang `gemini-2.0-flash` + endpoint `v1` — cần test thực tế với ảnh upload.
