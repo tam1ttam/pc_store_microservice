@@ -1,52 +1,84 @@
-import { ENDPOINTS } from "@/constants";
+import ENDPOINT from "@/constants/endpoint";
 import { get, post, put, del } from "../api.service";
 
 export const adminApi = {
     // Products
     listProducts: (page: number = 0) => {
-        return get(`${ENDPOINTS.LIST_PRODUCT}?page=${page}`);
+        return get(`${ENDPOINT.LIST_PRODUCT}?page=${page}`);
     },
 
     getProductDetail: (productId: string) => {
-        return get(`${ENDPOINTS.PRODUCT_DETAIL}/${productId}`);
+        return get(`${ENDPOINT.PRODUCT_DETAIL}/${productId}`);
     },
 
     addProduct: (productData: any) => {
-        return post(ENDPOINTS.ADD_PRODUCT, productData);
+        return post(ENDPOINT.ADD_PRODUCT, productData);
     },
 
     updateProduct: (productId: string, formData: any) => {
-        return put(`${ENDPOINTS.UPDATE_PRODUCT}/${productId}`, formData);
+        return put(`${ENDPOINT.UPDATE_PRODUCT}/${productId}`, formData);
     },
 
     updateProductDetail: (productId: string, updateData: any) => {
-        return put(`${ENDPOINTS.PRODUCT_DETAIL}/${productId}`, updateData);
+        return put(`${ENDPOINT.PRODUCT_DETAIL}/${productId}`, updateData);
     },
 
     deleteProduct: (productId: string, token: string) => {
-        return del(`${ENDPOINTS.DELETE_PRODUCT}/${productId}`, {}, token);
+        return del(`${ENDPOINT.DELETE_PRODUCT}/${productId}`, {}, token);
     },
 
     // Orders
     listOrders: (page: number = 0) => {
-        return get(`${ENDPOINTS.LIST_ORDER}?page=${page}`);
+        return get(`${ENDPOINT.LIST_ORDER}?page=${page}`);
     },
 
     updatePaymentStatus: (orderId: string, status: string) => {
-        return put(`${ENDPOINTS.UPDATE_PAYMENT_STATUS}/${orderId}?status=${status}`, {});
+        return put(`${ENDPOINT.UPDATE_PAYMENT_STATUS}/${orderId}?status=${status}`, {});
+    },
+
+    getOrderStats: () => {
+        return get(ENDPOINT.ORDER_STATS);
     },
 
     // Customers/Users
     getCustomers: (page: number = 0, size: number = 20) => {
-        return get(`${ENDPOINTS.LIST_CUSTOMER}?page=${page}&size=${size}`);
+        return get(`${ENDPOINT.LIST_CUSTOMER}?page=${page}&size=${size}`);
     },
 
     searchCustomers: (searchKey: string, page: number = 0, size: number = 20) => {
-        return get(`${ENDPOINTS.LIST_CUSTOMER}/search?searchKey=${searchKey}&page=${page}&size=${size}`);
+        return get(`${ENDPOINT.LIST_CUSTOMER}/search?searchKey=${searchKey}&page=${page}&size=${size}`);
+    },
+
+    getCustomerCount: () => {
+        return get(ENDPOINT.CUSTOMER_COUNT);
+    },
+
+    // Products count
+    getProductCount: () => {
+        return get(ENDPOINT.PRODUCT_COUNT);
+    },
+
+    // Online users (existing chat-service endpoints)
+    getChatOnlineUserIds: () => {
+        return get(ENDPOINT.CHAT_ONLINE_USER_IDS);
+    },
+
+    getChatManagers: () => {
+        return get(ENDPOINT.CHAT_MANAGERS);
     },
 
     // Roles
     updateUserRole: (userName: string) => {
-        return post(`${ENDPOINTS.ADMIN}/update-role/${userName}`, {});
+        return post(`${ENDPOINT.ADMIN}/update-role/${userName}`, {});
+    },
+
+    // Audit history
+    getAuditHistory: (params?: { search?: string; from?: string; to?: string }) => {
+        const query = new URLSearchParams();
+        if (params?.search) query.set("search", params.search);
+        if (params?.from) query.set("from", params.from);
+        if (params?.to) query.set("to", params.to);
+        const qs = query.toString();
+        return get(`${ENDPOINT.ADMIN}/history${qs ? `?${qs}` : ""}`);
     },
 };

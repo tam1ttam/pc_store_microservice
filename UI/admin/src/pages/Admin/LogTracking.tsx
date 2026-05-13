@@ -1,32 +1,73 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, ExternalLink } from "lucide-react";
+
+const GRAFANA_BASE = import.meta.env.VITE_GRAFANA_URL ?? "http://localhost:3000";
+const GRAFANA_DASHBOARD_URL = `${GRAFANA_BASE}/d-solo/loki-logs-dashboard/loki-logs?orgId=1&panelId=1&theme=light`;
 
 const LogTracking: React.FC = () => {
-    // This URL should point to your Grafana dashboard.
-    // For this to work, Grafana must be configured to allow embedding.
-    // You might need to adjust 'anonymous' access and 'allow_embedding' in grafana.ini.
-    const grafanaDashboardUrl = "http://localhost:3000/d-solo/loki-logs-dashboard/loki-logs?orgId=1&panelId=1";
+    const [iframeError, setIframeError] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    const handleLoad = () => setLoaded(true);
+    const handleError = () => setIframeError(true);
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Track Log Service</h1>
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">Track Log Service</h1>
+                <a
+                    href={GRAFANA_BASE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                >
+                    Mở Grafana <ExternalLink size={14} />
+                </a>
+            </div>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Grafana Loki Logs</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                        Dữ liệu log được lấy trực tiếp từ Grafana. Đảm bảo rằng Grafana, Loki, và Promtail đang chạy.
-                    </p>
-                    <div className="w-full h-[600px] border rounded-md overflow-hidden">
-                        <iframe
-                            src={grafanaDashboardUrl}
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            title="Grafana Loki Logs"
-                        ></iframe>
-                    </div>
+                    {iframeError ? (
+                        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
+                            <AlertCircle size={40} className="text-red-400" />
+                            <p className="font-medium">Không thể kết nối tới Grafana</p>
+                            <p className="text-sm text-center">
+                                Đảm bảo Grafana đang chạy tại{" "}
+                                <code className="bg-muted px-1 rounded">{GRAFANA_BASE}</code>
+                                <br />
+                                và dashboard <code className="bg-muted px-1 rounded">loki-logs-dashboard</code> đã được tạo.
+                            </p>
+                            <a
+                                href={GRAFANA_BASE}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 text-blue-600 hover:underline text-sm"
+                            >
+                                Thử mở Grafana trực tiếp →
+                            </a>
+                        </div>
+                    ) : (
+                        <div className="relative w-full h-[600px] border rounded-md overflow-hidden">
+                            {!loaded && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
+                                    <p className="text-sm text-muted-foreground">Đang tải Grafana...</p>
+                                </div>
+                            )}
+                            <iframe
+                                src={GRAFANA_DASHBOARD_URL}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                title="Grafana Loki Logs"
+                                onLoad={handleLoad}
+                                onError={handleError}
+                            />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

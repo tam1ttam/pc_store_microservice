@@ -38,7 +38,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Client: get or create the one support conversation with the store
     @PostMapping("/with-store")
     ApiResponse<ConversationResponse> withStore() {
         return ApiResponse.<ConversationResponse>builder()
@@ -46,7 +45,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Manager: list all SUPPORT conversations
     @GetMapping("/support-all")
     ApiResponse<List<ConversationResponse>> supportAll() {
         return ApiResponse.<List<ConversationResponse>>builder()
@@ -54,7 +52,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Manager: claim an unassigned conversation
     @PostMapping("/{id}/claim")
     ApiResponse<ConversationResponse> claim(@PathVariable String id) {
         return ApiResponse.<ConversationResponse>builder()
@@ -62,7 +59,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Manager: transfer conversation to another manager
     @PostMapping("/{id}/transfer")
     ApiResponse<ConversationResponse> transfer(@PathVariable String id, @RequestBody @Valid TransferRequest request) {
         return ApiResponse.<ConversationResponse>builder()
@@ -70,7 +66,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Manager: list all managers for transfer picker
     @GetMapping("/managers")
     ApiResponse<List<ManagerInfoResponse>> getManagers() {
         return ApiResponse.<List<ManagerInfoResponse>>builder()
@@ -78,7 +73,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Manager: get IDs of managers currently online (active socket session)
     @GetMapping("/managers/online")
     ApiResponse<List<String>> getOnlineManagers() {
         return ApiResponse.<List<String>>builder()
@@ -86,7 +80,6 @@ public class ConversationController {
                 .build();
     }
 
-    // Check if a specific user is currently online
     @GetMapping("/users/{userId}/online")
     ApiResponse<Boolean> isUserOnline(@PathVariable String userId) {
         return ApiResponse.<Boolean>builder()

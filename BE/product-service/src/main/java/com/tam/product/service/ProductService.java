@@ -36,4 +36,6 @@ public interface ProductService {
     Page<Product> getProductByName(String name, int page, int size);
 
     Page<Product> getProductByName(String name);
+
+    long countProducts();
 }

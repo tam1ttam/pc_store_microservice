@@ -157,4 +157,30 @@ public class OrderServiceImpl implements OrderService {
         result = orderRepository.findAll();
         return result;
     }
+
+    @Override
+    public OrderStatsResponse getStats() {
+        List<Order> all = orderRepository.findAll();
+        long total = all.size();
+        double revenue = all.stream().mapToDouble(Order::getTotalPrice).sum();
+        long paid = all.stream().filter(Order::isPaid).count();
+        long delivering = all.stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.DELIVERING)
+                .count();
+        long delivered = all.stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.DELIVERED)
+                .count();
+        long cancelled = all.stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.CANCELLED)
+                .count();
+
+        return OrderStatsResponse.builder()
+                .totalOrders(total)
+                .totalRevenue(revenue)
+                .paidOrders(paid)
+                .pendingOrders(delivering)
+                .completedOrders(delivered)
+                .cancelledOrders(cancelled)
+                .build();
+    }
 }

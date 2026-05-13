@@ -7,6 +7,7 @@ Hệ thống e-commerce bán PC/linh kiện, gồm **microservices Spring Boot**
 ## Quy tắc code
 - Ko được để xuất hiện ký tự BOM (\ueff) ở đầu mỗi file, làm sao để inteliji idea chạy được
 - Khi sửa gì và phát hiện có bug gì hay tôi gửi những lỗi gì (chưa fix đc), hãy ghi thêm vào đây, còn bug/lỗi đã fix thì xóa khỏi file này
+- Các task đã done thì ko cần làm nữa, chỉ xem qua thôi
 # FE
 - Tận dụng component tối đa nhất có thể
 - State chuẩn
@@ -215,6 +216,74 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
   - `CustomerChatWindow`: green dot trên avatar header khi client online; bootstrap client online status via `isUserOnline` API khi window mở; nút paperclip + pending attachment preview + `AttachmentBubble` render; `send()` truyền attachments.
   - Transfer picker: 2 tab "Đang hoạt động" / "Tất cả" với chấm xanh.
 
+### [DONE] Admin features — Dashboard, Track log, Audit Trail
+
+**BE — `order-service`**
+- `OrderStatsResponse.java` (DTO): `totalOrders`, `totalRevenue`, `paidOrders`, `pendingOrders`, `completedOrders`, `cancelledOrders`.
+- `OrderService.getStats()` + `OrderServiceImpl`: compute stats from `findAll()`.
+- `OrderController`: `GET /api/orders/stats`.
+- `AuditEvent.java` (package `com.devteria.event.dto`): Kafka event DTO.
+- `OrderServiceImpl.publishAudit()`: publishes to `audit.action` topic after `saveOrder` and `updateOrderStatus`.
+
+**BE — `user-service`**
+- `CustomerService.countCustomers()` + impl: `customerRepository.count()`.
+- `ProfileAdminController`: `GET /api/admin/customers/count`.
+
+**BE — `product-service`**
+- `ProductService.countProducts()` + impl: `productRepository.count()`.
+- `ProductController`: `GET /products/count`.
+
+**BE — `identity-service`**
+- `AdminService`: fixed `LocalDateTime.now()` bug, added `saveHistory()` (bypasses SecurityContext for Kafka consumer), added `getFilteredHistory()`.
+- `HistoryActionRepository`: `findFiltered()` JPQL query with optional `search`, `from`, `to` params.
+- `AdminController.GET /api/admin/history`: accepts `?search=`, `?from=`, `?to=` ISO datetime params.
+- `AuditEventConsumer.java` (`@KafkaListener(topics="audit.action")`): consumes events and calls `adminService.saveHistory()`.
+- `AuthenticationService`: publishes audit event on successful login via `authenticateForPortal()`.
+- `application.yaml`: added Kafka consumer config block.
+
+**Infrastructure**
+- `docker-compose.yml`: added `GF_SECURITY_ALLOW_EMBEDDING: "true"` to Grafana env (fixes iframe embedding).
+
+**FE — `UI/admin`**
+- `Dashboard.tsx`: 4 main stat cards + 3 order status cards + progress bar, `Promise.allSettled` parallel fetch, `formatCurrency()` helper, skeleton loading.
+- `AuditTrail.tsx`: search + from/to date filters, skeleton loading rows, record count display.
+- `adminApi.ts`: `getOrderStats()`, `getCustomerCount()`, `getProductCount()`.
+- `endpoint.ts`: `ORDER_STATS`, `CUSTOMER_COUNT`, `PRODUCT_COUNT`.
+
+### [DONE] Batch 9 — chat read status ("Đã xem")
+
+**BE — `chat-service`**
+- `ChatMessage.java`: added `readBy: List<String>` field (`@Builder.Default` to `new ArrayList<>()`).
+- `ChatMessageResponse.java`: added `readBy: List<String>`.
+- `ChatMessageRepository.java`: added `findAllByConversationIdAndSenderUserIdNotAndReadByNotContaining()` for efficient unread lookup.
+- `ChatMessageService.markAsRead(conversationId)`: finds all messages NOT sent by current user that don't have current userId in `readBy`, adds userId, saves, and broadcasts `messages_read` socket event `{conversationId, readerId}`.
+- `ChatMessageController.java`: added `POST /messages/read?conversationId=` endpoint.
+
+**FE — both `UI/manager` and `UI/client`**
+- `chat.ts` slice: added `readBy?: string[]` to `ChatMessage`, added `markMessagesRead` action.
+- `endpoint.ts`: added `CHAT.MARK_READ(conversationId)`.
+- `messageApi.ts`: added `markAsRead(conversationId)`.
+- `ManagerChatSidebar.tsx`: calls `markAsRead` after fetching messages; `messages_read` socket listener dispatches `markMessagesRead`; shows "Đã xem" (blue, 10px) below the last outgoing message that has been read.
+- `SellerChatModal.tsx`: calls `markAsRead` after fetching messages; shows "Đã xem" on last read outgoing message.
+- `SocketClient.tsx` (client): added `messages_read` listener → `dispatch(markMessagesRead(...))`.
+
+### [DONE] Batch 8 — chat takeover request feature
+
+**BE — `chat-service`**
+- `ConversationService.acceptTakeover(conversationId, currentManagerId, newManagerId)`: socket-driven transfer that bypasses `SecurityContextHolder` (called from SocketHandler, not HTTP layer).
+- `SocketHandler`: added `takeoverRequests` ConcurrentHashMap (conversationId → requesterId), `registerTakeoverListeners()` called before `server.start()`.
+  - `takeover_request`: stores requesterId, broadcasts payload to all clients (FE filters by conversationId + isAssignedToMe).
+  - `takeover_accept`: calls `acceptTakeover()`, then sends `takeover_accepted` event directly to requester's socket via `server.getClient(UUID)`.
+  - `takeover_reject`: sends `takeover_rejected` event to requester's socket.
+
+**FE — `UI/manager/src/components/ManagerChatSidebar.tsx`**
+- Added "Yêu cầu tiếp quản" button (blue, `UserCheck` icon) in action bar for `!isUnassigned && !isAssignedToMe` case.
+- Added `takeoverPopup` and `takeoverStatus` local state.
+- `useEffect` registers `takeover_request`/`takeover_accepted`/`takeover_rejected` socket listeners per conversation window.
+- `takeover_request` received → show full-screen overlay popup with "Đồng ý" / "Từ chối" buttons (only shown to `isAssignedToMe`).
+- Accept → emits `takeover_accept`; Reject → emits `takeover_reject`.
+- Status toast shown to requester after accept/reject (3s auto-dismiss).
+
 ### [DONE] Batch 7 — fix username null + isMe bug (chat-service)
 
 **Root cause username null**: Khi manager gửi tin trong SUPPORT conversation (manager không có trong `participants`), code fallback sang `fetchManagerUsernameById()` — Feign call tới identity-service. Nếu Feign fail intermittently → `sender.username = null` lưu vào MongoDB → không hiện username.
@@ -244,53 +313,7 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ## TODO (ưu tiên từ trên xuống)
 
----
-
-### [ADMIN] Các trang admin cần hoàn thiện
-
-#### 1. [ADMIN] Dashboard — hiện chỉ có text "Dashboard Page"
-- Hiển thị tổng quan hệ thống: tổng đơn hàng, tổng doanh thu, tổng người dùng, tổng sản phẩm.
-- Fetch từ: order-service (doanh thu/đơn hàng), user-service (tổng khách hàng), product-service (tổng sản phẩm).
-- Có thể thêm biểu đồ đơn hàng theo ngày/tuần (recharts hoặc chart.js).
-
-#### 2. [ADMIN] Track log — iframe Grafana/Loki không load được
-- Hiện trang nhúng iframe Grafana nhưng bị lỗi (gray box, sad icon).
-- Nguyên nhân thường là: Grafana chưa bật allow embed (`allow_embedding = true` trong `grafana.ini`), hoặc chưa cấu hình `GF_SECURITY_ALLOW_EMBEDDING=true` trong Docker env.
-- Fix phía infrastructure: thêm env `GF_SECURITY_ALLOW_EMBEDDING=true` vào container Grafana trong docker-compose.
-- Fix phía FE: đảm bảo URL iframe trỏ đúng dashboard Loki đã tạo sẵn trong Grafana.
-
-#### 3. [ADMIN] Lịch sử thao tác (Audit Trail) — hiện rỗng, chưa có data
-- **Phạm vi lưu**: tất cả hành động làm thay đổi DB của 3 actor:
-  - **Client**: đặt hàng, huỷ đơn, cập nhật profile, đăng ký/đăng nhập.
-  - **Manager**: thêm/sửa/xoá sản phẩm, cập nhật trạng thái đơn hàng, claim/transfer conversation.
-  - **Admin**: gán quyền người dùng, thay đổi role.
-- **Nơi lưu gợi ý**: identity-service đã có `HistoryAction` entity + `HistoryActionRepository` — cân nhắc tận dụng hoặc dùng collection riêng trong một service phù hợp.
-- **BE**: mỗi service tự ghi audit log sau khi thực hiện action thành công (có thể dùng Kafka event để không coupling trực tiếp).
-- **FE Admin**: gọi API lấy danh sách audit log, hiển thị bảng với cột: Thời gian, Actor, Hành động, Mô tả, Trạng thái, Ghi chú. Có filter theo actor type và time range.
-
-#### Kiến trúc admin UI cần nhớ
-- Auth: dùng thunk-based (`slices/auth.ts` + `thunks/auth.ts`) — giống manager/client. Store chỉ có 1 reducer `auth`.
-- `localStorage` key: `"token"` (đã đồng bộ với `slices/auth.ts`).
-- `ProtectedRoutes` dùng `<Outlet>` pattern (khác manager dùng `children`), không fetch user profile vì admin không cần.
-- Endpoints nằm trong `constants/endpoint.ts`, base URL lấy từ `VITE_API_URL`.
-
----
-
-### 1. [CHAT] Nút yêu cầu tiếp quản + popup đồng ý/từ chối
-- Manager chưa được assign có nút "Yêu cầu tiếp quản".
-- Khi nhấn: gửi socket event tới manager đang phụ trách, hiện popup `"{username} muốn tiếp quản cuộc hội thoại này"` với nút Đồng ý / Từ chối.
-- Nếu đồng ý: thực hiện transfer conversation.
-- Cần thêm socket event mới ở BE (`takeover_request`, `takeover_response`).
-
-### 2. [CHAT] Trạng thái đã xem cho tin nhắn cuối
-- Hiện trạng thái "Đã xem" cho tin nhắn cuối.
-- Cần thêm field `readBy: [userId]` vào `ChatMessage` entity và logic mark-as-read.
-
-### 3. [CHAT] Trạng thái online/offline
-- Client thấy manager online khi có ít nhất 1 manager đang kết nối socket.
-- Manager thấy client online khi client đang kết nối socket.
-- Cần dùng `WebSocketSession` để kiểm tra — phức tạp nhất, làm sau cùng.
-
+1. **Dashboard — Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
 ---
 
 ### [DONE] file-service — chuyển upload sang S3
@@ -313,4 +336,4 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ## Các lỗi hiện tại
 
-*(Không còn lỗi đã biết)*
+(Không có lỗi đã biết hiện tại)

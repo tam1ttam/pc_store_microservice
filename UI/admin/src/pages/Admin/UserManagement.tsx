@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     Table,
     TableBody,
@@ -17,67 +17,96 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { adminApi } from "@/services/api/adminApi";
 
-// Hardcoded data for demonstration
-const hardcodedUsers = [
-    { id: "1", userName: "user1", fullName: "User One", email: "user1@example.com", roles: ["USER"] },
-    { id: "2", userName: "manager1", fullName: "Manager One", email: "manager1@example.com", roles: ["MANAGER"] },
-    { id: "3", userName: "admin1", fullName: "Admin One", email: "admin1@example.com", roles: ["ADMIN", "USER"] },
-    { id: "4", userName: "user2", fullName: "User Two", email: "user2@example.com", roles: ["USER"] },
-    { id: "5", userName: "user3", fullName: "User Three", email: "user3@example.com", roles: ["USER"] },
-];
+interface Customer {
+    id: string;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    city?: string;
+}
 
 const UserManagement: React.FC = () => {
     const { toast } = useToast();
-    const [users, setUsers] = useState(hardcodedUsers);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [selectedRole, setSelectedRole] = useState<string | null>(null);
-    const usersPerPage = 5;
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+    const pageSize = 10;
 
-    const handleRoleChange = async (userName: string, role: string) => {
-        // Mock API call
-        console.log(`Assigning role ${role} to ${userName}`);
-        // In a real app, you would call:
-        // await adminApi.assignRole(userName, role);
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-        toast({
-            title: "Thành công",
-            description: `Đã gán quyền ${role} cho người dùng ${userName}.`,
-        });
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [debouncedSearch]);
 
-        // Update local state for demonstration
-        setUsers(users.map(u => u.userName === userName ? { ...u, roles: [role] } : u));
+    const fetchCustomers = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            let res: any;
+            if (debouncedSearch.trim()) {
+                res = await adminApi.searchCustomers(debouncedSearch.trim(), currentPage, pageSize);
+            } else {
+                res = await adminApi.getCustomers(currentPage, pageSize);
+            }
+            const page = res.data?.result;
+            setCustomers(page?.content ?? []);
+            setTotalPages(page?.totalPages ?? 0);
+            setTotalElements(page?.totalElements ?? 0);
+        } catch {
+            toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải danh sách người dùng." });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentPage, debouncedSearch, toast]);
+
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    const handleAssignAdmin = async (userName: string) => {
+        setUpdatingRole(userName);
+        try {
+            await adminApi.updateUserRole(userName);
+            toast({ title: "Thành công", description: `Đã gán quyền ADMIN cho ${userName}.` });
+        } catch {
+            toast({ variant: "destructive", title: "Lỗi", description: "Không thể cập nhật quyền." });
+        } finally {
+            setUpdatingRole(null);
+        }
     };
-
-    const filteredUsers = users.filter(user =>
-        user.userName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const indexOfLastUser = currentPage * usersPerPage;
-    const indexOfFirstUser = indexOfLastUser - usersPerPage;
-    const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-    const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Quản lý người dùng</h1>
             <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
+                    {!isLoading && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Tổng cộng {totalElements} người dùng
+                        </p>
+                    )}
+                </div>
                 <Input
-                    placeholder="Tìm kiếm người dùng..."
+                    placeholder="Tìm kiếm theo tên..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="max-w-sm"
                 />
             </div>
+
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
@@ -85,57 +114,81 @@ const UserManagement: React.FC = () => {
                             <TableHead>Tên đăng nhập</TableHead>
                             <TableHead>Họ và tên</TableHead>
                             <TableHead>Email</TableHead>
-                            <TableHead>Vai trò</TableHead>
+                            <TableHead>SĐT</TableHead>
+                            <TableHead>Thành phố</TableHead>
                             <TableHead className="text-right">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {currentUsers.map((user) => (
-                            <TableRow key={user.id}>
-                                <TableCell>{user.userName}</TableCell>
-                                <TableCell>{user.fullName}</TableCell>
-                                <TableCell>{user.email}</TableCell>
-                                <TableCell>{user.roles.join(", ")}</TableCell>
-                                <TableCell className="text-right">
-                                    <Select onValueChange={(value) => handleRoleChange(user.userName, value)}>
-                                        <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Gán quyền" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="USER">USER</SelectItem>
-                                            <SelectItem value="MANAGER">MANAGER</SelectItem>
-                                            <SelectItem value="ADMIN">ADMIN</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                        {isLoading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    {Array.from({ length: 6 }).map((__, j) => (
+                                        <TableCell key={j}>
+                                            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : customers.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                    Không có dữ liệu
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ) : (
+                            customers.map((customer) => (
+                                <TableRow key={customer.id}>
+                                    <TableCell className="font-medium">{customer.userName}</TableCell>
+                                    <TableCell>{`${customer.firstName ?? ""} ${customer.lastName ?? ""}`.trim() || "—"}</TableCell>
+                                    <TableCell>{customer.email || "—"}</TableCell>
+                                    <TableCell>{customer.phoneNumber || "—"}</TableCell>
+                                    <TableCell>{customer.city || "—"}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={updatingRole === customer.userName}
+                                            onClick={() => handleAssignAdmin(customer.userName)}
+                                        >
+                                            {updatingRole === customer.userName ? "Đang cập nhật..." : "Gán ADMIN"}
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>
-            <div className="flex justify-center mt-4">
-                <Pagination>
-                    <PaginationContent>
-                        <PaginationPrevious
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        />
-                        {[...Array(totalPages)].map((_, i) => (
-                            <PaginationItem key={i}>
-                                <PaginationLink
-                                    href="#"
-                                    isActive={i + 1 === currentPage}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                >
-                                    {i + 1}
-                                </PaginationLink>
-                            </PaginationItem>
-                        ))}
-                        <PaginationNext
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        />
-                    </PaginationContent>
-                </Pagination>
-            </div>
+
+            {totalPages > 1 && (
+                <div className="flex justify-center mt-4">
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationPrevious
+                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 0))}
+                            />
+                            {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+                                const page = i;
+                                return (
+                                    <PaginationItem key={page}>
+                                        <PaginationLink
+                                            href="#"
+                                            isActive={page === currentPage}
+                                            onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                                        >
+                                            {page + 1}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                );
+                            })}
+                            <PaginationNext
+                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages - 1))}
+                            />
+                        </PaginationContent>
+                    </Pagination>
+                </div>
+            )}
         </div>
     );
 };

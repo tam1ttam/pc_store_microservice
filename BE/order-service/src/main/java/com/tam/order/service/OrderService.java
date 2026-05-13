@@ -7,10 +7,13 @@ import org.bson.types.ObjectId;
 
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.dto.response.OrderResponse;
+import com.tam.order.dto.response.OrderStatsResponse;
 import com.tam.order.entity.Order;
 
 public interface OrderService {
     Order saveOrder(OrderCreationRequest request);
+
+    OrderStatsResponse getStats();
 
     List<Order> getAllOrders(ObjectId customerId);
 

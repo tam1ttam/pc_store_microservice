@@ -160,4 +160,9 @@ public class CustomerServiceImpl implements CustomerService {
     public boolean existsCustomerByUserName(String userName) {
         return customerRepository.existsByUserName(userName);
     }
+
+    @Override
+    public long countCustomers() {
+        return customerRepository.count();
+    }
 }

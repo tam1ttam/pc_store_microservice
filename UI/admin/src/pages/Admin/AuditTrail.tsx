@@ -28,7 +28,7 @@ export default function AuditTrail() {
         const fetchHistory = async () => {
             try {
                 setLoading(true);
-                const response = await api.get("/admin/history");
+                const response = await api.get("/api/admin/history");
                 if (response.data && response.data.result) {
                     setHistory(response.data.result);
                 }

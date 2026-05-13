@@ -27,4 +27,6 @@ public interface CustomerService {
     void deleteCustomer(String userName);
 
     boolean existsCustomerByUserName(String userName);
+
+    long countCustomers();
 }

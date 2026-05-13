@@ -82,6 +82,13 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: discovery-eureka
+          uri: ${EUREKA_BASE_URL:http://localhost:6059}
+          predicates:
+            - Path=/api-gateway/eureka/**
+          filters:
+            - StripPrefix=1
+
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
           predicates:

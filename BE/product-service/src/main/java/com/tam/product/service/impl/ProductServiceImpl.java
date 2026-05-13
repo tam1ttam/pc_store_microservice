@@ -253,4 +253,9 @@ public class ProductServiceImpl implements ProductService {
     private boolean isBase64(String s) {
         return s != null && !s.isBlank() && !s.startsWith("http");
     }
+
+    @Override
+    public long countProducts() {
+        return productRepository.count();
+    }
 }

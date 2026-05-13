@@ -87,4 +87,13 @@ public class ProfileAdminController {
                 .result("Người dùng đã bị xóa: " + userName)
                 .build());
     }
+
+    @GetMapping("/count")
+    public ResponseEntity<ApiResponse<Long>> countCustomers() {
+        return ResponseEntity.ok(ApiResponse.<Long>builder()
+                .code(1000)
+                .message("Lấy số lượng thành công")
+                .result(customerService.countCustomers())
+                .build());
+    }
 }

@@ -3,10 +3,12 @@ package com.tam.order.controller;
 import java.util.List;
 
 import org.bson.types.ObjectId;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.tam.order.dto.request.ApiResponse;
 import com.tam.order.dto.request.OrderCreationRequest;
+import com.tam.order.dto.response.OrderStatsResponse;
 import com.tam.order.entity.Order;
 import com.tam.order.service.OrderService;
 
@@ -69,6 +71,14 @@ public class OrderController {
     public ApiResponse<List<Order>> getAllOrder() {
         return com.tam.order.dto.request.ApiResponse.<List<Order>>builder()
                 .result(orderService.getAll())
+                .build();
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<OrderStatsResponse> getStats() {
+        return ApiResponse.<OrderStatsResponse>builder()
+                .result(orderService.getStats())
                 .build();
     }
 }

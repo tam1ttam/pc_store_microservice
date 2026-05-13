@@ -5,6 +5,7 @@ import java.util.HashSet;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.devteria.identity.constant.PredefinedRole;
@@ -34,6 +35,7 @@ public class ApplicationInitConfig {
     static final String ADMIN_PASSWORD = "123123123";
 
     @Bean
+    @Order(1)
     ApplicationRunner applicationRunner(UserRepository userRepository, RoleRepository roleRepository) {
         log.info("Initializing application.....");
         return args -> {

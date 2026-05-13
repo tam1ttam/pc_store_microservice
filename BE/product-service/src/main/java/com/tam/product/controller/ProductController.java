@@ -101,4 +101,11 @@ public class ProductController {
         var result = productService.deleteProductById(productId);
         return ApiResponse.<Boolean>builder().result(result).build();
     }
+
+    @GetMapping("/count")
+    public ApiResponse<Long> countProducts() {
+        return ApiResponse.<Long>builder()
+                .result(productService.countProducts())
+                .build();
+    }
 }

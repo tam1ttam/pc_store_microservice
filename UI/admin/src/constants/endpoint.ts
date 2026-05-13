@@ -41,9 +41,16 @@ const ENDPOINT = {
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER: `${ORDER_SVC}/api/orders`,
     LIST_ORDER: `${ORDER_SVC}/api/orders`,
+    ORDER_STATS: `${ORDER_SVC}/api/orders/stats`,
     UPDATE_PAYMENT_STATUS: `${ORDER_SVC}/api/orders`, // PUT /{orderId}?status=...
     PAYPAL: `${ORDER_SVC}/api/payment/create_payment`,
     PAYMENT_STATUS: `${ORDER_SVC}/api/payment`, // append /{paymentId}
+
+    // ── Admin stats ──────────────────────────────────────────────────────────
+    CUSTOMER_COUNT: `${USER_SVC}/api/admin/customers/count`,
+    PRODUCT_COUNT: `${PRODUCT_SVC}/products/count`,
+    CHAT_ONLINE_USER_IDS: `${BASE_URL}/api-gateway/chat-service/conversations/managers/online`,
+    CHAT_MANAGERS: `${BASE_URL}/api-gateway/chat-service/conversations/managers`,
 
     // ── Chat-service ─────────────────────────────────────────────────────────
     CHAT: {
