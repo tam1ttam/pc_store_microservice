@@ -5,3 +5,4 @@ tam.common.config.BaseSecurityConfig
 tam.common.config.CorsConfig
 tam.common.config.ObjectMapperConfiguration
 tam.common.config.OpenApiConfig
+tam.common.config.SecurityDebugFilter

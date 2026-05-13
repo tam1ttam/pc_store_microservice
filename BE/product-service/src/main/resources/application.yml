@@ -70,13 +70,11 @@ eureka:
 
 logging:
   level:
-    root: INFO
-    com.tam: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.tam: ${LOGGING_LEVEL_COM_TAM:INFO}
   pattern:
-    console: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{ISO8601} [%X{traceId},%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/product-service.log
     max-size: 10MB
