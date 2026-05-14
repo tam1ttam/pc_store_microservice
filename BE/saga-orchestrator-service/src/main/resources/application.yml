@@ -15,8 +15,7 @@ spring:
 app:
   security:
     allowed-origins:
-      - http://localhost:3003
-      - http://localhost:3004
+      - ${ALLOWED_ORIGINS:http://localhost:3003,http://localhost:3004}
     permit-all-endpoints: []
 
 jwt:

@@ -59,14 +59,14 @@ services:
       retries: 5
 
   # ============================================================
-  # CACHE — Redis  (host port ${REDIS_PORT:-6002})
+  # CACHE — Redis  (host port ${REDIS_HOST_PORT:-6002})
   # ============================================================
   redis:
     image: redis:7.2-alpine
     container_name: redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6002}:6379"
+      - "${REDIS_HOST_PORT:-6002}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -234,6 +234,7 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:-admin}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
@@ -248,6 +249,324 @@ services:
           memory: 192M
         reservations:
           memory: 64M
+
+  # ============================================================
+  # SPRING BOOT SERVICES
+  # Chạy: docker-compose --env-file .env.development up -d
+  # Build JAR trước:
+  #   cd common-lib    && mvn install -DskipTests
+  #   cd proto-common  && mvn install -DskipTests
+  #   cd {service}     && mvn package -DskipTests  (từng service)
+  # ============================================================
+
+  # ── Discovery / Eureka  (:6059) ──────────────────────────────
+  discovery-service:
+    build:
+      context: ./discovery-service
+      dockerfile: Dockerfile
+    container_name: discovery-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${DISCOVERY_SERVICE_PORT:-6059}:6059"
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6059/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ── API Gateway  (:6060) ──────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${API_GATEWAY_PORT:-6060}:6060"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6060/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Identity Service  (:6062 | MySQL) ────────────────────────
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-6062}:6062"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6062/identity-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── User Service  (:6063 | gRPC :6163 | MongoDB) ─────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${USER_SERVICE_PORT:-6063}:6063"
+      - "${USER_SERVICE_GRPC_PORT:-6163}:6163"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6063/user-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Product Service  (:6067 | gRPC :6167 | MongoDB + ES) ─────
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${PRODUCT_SERVICE_PORT:-6067}:6067"
+      - "${PRODUCT_SERVICE_GRPC_PORT:-6167}:6167"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6067/product-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Order Service  (:6065 | gRPC :6165 | MongoDB) ────────────
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${ORDER_SERVICE_PORT:-6065}:6065"
+      - "${ORDER_SERVICE_GRPC_PORT:-6165}:6165"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6065/order-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Chat Service  (:8085 | Socket.IO :8099 | MongoDB) ────────
+  chat-service:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile
+    container_name: chat-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${CHAT_SERVICE_PORT:-8085}:8085"
+      - "8099:8099"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/chat-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── File Service  (:8084 | gRPC :8184 | MongoDB + S3) ────────
+  file-service:
+    build:
+      context: ./file-service
+      dockerfile: Dockerfile
+    container_name: file-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${FILE_SERVICE_PORT:-8084}:8084"
+      - "${FILE_SERVICE_GRPC_PORT:-8184}:8184"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8084/file-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Notification Service  (:6068 | MongoDB) ──────────────────
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-6068}:6068"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6068/notification-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ── Saga Orchestrator  (:6058 | gRPC :6158) ──────────────────
+  saga-orchestrator-service:
+    build:
+      context: ./saga-orchestrator-service
+      dockerfile: Dockerfile
+    container_name: saga-orchestrator-service
+    restart: unless-stopped
+    env_file: .env.development
+    ports:
+      - "${SAGA_ORCHESTRATOR_PORT:-6058}:6058"
+      - "${SAGA_ORCHESTRATOR_GRPC_PORT:-6158}:6158"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6058/saga-orchestrator-service/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
 
 networks:
   ecommerce-network:

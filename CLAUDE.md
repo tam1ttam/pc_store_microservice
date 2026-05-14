@@ -337,3 +337,85 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 ## Các lỗi hiện tại
 
 (Không có lỗi đã biết hiện tại)
+
+---
+
+## Production (GitLab → Jenkins → K8s → VPS)
+
+### Hướng đi tối ưu
+
+```
+GitLab push
+  → Jenkins webhook trigger
+  → Build JAR (Maven, dùng cache ~/.m2 trên Jenkins agent)
+  → Build Docker image (copy JAR vào — Dockerfiles đã có)
+  → Push lên GitLab Container Registry
+  → kubectl apply / helm upgrade lên K8s cluster (k3s trên VPS)
+```
+
+- `docker-compose.yml` chỉ dùng cho **local dev**, không dùng trên VPS
+- Jenkins lo Maven build, Dockerfile giữ đơn giản (đã done)
+- Secrets nhạy cảm (JWT key, AWS key…) lưu vào **K8s Secret**, không dùng `env_file`
+
+---
+
+### TODO (theo thứ tự thực hiện)
+
+#### Phase 1 — Chuẩn bị VPS & tooling (một lần)
+- [ ] Cài **k3s** trên VPS (`curl -sfL https://get.k3s.io | sh`)
+- [ ] Cài **nginx Ingress controller** (`kubectl apply -f ingress-nginx`)
+- [ ] Bật **GitLab Container Registry** cho project
+- [ ] Cấu hình Jenkins: thêm credential GitLab registry, cài plugin Kubernetes + Docker Pipeline
+- [ ] Cấu hình Maven cache trên Jenkins agent (`/root/.m2` persist giữa các build)
+
+#### Phase 2 — Config management (K8s Secrets + ConfigMap)
+- [ ] Tách `.env.production` thành 2 phần:
+  - **Secret**: `JWT_SIGNER_KEY`, `AWS_SECRET_ACCESS_KEY`, `AWS_ACCESS_KEY_ID`, `MYSQL_ROOT_PASS`, `IDENTITY_DB_PASS`, `MONGO_ROOT_PASS`, `GEMINI_API_KEY`, `BREVO_API_KEY`, `CLOUDINARY_API_SECRET`, `ELASTICSEARCH_PASSWORD`
+  - **ConfigMap**: tất cả còn lại (URLs, ports, tên host, flags)
+- [ ] Tạo file `k8s/base/secrets.yaml` (không commit — thêm vào `.gitignore`)
+- [ ] Tạo file `k8s/base/configmap.yaml`
+
+#### Phase 3 — Jenkinsfile
+- [ ] Viết `Jenkinsfile` ở root `BE/` với các stage:
+  - `Build Libs`: `mvn install -DskipTests` cho `common-lib` + `proto-common` (tuần tự)
+  - `Build Services`: `mvn package -DskipTests` cho 10 service (song song với `parallel {}`)
+  - `Build & Push Images`: `docker build + push` lên GitLab registry, tag = `$GIT_COMMIT`
+  - `Deploy`: `kubectl set image` hoặc `helm upgrade --install`
+
+#### Phase 4 — K8s manifests cho Infrastructure
+- [ ] **MongoDB** — StatefulSet + PersistentVolumeClaim + ClusterIP Service
+- [ ] **MySQL** — StatefulSet + PVC + ClusterIP Service
+- [ ] **Redis** — Deployment + PVC + ClusterIP Service
+- [ ] **Kafka** — StatefulSet + PVC + ClusterIP Service (chỉ cần internal `9092`, không expose ra ngoài)
+- [ ] **Elasticsearch** — StatefulSet + PVC + ClusterIP Service
+
+#### Phase 5 — K8s manifests cho Spring Boot services
+- [ ] Deployment + ClusterIP Service cho từng service (10 service)
+- [ ] Lưu ý port đặc biệt:
+  - `chat-service`: Service cần cả port `8085` (HTTP) và `8099` (Socket.IO)
+  - `user-service`, `product-service`, `order-service`, `file-service`, `saga-orchestrator`: Service cần thêm gRPC port
+- [ ] Cấu hình `envFrom` dùng cả Secret lẫn ConfigMap thay vì `env_file`
+- [ ] Set `readinessProbe` + `livenessProbe` dùng `/actuator/health` (context-path tương ứng)
+
+#### Phase 6 — Ingress
+- [ ] Ingress cho **api-gateway** (port 6060) → expose domain ra ngoài
+- [ ] Thêm annotation WebSocket cho chat route:
+  ```yaml
+  nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  ```
+- [ ] **Sticky session** cho Socket.IO:
+  ```yaml
+  nginx.ingress.kubernetes.io/affinity: "cookie"
+  ```
+- [ ] TLS/HTTPS: cert-manager + Let's Encrypt (nếu có domain)
+
+#### Phase 7 — Frontend (3 React apps)
+- [ ] Viết Dockerfile cho mỗi app: `vite build` → nginx serve static
+- [ ] K8s Deployment + Service + Ingress cho `client` (:3000), `manager` (:3004), `admin` (:3003)
+- [ ] Cập nhật API base URL trong FE từ `localhost:6060` → domain thật của api-gateway
+
+#### Phase 8 — Vận hành
+- [ ] Cấu hình **HorizontalPodAutoscaler** cho api-gateway + identity-service (traffic cao nhất)
+- [ ] Kết nối Grafana (đã có) với Prometheus trong K8s để monitor pod metrics
+- [ ] Thiết lập backup định kỳ cho MongoDB + MySQL PVC
