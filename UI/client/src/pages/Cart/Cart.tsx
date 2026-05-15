@@ -12,25 +12,118 @@ import { RootState } from "@/redux/store";
 import { deleteCartItem, getCartCount } from "@/redux/thunks/cart";
 import { viewOrder } from "@/redux/thunks/order";
 import { cartApi } from "@/services/api/cartApi";
-import { orderApi } from "@/services/api/orderApi";
+import { post, get } from "@/services/api.service";
+import { ENDPOINTS } from "@/constants";
 import { Loader2, MapPin, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
 function Cart() {
-    const { items } = useSelector((state: RootState) => state.cart);
-    console.log(items);
+    const [items, setItems] = useState<any[]>([]);
     const dispatch = useDispatch();
     const { toast } = useToast();
     const { info: user } = useSelector((state: RootState) => state.user);
     const [isLoading, setIsloading] = useState(false);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [address, setAddress] = useState(localStorage.getItem("addressShipping") || "");
-
     const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
     const [isOrdering, setIsOrdering] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<string>("ship");
+
+    // 2. HÀM MỚI: Dùng đúng đường link "?id=" của Backend
+    const loadCartData = async () => {
+        if (!user?.id) return;
+        try {
+            const res = await cartApi.getCartItems(user.id);
+            const orders = res.data?.result || res.data;
+
+            if (orders && Array.isArray(orders) && orders.length > 0) {
+                const cartOrders = orders.filter((o: any) => o.orderStatus === "CART" || !o.orderStatus);
+
+                let allItems: any[] = [];
+                cartOrders.forEach((order: any) => {
+                    if (order.items && Array.isArray(order.items)) {
+                        allItems = [...allItems, ...order.items];
+                    }
+                });
+
+                const validItems = allItems.filter(item => item.productId && !item.productId.includes("-"));
+
+                if (validItems.length > 0) {
+                    const itemsWithRealData = await Promise.all(
+                        validItems.map(async (apiItem: any) => {
+                            try {
+                                // 👉 BÍ MẬT NẰM Ở ĐÂY: Dùng đúng cú pháp /id?id= của Backend
+                                const productRes = await get<any>(`${ENDPOINTS.PRODUCTS}/id?id=${apiItem.productId}`);
+                                
+                                const responseData = productRes.data || productRes;
+                                const realProduct = responseData?.result || responseData?.data || responseData;
+
+                                const pName = realProduct?.name || realProduct?.productName || "Sản phẩm";
+                                const pPrice = realProduct?.priceAfterDiscount || realProduct?.discountPrice || realProduct?.price || 0;
+                                const pOriginalPrice = realProduct?.originalPrice || realProduct?.price || pPrice;
+                                
+                                let pImg = "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg";
+                                if (typeof realProduct?.img === 'string') pImg = realProduct.img;
+                                else if (typeof realProduct?.image === 'string') pImg = realProduct.image;
+                                else if (Array.isArray(realProduct?.images) && realProduct.images.length > 0) {
+                                    pImg = realProduct.images[0]?.url || realProduct.images[0] || pImg;
+                                }
+
+                                return {
+                                    quantity: apiItem.quantity || 1,
+                                    product: {
+                                        id: apiItem.productId,
+                                        name: pName,
+                                        img: pImg,
+                                        priceAfterDiscount: pPrice,
+                                        originalPrice: pOriginalPrice,
+                                        supplier: { name: realProduct?.supplier?.name || "Hệ thống PC Store" }
+                                    }
+                                };
+                            } catch (err) {
+                                return {
+                                    quantity: apiItem.quantity || 1,
+                                    product: {
+                                        id: apiItem.productId,
+                                        name: "Sản phẩm (Lỗi kết nối API)",
+                                        img: "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg",
+                                        priceAfterDiscount: 0,
+                                        originalPrice: 0,
+                                        supplier: { name: "PC Store" }
+                                    }
+                                };
+                            }
+                        })
+                    );
+
+                    // Thuật toán gộp hàng trùng lặp
+                    const uniqueItemsMap = new Map();
+                    itemsWithRealData.forEach(item => {
+                        if (uniqueItemsMap.has(item.product.id)) {
+                            const existing = uniqueItemsMap.get(item.product.id);
+                            existing.quantity += item.quantity;
+                        } else {
+                            uniqueItemsMap.set(item.product.id, item);
+                        }
+                    });
+
+                    setItems(Array.from(uniqueItemsMap.values()));
+                } else {
+                    setItems([]); 
+                }
+            } else {
+                setItems([]);
+            }
+        } catch (error) {
+            console.error("Lỗi lấy giỏ hàng:", error);
+            setItems([]);
+        }
+    };
+    useEffect(() => {
+        loadCartData();
+    }, [user?.id]);
 
     const totalPrice = useMemo(() => {
         return (
@@ -50,7 +143,7 @@ function Cart() {
             });
             setQuantities(initialQuantities as any);
         }
-    }, [JSON.stringify]);
+    }, [items]); 
 
     const handleDeleteCartItem = async (productId: string) => {
         try {
@@ -61,26 +154,15 @@ function Cart() {
                 }) as any
             );
 
-            if (result.payload.code === 1000) {
-                toast({
-                    title: "Xóa sản phẩm thành công"
-                });
-                dispatch(
-                    getCartCount({
-                        userId: user?.id as string
-                    }) as any
-                );
+            if (result.payload?.code === 1000) {
+                toast({ title: "Xóa sản phẩm thành công" });
+                dispatch(getCartCount({ userId: user?.id as string }) as any);
+                loadCartData(); 
             } else {
-                toast({
-                    title: "Xóa sản phẩm thất bại",
-                    variant: "destructive"
-                });
+                toast({ title: "Xóa sản phẩm thất bại", variant: "destructive" });
             }
         } catch (error) {
-            toast({
-                title: "Đã có lỗi xảy ra",
-                variant: "destructive"
-            });
+            toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
         }
     };
 
@@ -93,25 +175,16 @@ function Cart() {
 
         try {
             const result = await cartApi.decreaseQuantity(user?.id as string, productId);
-
             dispatch(getCartCount({ userId: user?.id as string }) as any);
+            loadCartData();
 
             if (result.data.code !== 1000) {
-                setQuantities((prev) => ({
-                    ...prev,
-                    [productId]: prev[productId] + 1
-                }));
-                toast({
-                    title: "Giảm số lượng thất bại",
-                    variant: "destructive"
-                });
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
+                toast({ title: "Giảm số lượng thất bại", variant: "destructive" });
             }
         } catch (error) {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
-            toast({
-                title: "Đã có lỗi xảy ra",
-                variant: "destructive"
-            });
+            toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
         } finally {
             setIsloading(false);
         }
@@ -123,40 +196,16 @@ function Cart() {
 
         try {
             const result = await cartApi.increaseQuantity(user?.id as string, productId);
-
             dispatch(getCartCount({ userId: user?.id as string }) as any);
+            loadCartData();
 
             if (result.data.code !== 1000) {
-                setQuantities((prev) => ({
-                    ...prev,
-                    [productId]: prev[productId] - 1
-                }));
-
-                if (result.data.code === 6001) {
-                    toast({
-                        title: "Sản phẩm không đủ số lượng trong kho",
-                        variant: "destructive"
-                    });
-                } else {
-                    toast({
-                        title: "Tăng số lượng thất bại",
-                        variant: "destructive"
-                    });
-                }
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
+                toast({ title: "Tăng số lượng thất bại", variant: "destructive" });
             }
         } catch (error: any) {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
-            if (error.response && error.response.data.code === 6001) {
-                toast({
-                    title: "Sản phẩm không đủ số lượng trong kho",
-                    variant: "destructive"
-                });
-            } else {
-                toast({
-                    title: "Đã có lỗi xảy ra",
-                    variant: "destructive"
-                });
-            }
+            toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
         } finally {
             setIsloading(false);
         }
@@ -164,59 +213,39 @@ function Cart() {
 
     const handleOrder = async () => {
         if (!address) {
-            toast({
-                title: "Vui lòng nhập địa chỉ giao hàng",
-                variant: "destructive"
-            });
+            toast({ title: "Vui lòng nhập địa chỉ giao hàng", variant: "destructive" });
             setShowAddressModal(true);
             return;
         }
+
+        const backendItems = items.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            productPrice: item.product.priceAfterDiscount,
+            quantity: quantities[item.product.id as string] || item.quantity
+        }));
+
         if (paymentMethod === "ship") {
             setIsOrdering(true);
             try {
                 const result = await post<any>(ENDPOINTS.ORDER, {
                     customerId: user?.id,
                     shipAddress: address,
-                    items,
+                    items: backendItems,
                     totalPrice,
                     orderStatus: "DELIVERING",
                     isPaid: "false"
                 });
 
                 if (result.data.code === 1000) {
-                    toast({
-                        title: "Đặt hàng thành công"
-                    });
-                    dispatch(
-                        getCartCount({
-                            userId: user?.id as string
-                        }) as any
-                    );
-                    dispatch(
-                        viewOrder({
-                            userId: user?.id as string
-                        }) as any
-                    );
+                    toast({ title: "Đặt hàng thành công" });
+                    dispatch(getCartCount({ userId: user?.id as string }) as any);
+                    dispatch(viewOrder({ userId: user?.id as string }) as any);
                 } else {
                     throw new Error("Failed to order");
                 }
             } catch (error: any) {
-                if (error.response && error.response.status === 401) {
-                    toast({
-                        title: "Hết phiên đăng nhập",
-                        description: "Vui lòng đăng nhập lại",
-                        variant: "destructive"
-                    });
-                    setTimeout(() => {
-                        window.location.href = "/login";
-                    }, 2000);
-                } else {
-                    toast({
-                        title: "Đặt hàng thất bại",
-                        description: error.message || "Đã xảy ra lỗi không xác định",
-                        variant: "destructive"
-                    });
-                }
+                toast({ title: "Đặt hàng thất bại", variant: "destructive" });
             } finally {
                 setIsOrdering(false);
             }
@@ -227,24 +256,17 @@ function Cart() {
                     amount: totalPrice,
                     userId: user?.id,
                     shipAddress: address,
-                    items: items
+                    items: backendItems
                 });
 
                 if (response.data.code === 1000) {
                     localStorage.setItem("paymentId", response.data.result.paymentId as string);
                     window.location.href = response.data.result.url;
                 } else {
-                    toast({
-                        title: "Đặt hàng thất bại vui lòng thử lại",
-                        variant: "destructive"
-                    });
+                    toast({ title: "Đặt hàng thất bại vui lòng thử lại", variant: "destructive" });
                 }
             } catch (error) {
-                console.log(error);
-                toast({
-                    title: "Lỗi kết nối",
-                    variant: "destructive"
-                });
+                toast({ title: "Lỗi kết nối", variant: "destructive" });
             } finally {
                 setIsOrdering(false);
             }

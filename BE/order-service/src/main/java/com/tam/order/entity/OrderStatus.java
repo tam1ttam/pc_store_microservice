@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum OrderStatus {
+    CART("Giỏ hàng"), // 👉 Thêm dòng này vào đầu
     DELIVERING("Đang giao hàng"),
     DELIVERED("Đã giao hàng"),
     CANCELLED("Đã hủy");

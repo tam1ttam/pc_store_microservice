@@ -6,7 +6,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
-import org.bson.types.ObjectId;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,10 +38,18 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order saveOrder(OrderCreationRequest request) {
+        log.info("👉 BƯỚC 1 - NHẬN REQUEST THÊM GIỎ HÀNG: customerId={}, orderStatus={}, items={}",
+                request.getCustomerId(), request.getOrderStatus(),
+                request.getItems() != null ? request.getItems().size() + " món" : "0 món");
+
         if (request.getOrderDate() == null) {
             request.setOrderDate(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
                     .format(LocalDateTime.now(ZoneId.systemDefault())));
         }
+
+        String statusSafe = (request.getOrderStatus() != null && !request.getOrderStatus().isBlank())
+                ? request.getOrderStatus() : "CART";
+        boolean isPaidSafe = request.getIsPaid() != null && request.getIsPaid().toString().equalsIgnoreCase("true");
 
         Order order = Order.builder()
                 .customerId(request.getCustomerId())
@@ -50,12 +57,14 @@ public class OrderServiceImpl implements OrderService {
                 .items(request.getItems())
                 .totalPrice(request.getTotalPrice())
                 .orderDate(request.getOrderDate())
-                .orderStatus(OrderStatus.valueOf(request.getOrderStatus()))
-                .isPaid(request.getIsPaid().equals("true"))
+                .orderStatus(OrderStatus.valueOf(statusSafe))
+                .isPaid(isPaidSafe)
                 .build();
 
         order = orderRepository.save(order);
-        log.info("Order saved: orderId={}, customerId={}", order.getId(), order.getCustomerId());
+
+        log.info("👉 BƯỚC 2 - ĐÃ LƯU XUỐNG MONGODB THÀNH CÔNG: orderId={}, của customerId={}",
+                order.getId(), order.getCustomerId());
 
         publishOrderCreatedEvent(order, request);
         publishOrderConfirmationEmail(order, request);
@@ -68,14 +77,14 @@ public class OrderServiceImpl implements OrderService {
             List<OrderItemEvent> itemEvents = order.getItems() == null
                     ? List.of()
                     : order.getItems().stream()
-                            .map(i -> OrderItemEvent.builder()
-                                    .productId(i.getProductId())
-                                    .quantity(i.getQuantity())
-                                    .build())
-                            .toList();
+                      .map(i -> OrderItemEvent.builder()
+                                .productId(i.getProductId())
+                                .quantity(i.getQuantity())
+                                .build())
+                      .toList();
 
             OrderCreatedEvent event = OrderCreatedEvent.builder()
-                    .orderId(order.getId().toString())
+                    .orderId(order.getId() != null ? order.getId().toString() : "")
                     .customerId(order.getCustomerId())
                     .customerEmail(request.getCustomerEmail())
                     .customerName(request.getCustomerName())
@@ -86,7 +95,6 @@ public class OrderServiceImpl implements OrderService {
                     .build();
 
             kafkaTemplate.send("order.created", event);
-            log.info("Published order.created event for orderId={}", order.getId());
         } catch (Exception e) {
             log.error("Failed to publish order.created event for orderId={}: {}", order.getId(), e.getMessage());
         }
@@ -94,10 +102,8 @@ public class OrderServiceImpl implements OrderService {
 
     private void publishOrderConfirmationEmail(Order order, OrderCreationRequest request) {
         if (request.getCustomerEmail() == null || request.getCustomerEmail().isBlank()) {
-            log.warn("No customerEmail in request, skipping order confirmation email for orderId={}", order.getId());
             return;
         }
-
         try {
             String name = request.getCustomerName() != null ? request.getCustomerName() : request.getCustomerId();
             String body = String.format(
@@ -112,49 +118,81 @@ public class OrderServiceImpl implements OrderService {
                     .build();
 
             kafkaTemplate.send("notification-delivery", notification);
-            log.info("Published order confirmation email for orderId={}", order.getId());
         } catch (Exception e) {
             log.error("Failed to publish notification for orderId={}: {}", order.getId(), e.getMessage());
         }
     }
 
     @Override
-    public List<Order> getAllOrders(ObjectId customerId) {
-        return orderRepository.findAllByCustomerId(customerId);
+    public List<Order> getAllOrders(String customerId) {
+        log.info("👉 TÌM KIẾM: Frontend đang yêu cầu lấy TẤT CẢ giỏ hàng của customerId={}", customerId);
+        List<Order> results = orderRepository.findAllByCustomerId(customerId);
+        log.info("👉 KẾT QUẢ TÌM ĐƯỢC: {} giỏ hàng", results.size());
+        return results;
     }
 
     @Override
-    public Optional<Order> getOrderById(ObjectId orderId) {
+    public Optional<Order> getOrderById(String orderId) {
         return orderRepository.findById(orderId);
     }
 
     @Override
-    public Order updateOrderStatus(ObjectId orderId, String status) {
+    public Order updateOrderStatus(String orderId, String status) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         order.setOrderStatus(OrderStatus.valueOf(status));
         return orderRepository.save(order);
     }
 
     @Override
-    public List<Order> getOrdersByStatus(ObjectId customerId, String status) {
-        return orderRepository.findByCustomerIdAndStatus(customerId, status);
+    public List<Order> getOrdersByStatus(String customerId, String status) {
+        log.info("👉 TÌM KIẾM TRẠNG THÁI: Lấy giỏ hàng '{}' của customerId={}", status, customerId);
+        List<Order> results = orderRepository.findByCustomerIdAndOrderStatus(customerId, status);
+        log.info("👉 KẾT QUẢ TÌM ĐƯỢC: {} giỏ hàng", results.size());
+        return results;
     }
 
     @Override
-    public boolean deleteOrder(ObjectId orderId) {
+    public boolean deleteOrder(String orderId) {
         orderRepository.deleteById(orderId);
         return true;
     }
 
     @Override
-    public Optional<OrderResponse> getOrderResponse(ObjectId orderId) {
+    public Optional<OrderResponse> getOrderResponse(String orderId) {
         return orderRepository.findById(orderId).map(orderMapper::toOrderResponse);
     }
 
     @Override
     public List<Order> getAll() {
-        List<Order> result;
-        result = orderRepository.findAll();
-        return result;
+        return orderRepository.findAll();
+    }
+
+    // --- HÀM XÓA SẢN PHẨM TRONG GIỎ HÀNG ---
+    @Override
+    public boolean deleteItemInCart(String customerId, String productId) {
+        log.info("Bắt đầu xử lý xóa sản phẩm {} trong giỏ hàng của khách {}", productId, customerId);
+
+        // 1. Tìm đúng cái giỏ hàng (CART) của khách
+        Optional<Order> cartOptional = orderRepository.findFirstByCustomerIdAndOrderStatus(customerId, "CART");
+
+        if (cartOptional.isPresent()) {
+            Order cart = cartOptional.get();
+
+            // Kiểm tra xem danh sách items có tồn tại không
+            if (cart.getItems() != null) {
+                // 2. Dùng removeIf để xóa món đồ có productId khớp
+                boolean isRemoved = cart.getItems().removeIf(item -> item.getProductId().equals(productId));
+
+                if (isRemoved) {
+                    // 3. Nếu xóa xong thì lưu lại vào MongoDB
+                    orderRepository.save(cart);
+                    log.info("Xóa thành công sản phẩm {} khỏi MongoDB", productId);
+                    return true;
+                }
+            }
+        }
+
+        log.warn("Không tìm thấy sản phẩm hoặc giỏ hàng để xóa");
+        return false;
     }
 }

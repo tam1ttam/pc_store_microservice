@@ -2,7 +2,7 @@ package com.tam.order.grpc;
 
 import java.util.List;
 
-import org.bson.types.ObjectId;
+// Đã có thể xóa bỏ import org.bson.types.ObjectId; vì không còn dùng nữa
 
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.entity.Order;
@@ -68,7 +68,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void getOrders(GetOrdersRequest request, StreamObserver<GetOrdersResponse> responseObserver) {
         try {
-            List<Order> orders = orderService.getAllOrders(new ObjectId(request.getCustomerId()));
+            List<Order> orders = orderService.getAllOrders(request.getCustomerId());
             GetOrdersResponse.Builder builder = GetOrdersResponse.newBuilder()
                     .setTotalPages(1)
                     .setCurrentPage(0)
@@ -87,7 +87,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     public void getOrderDetail(GetOrderDetailRequest request, StreamObserver<OrderResponse> responseObserver) {
         try {
             orderService
-                    .getOrderById(new ObjectId(request.getOrderId()))
+                    .getOrderById(request.getOrderId()) // Đã xóa new ObjectId()
                     .ifPresentOrElse(
                             o -> {
                                 responseObserver.onNext(toOrderResponse(o));
@@ -107,8 +107,9 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     public void getOrdersByStatus(
             GetOrdersByStatusRequest request, StreamObserver<GetOrdersResponse> responseObserver) {
         try {
+            // Đã xóa new ObjectId()
             List<Order> orders =
-                    orderService.getOrdersByStatus(new ObjectId(request.getCustomerId()), request.getStatus());
+                    orderService.getOrdersByStatus(request.getCustomerId(), request.getStatus());
             GetOrdersResponse.Builder builder = GetOrdersResponse.newBuilder()
                     .setTotalPages(1)
                     .setCurrentPage(0)
@@ -126,7 +127,8 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void updateOrderStatus(UpdateOrderStatusRequest request, StreamObserver<OrderResponse> responseObserver) {
         try {
-            Order order = orderService.updateOrderStatus(new ObjectId(request.getOrderId()), request.getStatus());
+            // Đã xóa new ObjectId()
+            Order order = orderService.updateOrderStatus(request.getOrderId(), request.getStatus());
             responseObserver.onNext(toOrderResponse(order));
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -139,7 +141,8 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void cancelOrder(CancelOrderRequest request, StreamObserver<CancelOrderResponse> responseObserver) {
         try {
-            boolean deleted = orderService.deleteOrder(new ObjectId(request.getOrderId()));
+            // Đã xóa new ObjectId()
+            boolean deleted = orderService.deleteOrder(request.getOrderId());
             responseObserver.onNext(CancelOrderResponse.newBuilder()
                     .setSuccess(deleted)
                     .setOrderId(request.getOrderId())
@@ -155,8 +158,8 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
 
     private OrderResponse toOrderResponse(Order o) {
         OrderResponse.Builder builder = OrderResponse.newBuilder()
-                .setId(o.getId().toString())
-                .setCustomerId(o.getCustomerId())
+                .setId(o.getId() != null ? o.getId().toString() : "")
+                .setCustomerId(o.getCustomerId() != null ? o.getCustomerId() : "")
                 .setShipAddress(o.getShipAddress() != null ? o.getShipAddress() : "")
                 .setOrderDate(o.getOrderDate() != null ? o.getOrderDate() : "")
                 .setCurrency(o.getCurrency() != null ? o.getCurrency() : "")

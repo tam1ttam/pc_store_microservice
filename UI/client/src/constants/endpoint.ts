@@ -60,18 +60,18 @@ const ENDPOINT = {
         DOWNLOAD: (fileName: string) => `${FILE_SVC}/media/download/${fileName}`,
     },
 
-    // ── Cart-service (not yet in API spec — paths TBD) ───────────────────────
+    // ── Cart-service (Routed via order-service) ──────────────────────────────
     CART: {
-        CART_COUNT:      `${BASE_URL}/api/cart`,
-        COUNT:           `${BASE_URL}/api/cart/countOfItems`,
-        CREATE:          (customerId: string) => `${BASE_URL}/api/cart/createCart/${customerId}`,
-        ADD:             (customerId: string) => `${BASE_URL}/api/cart/${customerId}/addCart`,
-        INCREASE:        `${BASE_URL}/api/cart/increaseQuantity`,
-        DECREASE:        `${BASE_URL}/api/cart/decreaseQuantity`,
-        DELETE_ITEM:     `${BASE_URL}/api/cart/deleteItem`,
-        DELETE_ALL:      `${BASE_URL}/api/cart/deleteCart`,
-        GET_PRODUCT_IDS: (customerId: string) => `${BASE_URL}/api/cart/productIds/${customerId}`,
-        GET_ITEMS:       (customerId: string) => `${BASE_URL}/api/cart/items/${customerId}`,
+        CART_COUNT:      `${ORDER_SVC}/api/cart`,
+        COUNT:           `${ORDER_SVC}/api/cart/countOfItems`,
+        CREATE:          (customerId: string) => `${ORDER_SVC}/api/cart/createCart/${customerId}`,
+        ADD: (customerId: string) => `${ORDER_SVC}/api/orders`,
+        INCREASE:        `${ORDER_SVC}/api/cart/increaseQuantity`,
+        DECREASE:        `${ORDER_SVC}/api/cart/decreaseQuantity`,
+        DELETE_ITEM:     `${ORDER_SVC}/api/cart/deleteItem`,
+        DELETE_ALL:      `${ORDER_SVC}/api/cart/deleteCart`,
+        GET_PRODUCT_IDS: (customerId: string) => `${ORDER_SVC}/api/cart/productIds/${customerId}`,
+        GET_ITEMS: (customerId: string) => `${ORDER_SVC}/api/orders/${customerId}`,
     },
 };
 
