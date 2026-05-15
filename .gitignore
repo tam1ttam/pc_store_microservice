@@ -10,3 +10,4 @@ UI/**/.output/
 .env
 *.env
 !.env.example
+*.md

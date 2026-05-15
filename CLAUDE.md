@@ -342,31 +342,58 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ## Production (GitLab → Jenkins → K8s → VPS)
 
-### Hướng đi tối ưu
+### Kiến trúc tổng thể
 
 ```
-GitLab push
-  → Jenkins webhook trigger
-  → Build JAR (Maven, dùng cache ~/.m2 trên Jenkins agent)
-  → Build Docker image (copy JAR vào — Dockerfiles đã có)
-  → Push lên GitLab Container Registry
-  → kubectl apply / helm upgrade lên K8s cluster (k3s trên VPS)
+GitHub (source code)
+  → GitLab mirror (tự đồng bộ qua import)
+  → GitLab webhook → Jenkins trigger (Jenkins chạy trong k3s)
+  → Jenkinsfile:
+      1. Build common-lib + proto-common (tuần tự)
+      2. Build 10 service JAR (song song)
+      3. Build + push Docker image → GitLab Container Registry (tag = $GIT_COMMIT)
+      4. kubectl apply → k3s trên VPS
 ```
 
-- `docker-compose.yml` chỉ dùng cho **local dev**, không dùng trên VPS
-- Jenkins lo Maven build, Dockerfile giữ đơn giản (đã done)
-- Secrets nhạy cảm (JWT key, AWS key…) lưu vào **K8s Secret**, không dùng `env_file`
+### K8s Namespace layout
+
+```
+k3s (single node VPS)
+├── namespace: jenkins        — Jenkins CI server
+├── namespace: infra          — MongoDB, MySQL, Redis, Kafka, Elasticsearch
+├── namespace: monitoring     — Grafana, Loki, Promtail, Zipkin
+├── namespace: app            — 10 Spring Boot services
+└── namespace: web            — 3 React apps (nginx static)
+```
+
+### Ingress routing (domain thật + TLS)
+
+```
+domain.com/           → web/client
+domain.com/manager    → web/manager
+domain.com/admin      → web/admin
+domain.com/api/       → app/api-gateway:6060
+domain.com/socket.io/ → app/chat-service:8099 (sticky session)
+domain.com/grafana/   → monitoring/grafana (embed iframe trong Admin UI)
+```
+
+### Giới hạn resource (VPS 8GB RAM)
+
+- Mỗi Spring Boot service: `JAVA_OPTS="-Xms128m -Xmx256m"`
+- Elasticsearch: `ES_JAVA_OPTS="-Xms512m -Xmx512m"`
+- Tổng ước tính ~6GB, buffer ~2GB
 
 ---
 
 ### TODO (theo thứ tự thực hiện)
 
-#### Phase 1 — Chuẩn bị VPS & tooling (một lần)
+#### Phase 1 — Chuẩn bị VPS & tooling
 - [ ] Cài **k3s** trên VPS (`curl -sfL https://get.k3s.io | sh`)
 - [ ] Cài **nginx Ingress controller** (`kubectl apply -f ingress-nginx`)
-- [ ] Bật **GitLab Container Registry** cho project
-- [ ] Cấu hình Jenkins: thêm credential GitLab registry, cài plugin Kubernetes + Docker Pipeline
-- [ ] Cấu hình Maven cache trên Jenkins agent (`/root/.m2` persist giữa các build)
+- [ ] Cài **cert-manager** + ClusterIssuer Let's Encrypt → TLS tự động cho domain
+- [ ] Deploy **Jenkins** vào namespace `jenkins` (Deployment + PVC lưu workspace + Service NodePort)
+- [ ] Cấu hình Jenkins: cài plugin (Kubernetes, Docker Pipeline, GitLab), thêm credential GitLab registry + kubeconfig
+- [ ] Bật **GitLab Container Registry** cho project, tạo deploy token
 
 #### Phase 2 — Config management (K8s Secrets + ConfigMap)
 - [ ] Tách `.env.production` thành 2 phần:
@@ -380,42 +407,59 @@ GitLab push
   - `Build Libs`: `mvn install -DskipTests` cho `common-lib` + `proto-common` (tuần tự)
   - `Build Services`: `mvn package -DskipTests` cho 10 service (song song với `parallel {}`)
   - `Build & Push Images`: `docker build + push` lên GitLab registry, tag = `$GIT_COMMIT`
-  - `Deploy`: `kubectl set image` hoặc `helm upgrade --install`
+  - `Deploy`: `kubectl set image` cho từng Deployment trong namespace `app`
+- [ ] Cấu hình Maven cache (`/root/.m2` mount vào Jenkins pod để persist giữa các build)
 
-#### Phase 4 — K8s manifests cho Infrastructure
-- [ ] **MongoDB** — StatefulSet + PersistentVolumeClaim + ClusterIP Service
-- [ ] **MySQL** — StatefulSet + PVC + ClusterIP Service
-- [ ] **Redis** — Deployment + PVC + ClusterIP Service
-- [ ] **Kafka** — StatefulSet + PVC + ClusterIP Service (chỉ cần internal `9092`, không expose ra ngoài)
-- [ ] **Elasticsearch** — StatefulSet + PVC + ClusterIP Service
+#### Phase 4 — K8s manifests cho namespace `infra`
+- [ ] **MongoDB** — StatefulSet + PVC + ClusterIP Service (port 27017)
+- [ ] **MySQL** — StatefulSet + PVC + ClusterIP Service (port 3306)
+- [ ] **Redis** — Deployment + PVC + ClusterIP Service (port 6379)
+- [ ] **Kafka** — StatefulSet + PVC + ClusterIP Service (port 9092 internal only)
+- [ ] **Elasticsearch** — StatefulSet + PVC + ClusterIP Service (port 9200), giới hạn heap 512MB
 
-#### Phase 5 — K8s manifests cho Spring Boot services
-- [ ] Deployment + ClusterIP Service cho từng service (10 service)
-- [ ] Lưu ý port đặc biệt:
-  - `chat-service`: Service cần cả port `8085` (HTTP) và `8099` (Socket.IO)
-  - `user-service`, `product-service`, `order-service`, `file-service`, `saga-orchestrator`: Service cần thêm gRPC port
-- [ ] Cấu hình `envFrom` dùng cả Secret lẫn ConfigMap thay vì `env_file`
-- [ ] Set `readinessProbe` + `livenessProbe` dùng `/actuator/health` (context-path tương ứng)
+#### Phase 5 — K8s manifests cho namespace `app` (10 Spring Boot services)
+- [ ] Deployment + ClusterIP Service cho từng service, `envFrom` dùng Secret + ConfigMap
+- [ ] Port đặc biệt:
+  - `chat-service`: HTTP `8085` + Socket.IO `8099`
+  - `user-service`, `product-service`, `order-service`, `file-service`, `saga-orchestrator`: thêm gRPC port
+- [ ] `readinessProbe` + `livenessProbe` dùng `/actuator/health` (theo context-path từng service)
+- [ ] Thêm `JAVA_OPTS="-Xms128m -Xmx256m"` vào env mỗi service
 
-#### Phase 6 — Ingress
-- [ ] Ingress cho **api-gateway** (port 6060) → expose domain ra ngoài
-- [ ] Thêm annotation WebSocket cho chat route:
-  ```yaml
-  nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-  nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-  ```
-- [ ] **Sticky session** cho Socket.IO:
-  ```yaml
-  nginx.ingress.kubernetes.io/affinity: "cookie"
-  ```
-- [ ] TLS/HTTPS: cert-manager + Let's Encrypt (nếu có domain)
+#### Phase 6 — Ingress (namespace `app` + `web`)
+- [ ] Ingress api-gateway: `domain.com/api/` → `api-gateway:6060`
+- [ ] Annotation WebSocket cho chat route (`proxy-read-timeout: 3600`, `proxy-send-timeout: 3600`)
+- [ ] Sticky session Socket.IO (`nginx.ingress.kubernetes.io/affinity: cookie`)
+- [ ] TLS: annotation `cert-manager.io/cluster-issuer: letsencrypt-prod` trên Ingress
 
-#### Phase 7 — Frontend (3 React apps)
+#### Phase 7 — Frontend (namespace `web`)
 - [ ] Viết Dockerfile cho mỗi app: `vite build` → nginx serve static
-- [ ] K8s Deployment + Service + Ingress cho `client` (:3000), `manager` (:3004), `admin` (:3003)
-- [ ] Cập nhật API base URL trong FE từ `localhost:6060` → domain thật của api-gateway
+- [ ] Cập nhật API base URL trong FE: `localhost:6060` → `https://domain.com/api`
+- [ ] K8s Deployment + ClusterIP Service + Ingress cho `client`, `manager`, `admin`
 
-#### Phase 8 — Vận hành
-- [ ] Cấu hình **HorizontalPodAutoscaler** cho api-gateway + identity-service (traffic cao nhất)
-- [ ] Kết nối Grafana (đã có) với Prometheus trong K8s để monitor pod metrics
-- [ ] Thiết lập backup định kỳ cho MongoDB + MySQL PVC
+#### Phase 8 — Monitoring (namespace `monitoring`)
+- [ ] **Zipkin** — Deployment + ClusterIP Service (port 9411)
+- [ ] **Loki** — Deployment + PVC + ClusterIP Service (port 3100)
+- [ ] **Promtail** — DaemonSet với ConfigMap pipeline parse JSON log → extract label `level` và `service`
+- [ ] **Grafana** — Deployment + PVC + ClusterIP Service, expose qua Ingress tại `domain.com/grafana/`, giữ `GF_SECURITY_ALLOW_EMBEDDING=true`
+- [ ] Cấu hình Grafana datasource: Loki + Zipkin
+
+#### Phase 9 — Admin UI System Logs (tích hợp monitoring vào UI)
+Mục tiêu: Admin xem và filter log thực từ tất cả service ngay trên UI, không cần SSH.
+
+**BE — cấu hình log JSON (10 service)**
+- [ ] Thêm dependency `logstash-logback-encoder` vào `pom.xml` mỗi service
+- [ ] Thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
+
+**BE — proxy endpoint (identity-service)**
+- [ ] `AdminLogController.GET /api/admin/logs` — nhận params `service`, `level`, `start`, `end`, `limit`
+- [ ] Build LogQL query: `{namespace="app", service="...", level="..."}` rồi gọi `http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/query_range`
+- [ ] Thêm route vào api-gateway + `PUBLIC_GET` hoặc ADMIN role check
+
+**FE — `UI/admin`**
+- [ ] Trang `SystemLogs.tsx`: dropdown chọn service, filter level (ERROR/WARN/INFO/DEBUG), date-time range picker
+- [ ] Bảng log: cột timestamp, level badge màu (đỏ/vàng/xanh/xám), service name, message
+- [ ] `adminApi.ts`: thêm `getLogs(params)` gọi `/api/admin/logs`
+
+#### Phase 10 — Vận hành
+- [ ] **HorizontalPodAutoscaler** cho `api-gateway` + `identity-service`
+- [ ] Backup định kỳ MongoDB + MySQL PVC (CronJob K8s)
