@@ -40,6 +40,8 @@ spec:
               mountPath: /var/jenkins_home
             - name: docker-sock
               mountPath: /var/run/docker.sock
+            - name: maven-cache
+              mountPath: /root/.m2
           readinessProbe:
             httpGet:
               path: /login
@@ -59,3 +61,6 @@ spec:
         - name: docker-sock
           hostPath:
             path: /var/run/docker.sock
+        - name: maven-cache
+          persistentVolumeClaim:
+            claimName: maven-cache-pvc
