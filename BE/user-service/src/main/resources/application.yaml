@@ -36,7 +36,7 @@ spring:
         "[spring.json.type.mapping]": "com.devteria.identity.event.UserDeletedEvent:com.tam.profile.kafka.event.UserDeletedEvent"
 
 jwt:
-  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
+  signerKey: ${JWT_SIGNER_KEY}
 
 app:
   security:

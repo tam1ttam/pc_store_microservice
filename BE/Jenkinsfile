@@ -1,0 +1,154 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = "registry.gitlab.com/tam1ttam-group/pc_store_microservice"
+        TAG      = "${GIT_COMMIT[0..7]}"
+    }
+
+    stages {
+
+        stage('Detect Changes') {
+            steps {
+                script {
+                    def allServices = [
+                        'api-gateway',
+                        'discovery-service',
+                        'identity-service',
+                        'user-service',
+                        'product-service',
+                        'order-service',
+                        'chat-service',
+                        'file-service',
+                        'notification-service',
+                        'saga-orchestrator-service'
+                    ]
+
+                    def changedFiles = ''
+                    try {
+                        changedFiles = sh(
+                            script: 'git diff --name-only HEAD~1 HEAD',
+                            returnStdout: true
+                        ).trim()
+                    } catch (e) {
+                        // Lần build đầu tiên (chưa có HEAD~1) → build tất cả
+                        changedFiles = 'BE/'
+                    }
+
+                    echo "Files changed:\n${changedFiles}"
+
+                    // Nếu shared lib thay đổi → rebuild tất cả
+                    def rebuildAll = changedFiles.contains('BE/common-lib/') ||
+                                     changedFiles.contains('BE/proto-common/')
+
+                    if (rebuildAll) {
+                        echo "Shared lib changed → rebuild ALL services"
+                        env.CHANGED_SERVICES = allServices.join(',')
+                        env.REBUILD_LIBS = 'true'
+                    } else {
+                        def changed = allServices.findAll { svc ->
+                            changedFiles.contains("BE/${svc}/")
+                        }
+                        if (changed.isEmpty()) {
+                            echo "No service changed → skip build"
+                            env.CHANGED_SERVICES = ''
+                        } else {
+                            env.CHANGED_SERVICES = changed.join(',')
+                        }
+                        env.REBUILD_LIBS = 'false'
+                    }
+
+                    echo "Services to build: ${env.CHANGED_SERVICES ?: 'none'}"
+                }
+            }
+        }
+
+        stage('Build Libs') {
+            when {
+                expression { env.REBUILD_LIBS == 'true' }
+            }
+            steps {
+                dir('BE/common-lib') {
+                    sh 'mvn clean install -DskipTests'
+                }
+                dir('BE/proto-common') {
+                    sh 'mvn clean install -DskipTests'
+                }
+            }
+        }
+
+        stage('Build Services') {
+            when {
+                expression { env.CHANGED_SERVICES != '' }
+            }
+            steps {
+                script {
+                    def services = env.CHANGED_SERVICES.split(',')
+                    def parallelStages = [:]
+
+                    for (svc in services) {
+                        def s = svc
+                        parallelStages[s] = {
+                            dir("BE/${s}") {
+                                sh 'mvn package -DskipTests'
+                            }
+                        }
+                    }
+
+                    parallel parallelStages
+                }
+            }
+        }
+
+        stage('Build & Push Images') {
+            when {
+                expression { env.CHANGED_SERVICES != '' }
+            }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'gitlab-registry-credentials',
+                    usernameVariable: 'REGISTRY_USER',
+                    passwordVariable: 'REGISTRY_PASS'
+                )]) {
+                    sh 'echo "$REGISTRY_PASS" | docker login registry.gitlab.com -u "$REGISTRY_USER" --password-stdin'
+                    script {
+                        for (svc in env.CHANGED_SERVICES.split(',')) {
+                            sh """
+                                docker build -t ${REGISTRY}/${svc}:${TAG} BE/${svc}/
+                                docker push ${REGISTRY}/${svc}:${TAG}
+                                docker rmi ${REGISTRY}/${svc}:${TAG}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression { env.CHANGED_SERVICES != '' }
+            }
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        for (svc in env.CHANGED_SERVICES.split(',')) {
+                            sh "kubectl set image deployment/${svc} ${svc}=${REGISTRY}/${svc}:${TAG} -n app --ignore-not-found"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout registry.gitlab.com || true'
+        }
+        success {
+            echo "Done: ${env.CHANGED_SERVICES ?: 'nothing to build'} @ ${TAG}"
+        }
+        failure {
+            echo "Failed @ ${TAG}"
+        }
+    }
+}
