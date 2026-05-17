@@ -47,8 +47,8 @@ spec:
               memory: 512Mi
               cpu: 500m
           readinessProbe:
-            exec:
-              command: [mongosh, --eval, "db.adminCommand('ping')"]
+            tcpSocket:
+              port: 27017
             initialDelaySeconds: 20
             periodSeconds: 10
       volumes:

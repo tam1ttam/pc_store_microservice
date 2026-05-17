@@ -35,7 +35,7 @@ spec:
             - name: MYSQL_ROOT_PASSWORD
               value: mysql123
             - name: MYSQL_DATABASE
-              value: pc_identity
+              value: identityservice
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
