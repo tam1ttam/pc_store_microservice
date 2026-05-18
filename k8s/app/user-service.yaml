@@ -13,6 +13,7 @@ spec:
       labels:
         app: user-service
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: gitlab-registry
       containers:

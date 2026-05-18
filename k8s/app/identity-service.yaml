@@ -13,6 +13,7 @@ spec:
       labels:
         app: identity-service
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: gitlab-registry
       containers:
