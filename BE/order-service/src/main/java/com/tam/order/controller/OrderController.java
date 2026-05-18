@@ -25,7 +25,7 @@ public class OrderController {
     public ApiResponse<Boolean> saveOrder(@RequestBody OrderCreationRequest request) {
         try {
             orderService.saveOrder(request);
-            return ApiResponse.<Boolean>builder().result(true).build();
+            return ApiResponse.<Boolean>builder().code(1000).result(true).build();
         } catch (Exception e) {
             log.error("Lỗi hệ thống khi lưu đơn hàng: ", e);
             return ApiResponse.<Boolean>builder()
@@ -122,6 +122,40 @@ public class OrderController {
             return ApiResponse.<Boolean>builder()
                     .code(500)
                     .message("Lỗi khi xóa sản phẩm: " + e.getMessage())
+                    .result(false)
+                    .build();
+        }
+    }
+
+    // API tăng số lượng sản phẩm trong giỏ hàng
+    @PostMapping("/increase-quantity")
+    public ApiResponse<Boolean> increaseQuantity(@RequestParam String customerId, @RequestParam String productId) {
+        try {
+            log.info("Yêu cầu tăng số lượng sản phẩm {} cho khách hàng {}", productId, customerId);
+            boolean result = orderService.increaseItemQuantity(customerId, productId);
+            return ApiResponse.<Boolean>builder().code(1000).result(result).build();
+        } catch (Exception e) {
+            log.error("Lỗi khi tăng số lượng: ", e);
+            return ApiResponse.<Boolean>builder()
+                    .code(500)
+                    .message("Lỗi khi tăng số lượng: " + e.getMessage())
+                    .result(false)
+                    .build();
+        }
+    }
+
+    // API giảm số lượng sản phẩm trong giỏ hàng
+    @PostMapping("/decrease-quantity")
+    public ApiResponse<Boolean> decreaseQuantity(@RequestParam String customerId, @RequestParam String productId) {
+        try {
+            log.info("Yêu cầu giảm số lượng sản phẩm {} cho khách hàng {}", productId, customerId);
+            boolean result = orderService.decreaseItemQuantity(customerId, productId);
+            return ApiResponse.<Boolean>builder().code(1000).result(result).build();
+        } catch (Exception e) {
+            log.error("Lỗi khi giảm số lượng: ", e);
+            return ApiResponse.<Boolean>builder()
+                    .code(500)
+                    .message("Lỗi khi giảm số lượng: " + e.getMessage())
                     .result(false)
                     .build();
         }

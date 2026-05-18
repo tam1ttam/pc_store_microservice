@@ -56,14 +56,14 @@ function Cart() {
                             try {
                                 // 👉 BÍ MẬT NẰM Ở ĐÂY: Dùng đúng cú pháp /id?id= của Backend
                                 const productRes = await get<any>(`${ENDPOINTS.PRODUCTS}/id?id=${apiItem.productId}`);
-                                
+
                                 const responseData = productRes.data || productRes;
                                 const realProduct = responseData?.result || responseData?.data || responseData;
 
                                 const pName = realProduct?.name || realProduct?.productName || "Sản phẩm";
                                 const pPrice = realProduct?.priceAfterDiscount || realProduct?.discountPrice || realProduct?.price || 0;
                                 const pOriginalPrice = realProduct?.originalPrice || realProduct?.price || pPrice;
-                                
+
                                 let pImg = "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg";
                                 if (typeof realProduct?.img === 'string') pImg = realProduct.img;
                                 else if (typeof realProduct?.image === 'string') pImg = realProduct.image;
@@ -111,7 +111,7 @@ function Cart() {
 
                     setItems(Array.from(uniqueItemsMap.values()));
                 } else {
-                    setItems([]); 
+                    setItems([]);
                 }
             } else {
                 setItems([]);
@@ -143,9 +143,13 @@ function Cart() {
             });
             setQuantities(initialQuantities as any);
         }
-    }, [items]); 
+    }, [items]);
 
     const handleDeleteCartItem = async (productId: string) => {
+        // Optimistic update: xóa ngay khỏi UI trước khi gọi API
+        const previousItems = items;
+        setItems((prev) => prev.filter((item) => item.product.id !== productId));
+
         try {
             const result = await dispatch(
                 deleteCartItem({
@@ -154,14 +158,17 @@ function Cart() {
                 }) as any
             );
 
-            if (result.payload?.code === 1000) {
+            if (result.payload?.code === 1000 && result.payload?.result === true) {
                 toast({ title: "Xóa sản phẩm thành công" });
                 dispatch(getCartCount({ userId: user?.id as string }) as any);
-                loadCartData(); 
             } else {
+                // Khôi phục lại nếu API thất bại hoặc backend trả về false
+                setItems(previousItems);
                 toast({ title: "Xóa sản phẩm thất bại", variant: "destructive" });
             }
         } catch (error) {
+            // Khôi phục lại nếu có lỗi
+            setItems(previousItems);
             toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
         }
     };
@@ -239,6 +246,7 @@ function Cart() {
 
                 if (result.data.code === 1000) {
                     toast({ title: "Đặt hàng thành công" });
+                    setItems([]); // Xóa sản phẩm khỏi UI giỏ hàng
                     dispatch(getCartCount({ userId: user?.id as string }) as any);
                     dispatch(viewOrder({ userId: user?.id as string }) as any);
                 } else {
@@ -252,21 +260,38 @@ function Cart() {
         } else if (paymentMethod === "paypal") {
             setIsOrdering(true);
             try {
-                const response = await post<any>(`${ENDPOINTS.PAYPAL}`, {
-                    amount: totalPrice,
-                    userId: user?.id,
+                // TẠO ORDER TRƯỚC VỚI STATUS WAITING_PAYMENT
+                const orderResult = await post<any>(ENDPOINTS.ORDER, {
+                    customerId: user?.id,
                     shipAddress: address,
-                    items: backendItems
+                    items: backendItems,
+                    totalPrice,
+                    orderStatus: "WAITING_PAYMENT",
+                    isPaid: "false"
                 });
 
-                if (response.data.code === 1000) {
-                    localStorage.setItem("paymentId", response.data.result.paymentId as string);
-                    window.location.href = response.data.result.url;
+                if (orderResult.data.code === 1000) {
+                    const response = await post<any>(`${ENDPOINTS.PAYPAL}`, {
+                        amount: totalPrice,
+                        userId: user?.id,
+                        description: `Order ${orderResult.data.result.id}`
+                    });
+
+                    if (response.data.code === 1000) {
+                        localStorage.setItem("paymentId", response.data.result.paymentId as string);
+                        setItems([]); // Xóa giỏ hàng trên UI
+                        dispatch(getCartCount({ userId: user?.id as string }) as any);
+                        
+                        // Chuyển hướng tới Sandbox PayPal
+                        window.location.href = response.data.result.url;
+                    } else {
+                        toast({ title: "Lỗi tạo thanh toán PayPal", variant: "destructive" });
+                    }
                 } else {
-                    toast({ title: "Đặt hàng thất bại vui lòng thử lại", variant: "destructive" });
+                    throw new Error("Failed to create order");
                 }
             } catch (error) {
-                toast({ title: "Lỗi kết nối", variant: "destructive" });
+                toast({ title: "Lỗi kết nối hoặc đặt hàng thất bại", variant: "destructive" });
             } finally {
                 setIsOrdering(false);
             }

@@ -1,7 +1,7 @@
 package com.tam.order.repository;
 
 import java.util.List;
-import java.util.Optional; // Import cực kỳ quan trọng ở đây
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,5 +29,5 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     Page<Order> findByOrderStatus(String status, Pageable pageable);
 
     // Hàm này để lấy duy nhất 1 giỏ hàng để xử lý xóa item
-    Optional<Order> findFirstByCustomerIdAndOrderStatus(String customerId, String status);
+    Optional<Order> findFirstByCustomerIdAndOrderStatus(String customerId, com.tam.order.entity.OrderStatus status);
 }

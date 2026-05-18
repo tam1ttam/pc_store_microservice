@@ -2,8 +2,6 @@ package com.tam.order.grpc;
 
 import java.util.List;
 
-// Đã có thể xóa bỏ import org.bson.types.ObjectId; vì không còn dùng nữa
-
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.entity.Order;
 import com.tam.order.service.OrderService;
@@ -108,8 +106,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
             GetOrdersByStatusRequest request, StreamObserver<GetOrdersResponse> responseObserver) {
         try {
             // Đã xóa new ObjectId()
-            List<Order> orders =
-                    orderService.getOrdersByStatus(request.getCustomerId(), request.getStatus());
+            List<Order> orders = orderService.getOrdersByStatus(request.getCustomerId(), request.getStatus());
             GetOrdersResponse.Builder builder = GetOrdersResponse.newBuilder()
                     .setTotalPages(1)
                     .setCurrentPage(0)

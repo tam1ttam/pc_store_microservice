@@ -38,8 +38,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order saveOrder(OrderCreationRequest request) {
-        log.info("👉 BƯỚC 1 - NHẬN REQUEST THÊM GIỎ HÀNG: customerId={}, orderStatus={}, items={}",
-                request.getCustomerId(), request.getOrderStatus(),
+        log.info(
+                "👉 BƯỚC 1 - NHẬN REQUEST THÊM GIỎ HÀNG: customerId={}, orderStatus={}, items={}",
+                request.getCustomerId(),
+                request.getOrderStatus(),
                 request.getItems() != null ? request.getItems().size() + " món" : "0 món");
 
         if (request.getOrderDate() == null) {
@@ -47,9 +49,12 @@ public class OrderServiceImpl implements OrderService {
                     .format(LocalDateTime.now(ZoneId.systemDefault())));
         }
 
-        String statusSafe = (request.getOrderStatus() != null && !request.getOrderStatus().isBlank())
-                ? request.getOrderStatus() : "CART";
-        boolean isPaidSafe = request.getIsPaid() != null && request.getIsPaid().toString().equalsIgnoreCase("true");
+        String statusSafe =
+                (request.getOrderStatus() != null && !request.getOrderStatus().isBlank())
+                        ? request.getOrderStatus()
+                        : "CART";
+        boolean isPaidSafe =
+                request.getIsPaid() != null && request.getIsPaid().toString().equalsIgnoreCase("true");
 
         Order order = Order.builder()
                 .customerId(request.getCustomerId())
@@ -63,11 +68,25 @@ public class OrderServiceImpl implements OrderService {
 
         order = orderRepository.save(order);
 
-        log.info("👉 BƯỚC 2 - ĐÃ LƯU XUỐNG MONGODB THÀNH CÔNG: orderId={}, của customerId={}",
-                order.getId(), order.getCustomerId());
+        log.info(
+                "👉 BƯỚC 2 - ĐÃ LƯU XUỐNG MONGODB THÀNH CÔNG: orderId={}, của customerId={}",
+                order.getId(),
+                order.getCustomerId());
 
         publishOrderCreatedEvent(order, request);
         publishOrderConfirmationEmail(order, request);
+
+        // 👉 Nếu đây là một đơn hàng thực sự (không phải CART), ta sẽ dọn sạch giỏ hàng của user
+        if (!OrderStatus.CART.equals(order.getOrderStatus())) {
+            String customerIdStr = order.getCustomerId();
+            orderRepository
+                    .findFirstByCustomerIdAndOrderStatus(customerIdStr, OrderStatus.CART)
+                    .ifPresent(cart -> {
+                        cart.setItems(new java.util.ArrayList<>());
+                        orderRepository.save(cart);
+                        log.info("Đã xóa sạch giỏ hàng của customerId={} sau khi đặt hàng", customerIdStr);
+                    });
+        }
 
         return order;
     }
@@ -77,11 +96,11 @@ public class OrderServiceImpl implements OrderService {
             List<OrderItemEvent> itemEvents = order.getItems() == null
                     ? List.of()
                     : order.getItems().stream()
-                      .map(i -> OrderItemEvent.builder()
-                                .productId(i.getProductId())
-                                .quantity(i.getQuantity())
-                                .build())
-                      .toList();
+                            .map(i -> OrderItemEvent.builder()
+                                    .productId(i.getProductId())
+                                    .quantity(i.getQuantity())
+                                    .build())
+                            .toList();
 
             OrderCreatedEvent event = OrderCreatedEvent.builder()
                     .orderId(order.getId() != null ? order.getId().toString() : "")
@@ -172,27 +191,76 @@ public class OrderServiceImpl implements OrderService {
     public boolean deleteItemInCart(String customerId, String productId) {
         log.info("Bắt đầu xử lý xóa sản phẩm {} trong giỏ hàng của khách {}", productId, customerId);
 
-        // 1. Tìm đúng cái giỏ hàng (CART) của khách
-        Optional<Order> cartOptional = orderRepository.findFirstByCustomerIdAndOrderStatus(customerId, "CART");
+        List<Order> carts = orderRepository.findByCustomerIdAndOrderStatus(customerId, OrderStatus.CART.name());
+        boolean anyRemoved = false;
 
-        if (cartOptional.isPresent()) {
-            Order cart = cartOptional.get();
-
-            // Kiểm tra xem danh sách items có tồn tại không
+        for (Order cart : carts) {
             if (cart.getItems() != null) {
-                // 2. Dùng removeIf để xóa món đồ có productId khớp
-                boolean isRemoved = cart.getItems().removeIf(item -> item.getProductId().equals(productId));
-
-                if (isRemoved) {
-                    // 3. Nếu xóa xong thì lưu lại vào MongoDB
+                boolean removed =
+                        cart.getItems().removeIf(item -> item.getProductId().equals(productId));
+                if (removed) {
                     orderRepository.save(cart);
-                    log.info("Xóa thành công sản phẩm {} khỏi MongoDB", productId);
-                    return true;
+                    log.info("Xóa thành công sản phẩm {} khỏi MongoDB orderId={}", productId, cart.getId());
+                    anyRemoved = true;
                 }
             }
         }
 
-        log.warn("Không tìm thấy sản phẩm hoặc giỏ hàng để xóa");
-        return false;
+        if (!anyRemoved) {
+            log.warn("Không tìm thấy sản phẩm {} hoặc giỏ hàng để xóa cho khách {}", productId, customerId);
+        }
+        return anyRemoved;
+    }
+
+    // --- HÀM TĂNG SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG ---
+    @Override
+    public boolean increaseItemQuantity(String customerId, String productId) {
+        log.info("Tăng số lượng sản phẩm {} cho khách hàng {}", productId, customerId);
+        List<Order> carts = orderRepository.findByCustomerIdAndOrderStatus(customerId, OrderStatus.CART.name());
+        boolean updated = false;
+
+        for (Order cart : carts) {
+            if (cart.getItems() != null) {
+                for (com.tam.order.entity.CartItem item : cart.getItems()) {
+                    if (item.getProductId().equals(productId)) {
+                        item.setQuantity(item.getQuantity() + 1);
+                        orderRepository.save(cart);
+                        log.info("Tăng thành công số lượng sản phẩm {} trong orderId={}", productId, cart.getId());
+                        updated = true;
+                        break;
+                    }
+                }
+            }
+            if (updated) break;
+        }
+        if (!updated) log.warn("Không tìm thấy sản phẩm {} để tăng số lượng", productId);
+        return updated;
+    }
+
+    // --- HÀM GIẢM SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG ---
+    @Override
+    public boolean decreaseItemQuantity(String customerId, String productId) {
+        log.info("Giảm số lượng sản phẩm {} cho khách hàng {}", productId, customerId);
+        List<Order> carts = orderRepository.findByCustomerIdAndOrderStatus(customerId, OrderStatus.CART.name());
+        boolean updated = false;
+
+        for (Order cart : carts) {
+            if (cart.getItems() != null) {
+                for (com.tam.order.entity.CartItem item : cart.getItems()) {
+                    if (item.getProductId().equals(productId)) {
+                        if (item.getQuantity() > 1) {
+                            item.setQuantity(item.getQuantity() - 1);
+                            orderRepository.save(cart);
+                            log.info("Giảm thành công số lượng sản phẩm {} trong orderId={}", productId, cart.getId());
+                            updated = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (updated) break;
+        }
+        if (!updated) log.warn("Không tìm thấy sản phẩm {} để giảm số lượng", productId);
+        return updated;
     }
 }

@@ -26,4 +26,8 @@ public interface OrderService {
 
     // 👉 THÊM DÒNG NÀY VÀO:
     boolean deleteItemInCart(String customerId, String productId);
+
+    boolean increaseItemQuantity(String customerId, String productId);
+
+    boolean decreaseItemQuantity(String customerId, String productId);
 }

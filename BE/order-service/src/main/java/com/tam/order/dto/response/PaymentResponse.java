@@ -25,4 +25,5 @@ public class PaymentResponse {
     String currency;
     String description;
     String status;
+    String url;
 }

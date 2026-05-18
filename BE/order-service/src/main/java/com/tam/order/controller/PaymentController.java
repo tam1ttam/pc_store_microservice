@@ -35,6 +35,7 @@ public class PaymentController {
         PaymentResponse payment = paymentService.createPayment(paymentRequest);
         String redirectUrl =
                 String.format(Locale.US, "https://www.sandbox.paypal.com/checkoutnow?token=%s", payment.getPaymentId());
+        payment.setUrl(redirectUrl);
 
         return ApiResponse.builder()
                 .code(1000)
