@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saga-orchestrator-service
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: saga-orchestrator-service
+  template:
+    metadata:
+      labels:
+        app: saga-orchestrator-service
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: saga-orchestrator-service
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/saga-orchestrator-service:latest
+          ports:
+            - containerPort: 6058
+            - containerPort: 6158
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 6058
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 6058
+            initialDelaySeconds: 90
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: saga-orchestrator-service
+  namespace: app
+spec:
+  selector:
+    app: saga-orchestrator-service
+  ports:
+    - name: http
+      port: 6058
+      targetPort: 6058
+    - name: grpc
+      port: 6158
+      targetPort: 6158
