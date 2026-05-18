@@ -25,6 +25,8 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-Xms128m -Xmx256m"
+            - name: FILE_SERVICE_PORT
+              value: "8084"
           envFrom:
             - secretRef:
                 name: app-secrets

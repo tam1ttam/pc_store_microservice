@@ -24,6 +24,8 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-Xms128m -Xmx256m"
+            - name: IDENTITY_SERVICE_PORT
+              value: "6062"
           envFrom:
             - secretRef:
                 name: app-secrets

@@ -24,6 +24,8 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-Xms128m -Xmx256m"
+            - name: API_GATEWAY_PORT
+              value: "6060"
           envFrom:
             - secretRef:
                 name: app-secrets

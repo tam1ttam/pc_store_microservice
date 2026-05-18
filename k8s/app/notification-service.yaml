@@ -24,6 +24,8 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-Xms128m -Xmx256m"
+            - name: NOTIFICATION_SERVICE_PORT
+              value: "6068"
           envFrom:
             - secretRef:
                 name: app-secrets
