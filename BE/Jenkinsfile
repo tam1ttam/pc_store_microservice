@@ -109,6 +109,7 @@ pipeline {
                 expression { env.CHANGED_SERVICES != '' }
             }
             steps {
+                sh 'docker system prune -af --volumes || true'
                 withCredentials([usernamePassword(
                     credentialsId: 'gitlab-registry-credentials',
                     usernameVariable: 'REGISTRY_USER',
@@ -149,6 +150,7 @@ pipeline {
     post {
         always {
             sh 'docker logout registry.gitlab.com || true'
+            sh 'docker system prune -f || true'
         }
         success {
             echo "Done: ${env.CHANGED_SERVICES ?: 'nothing to build'} @ ${TAG}"
