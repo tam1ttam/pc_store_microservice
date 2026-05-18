@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        durabilityHint('PERFORMANCE_OPTIMIZED')
+    }
+
     environment {
         REGISTRY = "registry.gitlab.com/tam1ttam-group/pc_store_microservice"
         TAG      = "${GIT_COMMIT[0..7]}"
@@ -116,7 +120,9 @@ pipeline {
                             sh """
                                 docker build -t ${REGISTRY}/${svc}:${TAG} BE/${svc}/
                                 docker push ${REGISTRY}/${svc}:${TAG}
-                                docker rmi ${REGISTRY}/${svc}:${TAG}
+                                docker tag ${REGISTRY}/${svc}:${TAG} ${REGISTRY}/${svc}:latest
+                                docker push ${REGISTRY}/${svc}:latest
+                                docker rmi ${REGISTRY}/${svc}:${TAG} ${REGISTRY}/${svc}:latest
                             """
                         }
                     }
