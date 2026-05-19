@@ -27,6 +27,7 @@ pipeline {
                         'notification-service',
                         'saga-orchestrator-service'
                     ]
+                    def allFrontends = ['client', 'manager', 'admin']
 
                     def changedFiles = ''
                     try {
@@ -36,10 +37,17 @@ pipeline {
                         ).trim()
                     } catch (e) {
                         // Lần build đầu tiên (chưa có HEAD~1) → build tất cả
-                        changedFiles = 'BE/'
+                        changedFiles = 'BE/ UI/'
                     }
 
                     echo "Files changed:\n${changedFiles}"
+
+                    // Detect FE changes
+                    def changedFrontends = allFrontends.findAll { fe ->
+                        changedFiles.contains("UI/${fe}/") && !changedFiles.contains("UI/${fe}/node_modules/")
+                    }
+                    env.CHANGED_FRONTENDS = changedFrontends.join(',')
+                    echo "Frontends to build: ${env.CHANGED_FRONTENDS ?: 'none'}"
 
                     // Nếu shared lib thay đổi → rebuild tất cả
                     def rebuildAll = changedFiles.contains('BE/common-lib/') ||
@@ -131,7 +139,7 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Backend') {
             when {
                 expression { env.CHANGED_SERVICES != '' }
             }
@@ -140,6 +148,49 @@ pipeline {
                     script {
                         for (svc in env.CHANGED_SERVICES.split(',')) {
                             sh "kubectl set image deployment/${svc} ${svc}=${REGISTRY}/${svc}:${TAG} -n app || true"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Frontend') {
+            when {
+                expression { env.CHANGED_FRONTENDS != '' }
+            }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'gitlab-registry-credentials',
+                    usernameVariable: 'REGISTRY_USER',
+                    passwordVariable: 'REGISTRY_PASS'
+                )]) {
+                    sh 'echo "$REGISTRY_PASS" | docker login registry.gitlab.com -u "$REGISTRY_USER" --password-stdin'
+                    script {
+                        def feMap = [client: 'UI/client', manager: 'UI/manager', admin: 'UI/admin']
+                        for (fe in env.CHANGED_FRONTENDS.split(',')) {
+                            def feDir = feMap[fe]
+                            sh """
+                                docker build -t ${REGISTRY}/${fe}:${TAG} ${feDir}/
+                                docker push ${REGISTRY}/${fe}:${TAG}
+                                docker tag ${REGISTRY}/${fe}:${TAG} ${REGISTRY}/${fe}:latest
+                                docker push ${REGISTRY}/${fe}:latest
+                                docker rmi ${REGISTRY}/${fe}:${TAG} ${REGISTRY}/${fe}:latest || true
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            when {
+                expression { env.CHANGED_FRONTENDS != '' }
+            }
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        for (fe in env.CHANGED_FRONTENDS.split(',')) {
+                            sh "kubectl set image deployment/${fe} ${fe}=${REGISTRY}/${fe}:${TAG} -n web || true"
                         }
                     }
                 }
