@@ -32,8 +32,7 @@ spec:
             - configMapRef:
                 name: app-config
           readinessProbe:
-            httpGet:
-              path: /actuator/health
+            tcpSocket:
               port: 6058
             initialDelaySeconds: 90
             periodSeconds: 10
