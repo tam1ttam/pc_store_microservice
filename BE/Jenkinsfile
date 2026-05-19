@@ -139,7 +139,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     script {
                         for (svc in env.CHANGED_SERVICES.split(',')) {
-                            sh "kubectl set image deployment/${svc} ${svc}=${REGISTRY}/${svc}:${TAG} -n app --ignore-not-found"
+                            sh "kubectl set image deployment/${svc} ${svc}=${REGISTRY}/${svc}:${TAG} -n app || true"
                         }
                     }
                 }
