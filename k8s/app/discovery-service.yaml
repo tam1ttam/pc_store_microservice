@@ -19,6 +19,7 @@ spec:
       containers:
         - name: discovery-service
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/discovery-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 6059
           env:

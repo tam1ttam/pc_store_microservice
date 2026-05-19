@@ -19,6 +19,7 @@ spec:
       containers:
         - name: product-service
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/product-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 6067
             - containerPort: 6167

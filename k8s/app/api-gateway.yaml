@@ -19,6 +19,7 @@ spec:
       containers:
         - name: api-gateway
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/api-gateway:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 6060
           env:

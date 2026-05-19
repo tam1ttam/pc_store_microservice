@@ -19,6 +19,7 @@ spec:
       containers:
         - name: notification-service
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/notification-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 6068
           env:

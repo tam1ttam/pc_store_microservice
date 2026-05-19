@@ -19,6 +19,7 @@ spec:
       containers:
         - name: file-service
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/file-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 8084
             - containerPort: 8184

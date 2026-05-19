@@ -19,6 +19,7 @@ spec:
       containers:
         - name: chat-service
           image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/chat-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
           ports:
             - containerPort: 8085
             - containerPort: 8099
