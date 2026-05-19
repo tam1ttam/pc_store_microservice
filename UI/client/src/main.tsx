@@ -7,7 +7,7 @@ import store from "./redux/store.tsx";
 
 createRoot(document.getElementById("root")!).render(
     <Provider store={store}>
-        <Toaster />
         <App />
+        <Toaster />
     </Provider>
 );
