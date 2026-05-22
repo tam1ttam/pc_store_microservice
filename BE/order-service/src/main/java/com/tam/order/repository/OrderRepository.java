@@ -1,29 +1,31 @@
 package com.tam.order.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import org.bson.types.ObjectId;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.tam.order.entity.Order;
+import com.tam.order.entity.OrderStatus;
 
-@Repository
-public interface OrderRepository extends MongoRepository<Order, ObjectId> {
-    Order findOrderByCustomerId(ObjectId customerId);
+public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    List<Order> findAllByCustomerId(ObjectId customerId);
+    List<Order> findByIdentityUserId(String identityUserId);
 
-    Page<Order> findAllBy(Pageable pageable);
+    List<Order> findByCustomerId(String customerId);
 
-    List<Order> findByCustomerId(ObjectId customerId);
+    List<Order> findByCustomerIdAndOrderStatus(String customerId, OrderStatus status);
 
-    @Query("{ 'customer_id': ?0, 'orderStatus': ?1 }")
-    List<Order> findByCustomerIdAndStatus(ObjectId customerId, String status);
-
-    @Query("{ 'orderStatus': ?0 }")
-    Page<Order> findByOrderStatus(String status, Pageable pageable);
+    @Query("SELECT o FROM Order o WHERE o.identityUserId = :uid"
+            + " AND (:status IS NULL OR o.orderStatus = :status)"
+            + " AND (:from IS NULL OR o.orderDate >= :from)"
+            + " AND (:to IS NULL OR o.orderDate <= :to)"
+            + " ORDER BY o.orderDate DESC")
+    List<Order> findFiltered(
+            @Param("uid") String identityUserId,
+            @Param("status") OrderStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }

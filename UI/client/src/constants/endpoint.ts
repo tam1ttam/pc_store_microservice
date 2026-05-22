@@ -1,6 +1,7 @@
 // src/constants/endpoint.ts
 
-const BASE_URL = import.meta.env.VITE_API_URL;
+const BASE_URL  = import.meta.env.VITE_API_URL;
+const CART_URL  = import.meta.env.VITE_CART_URL ?? BASE_URL;
 
 const IDENTITY    = `${BASE_URL}/api-gateway/identity-service`;
 const USER_SVC    = `${BASE_URL}/api-gateway/user-service`;
@@ -8,6 +9,7 @@ const PRODUCT_SVC = `${BASE_URL}/api-gateway/product-service`;
 const ORDER_SVC   = `${BASE_URL}/api-gateway/order-service`;
 const CHAT_SVC    = `${BASE_URL}/api-gateway/chat-service`;
 const FILE_SVC    = `${BASE_URL}/api-gateway/file-service`;
+const NOTIF_SVC   = `${BASE_URL}/api-gateway/notification-service`;
 
 const ENDPOINT = {
     // ── Auth (identity-service / client portal) ──────────────────────────────
@@ -25,7 +27,8 @@ const ENDPOINT = {
     USER_INFO:      `${USER_SVC}/api/customers/info`,
     USER_PROFILE:   `${USER_SVC}/users`,           // /my-profile or /{profileId}
     UPDATE_PROFILE: `${USER_SVC}/users/my-profile`,
-    UPDATE_AVATAR:  `${USER_SVC}/users/avatar`,
+    UPDATE_AVATAR:      `${USER_SVC}/api/customers/avatar`,
+    COMPLETE_PROFILE:   `${USER_SVC}/api/customers/complete-profile`,
     SEARCH_USERS:   `${USER_SVC}/users/search`,
     LIST_CUSTOMER:  `${USER_SVC}/api/admin/customers`,
 
@@ -39,8 +42,7 @@ const ENDPOINT = {
 
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER:                `${ORDER_SVC}/api/orders`,
-    LIST_ORDER:           `${ORDER_SVC}/api/orders`,
-    UPDATE_PAYMENT_STATUS:`${ORDER_SVC}/api/orders`, // PUT /{orderId}?status=...
+    ORDER_CANCEL:         (id: number) => `${ORDER_SVC}/api/orders/${id}/cancel`,
     PAYPAL:               `${ORDER_SVC}/api/payment/create_payment`,
     PAYMENT_STATUS:       `${ORDER_SVC}/api/payment`, // append /{paymentId}
 
@@ -56,24 +58,35 @@ const ENDPOINT = {
         USER_ONLINE: (userId: string) => `${CHAT_SVC}/conversations/users/${userId}/online`,
     },
 
+    // ── Notification-service ─────────────────────────────────────────────────
+    NOTIFICATION: {
+        LIST: `${NOTIF_SVC}/api/notifications`,
+        COUNT: `${NOTIF_SVC}/api/notifications/count`,
+        MARK_READ: (id: string) => `${NOTIF_SVC}/api/notifications/${id}/read`,
+        MARK_ALL_READ: `${NOTIF_SVC}/api/notifications/read-all`,
+        MARK_ACTION_DONE: (id: string) => `${NOTIF_SVC}/api/notifications/${id}/action-done`,
+    },
+
     // ── File-service ─────────────────────────────────────────────────────────
     FILE: {
         UPLOAD: `${FILE_SVC}/media/upload`,
         DOWNLOAD: (fileName: string) => `${FILE_SVC}/media/download/${fileName}`,
     },
 
-    // ── Cart-service (not yet in API spec — paths TBD) ───────────────────────
+    // ── Cart (order-service) ─────────────────────────────────────────────────
     CART: {
-        CART_COUNT:      `${BASE_URL}/api/cart`,
-        COUNT:           `${BASE_URL}/api/cart/countOfItems`,
-        CREATE:          (customerId: string) => `${BASE_URL}/api/cart/createCart/${customerId}`,
-        ADD:             (customerId: string) => `${BASE_URL}/api/cart/${customerId}/addCart`,
-        INCREASE:        `${BASE_URL}/api/cart/increaseQuantity`,
-        DECREASE:        `${BASE_URL}/api/cart/decreaseQuantity`,
-        DELETE_ITEM:     `${BASE_URL}/api/cart/deleteItem`,
-        DELETE_ALL:      `${BASE_URL}/api/cart/deleteCart`,
-        GET_PRODUCT_IDS: (customerId: string) => `${BASE_URL}/api/cart/productIds/${customerId}`,
-        GET_ITEMS:       (customerId: string) => `${BASE_URL}/api/cart/items/${customerId}`,
+        GET:         `${ORDER_SVC}/cart`,
+        UPDATE_ITEM: `${ORDER_SVC}/cart/items`,
+        DELETE_ITEM: (itemId: number) => `${ORDER_SVC}/cart/items/${itemId}`,
+        CLEAR:       `${ORDER_SVC}/cart/clear`,
+    },
+
+    CHECKOUT: `${ORDER_SVC}/api/orders/checkout`,
+
+    // ── Voucher (order-service) ──────────────────────────────────────────────
+    VOUCHER: {
+        LIST:  `${ORDER_SVC}/vouchers`,
+        APPLY: `${ORDER_SVC}/vouchers/apply`,
     },
 };
 

@@ -5,15 +5,35 @@ export const roleSchema = z.object({
   description: z.string().optional(),
 });
 
+export const addressSchema = z.object({
+  id: z.string().optional(),
+  country: z.string().optional(),
+  province: z.string().optional(),
+  city: z.string().optional(),
+  ward: z.string().optional(),
+  street: z.string().optional(),
+  isDefault: z.boolean().optional(),
+  phoneContacts: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
+});
+
 export const userSchema = z.object({
   id: z.string(),
   userName: z.string().min(4, "Tên người dùng phải có ít nhất 4 ký tự"),
-  firstName: z.string().min(1, "Họ không được để trống"),
-  lastName: z.string().min(1, "Tên không được để trống"),
-  email: z.string().email("Email không hợp lệ"),
-  phoneNumber: z.string().regex(/^0[0-9]{9}$/, "Số điện thoại gồm 10 số và bắt đầu bằng 0"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-  roles: z.array(roleSchema),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  password: z.string().optional(),
+  roles: z.array(roleSchema).optional(),
+  avatar: z.string().optional(),
+  dob: z.string().optional(),
+  city: z.string().optional(),
+  gender: z.string().optional(),
+  defaultPhoneNumber: z.string().optional(),
+  defaultEmail: z.string().optional(),
+  isActive: z.boolean().optional(),
+  addresses: z.array(addressSchema).optional(),
 });
 
 export const loginRequestSchema = z.object({
@@ -29,13 +49,13 @@ export const loginResponseSchema = z.object({
   }),
 });
 
-export const registerRequestSchema = userSchema.omit({
-  id: true,
-  roles: true
-}).extend({
-  password: z.string()
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
-    .max(8, "Mật khẩu không được quá 8 ký tự")
+export const registerRequestSchema = z.object({
+  userName: z.string().min(1, "Tên đăng nhập không được để trống"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự").max(8, "Mật khẩu không được quá 8 ký tự"),
+  firstName: z.string().min(1, "Họ không được để trống"),
+  lastName: z.string().min(1, "Tên không được để trống"),
+  email: z.string().email("Email không hợp lệ"),
+  phoneNumber: z.string().regex(/^0[0-9]{9}$/, "Số điện thoại gồm 10 số và bắt đầu bằng 0"),
 });
 
 export const registerResponseSchema = z.object({
@@ -95,6 +115,7 @@ export const registerCredentialsSchema = z.object({
 });
 
 export type Role = z.infer<typeof roleSchema>;
+export type Address = z.infer<typeof addressSchema>;
 export type User = z.infer<typeof userSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;

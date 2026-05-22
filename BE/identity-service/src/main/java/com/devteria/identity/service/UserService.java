@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.devteria.event.dto.NotificationEvent;
+import com.devteria.event.dto.StoreNotificationEvent;
 import com.devteria.identity.constant.PredefinedRole;
 import com.devteria.identity.dto.request.UserCreationRequest;
 import com.devteria.identity.dto.request.UserUpdateRequest;
@@ -74,6 +75,28 @@ public class UserService {
                 .build();
 
         kafkaTemplate.send("notification-delivery", notificationEvent);
+
+        final String savedUserId = user.getId();
+        try {
+            kafkaTemplate.send("user.registered", savedUserId);
+        } catch (Exception e) {
+            log.warn("Failed to publish user.registered for userId={}", savedUserId, e);
+        }
+        try {
+            kafkaTemplate.send(
+                    "notification.store",
+                    StoreNotificationEvent.builder()
+                            .userId(savedUserId)
+                            .type("REGISTER")
+                            .title("Chào mừng bạn đến với PC Store!")
+                            .body(
+                                    "Tài khoản của bạn đã được tạo thành công. Hãy hoàn thiện hồ sơ để trải nghiệm tốt hơn.")
+                            .isSystem(false)
+                            .actionRequired(false)
+                            .build());
+        } catch (Exception e) {
+            log.warn("Failed to publish register notification for userId={}", savedUserId, e);
+        }
 
         var userCreationReponse = userMapper.toUserResponse(user);
         userCreationReponse.setId(profile.getId());

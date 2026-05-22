@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, ShoppingCart, Eye, Flame, Clock } from "luci
 import { productApi } from "@/services/api/productApi";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { addToCart, getCartCount } from "@/redux/thunks/cart";
+import { getCart, upsertCartItem } from "@/redux/thunks/cart";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSelector } from "@/hooks";
 import { RootState } from "@/redux/store";
@@ -32,8 +32,16 @@ const SimpleProductCard = ({ product }: { product: any }) => {
             return;
         }
         try {
-            await dispatch(addToCart({ userId: user.id, productId: product.id, quantity: 1 })).unwrap();
-            dispatch(getCartCount({ userId: user.id }));
+            await dispatch(
+                upsertCartItem({
+                    productId: product.id,
+                    productName: product.name,
+                    productPrice: product.priceAfterDiscount,
+                    quantity: 1,
+                    productImage: product.img,
+                })
+            ).unwrap();
+            dispatch(getCart());
             toast({ title: "Thành công", description: "Đã thêm vào giỏ hàng" });
         } catch (error) {
             toast({ variant: "destructive", title: "Lỗi", description: "Không thể thêm sản phẩm" });

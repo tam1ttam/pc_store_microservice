@@ -1,40 +1,28 @@
 export interface CartItem {
+    id: number;
     productId: string;
+    productName: string;
+    productPrice: number;
+    productImage?: string;
     quantity: number;
-}
-
-export interface Cart {
-    id: string;
-    customer: {
-        id: string;
-        name: string;
-        email: string;
-    };
-    items: CartItem[];
+    subtotal: number;
 }
 
 export interface CartItemWithProduct extends CartItem {
     product: {
         id: string;
         name: string;
-        img: string;
+        img?: string;
+        supplier?: { name: string };
         priceAfterDiscount: number;
-        originalPrice: number;
-        discountPercent: number;
-        priceDiscount?: number;
-        inStock?: number;
-        supplier?: {
-            name?: string;
-            address?: string;
-        };
+        originalPrice?: number;
     };
 }
 
-export interface CartState {
-    cart: Cart | null;
-    cartItems: CartItemWithProduct[];
-    totalQuantity: number;
+export interface CartResponse {
+    id: number;
+    identityUserId: string;
+    items: CartItem[];
+    totalItems: number;
     totalPrice: number;
-    loading: boolean;
-    error: string | null;
 }

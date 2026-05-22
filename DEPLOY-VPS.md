@@ -144,6 +144,17 @@ Giữ nguyên `k8s/infra/*.yaml`, chỉ đổi passwords trước khi apply:
 > - TCP socket check port open là đủ và không bao giờ bị auth block.
 >
 > **4. Credentials mặc định admin:** `admin` / `123123123` (xem `ApplicationInitConfig.java`)
+>
+> **5. Sau reboot hoặc disk đầy → Eviction cascade:**
+> Nếu thấy hàng chục pod `Evicted` trong `kubectl get pods -n app`, đây là dấu hiệu disk pressure hoặc memory pressure. Xử lý:
+> ```bash
+> # Dọn disk trước
+> docker system prune -af --volumes
+> # Xóa evicted pods (không tự dọn)
+> kubectl delete pods --field-selector=status.phase=Failed -n app
+> kubectl get pods -n app --no-headers | awk '$3=="ContainerStatusUnknown"{print $1}' | xargs -r kubectl delete pod --force --grace-period=0 -n app
+> # Scale lại từng cái một như bước 1
+> ```
 
 - [ ] Apply: `kubectl apply -f k8s/app/`
 - [ ] Scale down all ngay sau apply (xem lưu ý trên)
@@ -154,14 +165,29 @@ Giữ nguyên `k8s/infra/*.yaml`, chỉ đổi passwords trước khi apply:
 ### Phase 7 — Ingress với TLS *(mới so với VMware)*
 
 > **Lưu ý:**
-> - Socket.IO cần **sticky session** + timeout dài — thiếu annotation này websocket disconnect liên tục:
->   ```yaml
->   nginx.ingress.kubernetes.io/affinity: "cookie"
->   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
->   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
->   ```
-> - Path `/socket.io` trỏ sang port **8099** (không phải 8085 — HTTP port của chat-service).
-> - cert-manager cần vài phút để issue cert Let's Encrypt lần đầu — đợi `kubectl get certificate -n app` hiển thị `READY=True`.
+>
+> **1. k3s cài sẵn Traefik → nginx-ingress LoadBalancer bị Pending mãi mãi**
+> Traefik chiếm port 80 trên node. `svclb-ingress-nginx-controller` sẽ không bao giờ lấy được port → Pending.
+> Giải pháp cho production: cài k3s **không có Traefik** ngay từ đầu:
+> ```bash
+> curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik" sh -
+> ```
+> Nếu đã cài rồi: `kubectl delete helmchart traefik -n kube-system` rồi mới dùng nginx-ingress.
+>
+> **2. `/api` prefix cần Strip trước khi vào api-gateway**
+> api-gateway đăng ký routes dạng `/api-gateway/...` — nếu request vào với path `/api/something`, api-gateway không match.
+> - **Nginx-ingress**: dùng annotation `nginx.ingress.kubernetes.io/rewrite-target: /$2` + path regex.
+> - **Traefik** (nếu giữ): dùng Middleware CRD `stripPrefix: ["/api"]` và annotation `traefik.ingress.kubernetes.io/router.middlewares: app-strip-api-prefix@kubernetescrd`.
+>
+> **3. Socket.IO cần sticky session + timeout dài — thiếu sẽ disconnect liên tục:**
+> ```yaml
+> nginx.ingress.kubernetes.io/affinity: "cookie"
+> nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+> nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+> ```
+> Path `/socket.io` trỏ sang port **8099** (không phải 8085 HTTP port).
+>
+> **4. cert-manager cần vài phút để issue cert lần đầu** — đợi `kubectl get certificate -n app` hiển thị `READY=True` trước khi test HTTPS.
 
 - [ ] Tạo `k8s/ingress/app-ingress.yaml`:
   ```yaml
@@ -213,9 +239,38 @@ Giữ nguyên `k8s/infra/*.yaml`, chỉ đổi passwords trước khi apply:
 ### Phase 8 — Frontend namespace `web`
 
 > **Lưu ý:**
-> - Phải cập nhật API base URL trong FE **trước khi build image** — sau khi Vite build xong thì URL được bundle cứng vào JS, không thể đổi runtime.
-> - nginx.conf cần `try_files $uri $uri/ /index.html` để React Router hoạt động — thiếu dòng này mọi URL trừ `/` sẽ trả 404 khi F5.
-> - 3 app là **project độc lập** — build riêng từng cái, không dùng chung `node_modules`.
+>
+> **1. API URL được bundle cứng vào JS lúc build** — phải set đúng trong `.env.production` trước khi trigger Jenkins:
+> ```
+> VITE_API_URL=https://<your-domain>.com/api
+> VITE_SOCKET_URL=https://<your-domain>.com
+> ```
+> Sau khi `vite build` xong không thể đổi runtime.
+>
+> **2. nginx.conf phải có `try_files`** — thiếu dòng này mọi URL trừ `/` trả 404 khi F5:
+> ```nginx
+> location / {
+>     try_files $uri $uri/ /index.html;
+> }
+> ```
+>
+> **3. Build script phải là `"build": "vite build"`** — KHÔNG phải `tsc -b && vite build`.
+> TypeScript strict errors sẽ block CI build (field name mismatch, TS18046 unknown type...). Vite build bỏ qua type errors.
+>
+> **4. Docker FE build ngốn ~2GB disk mỗi app** (node_modules layer) — disk dễ đầy:
+> ```bash
+> # Chạy trước khi trigger FE build
+> docker system prune -af
+> ```
+> Nếu disk đầy giữa chừng, Jenkins build sẽ fail với exit -1 (không phải lỗi code). Re-trigger build sau khi dọn disk.
+>
+> **5. Jenkins restart giữa Docker build = build fail** với `exit code -1` — build tiếp theo sẽ phát hiện không có thay đổi mới (same commit) và bỏ qua FE stages. Cần trigger thủ công:
+> ```bash
+> CRUMB=$(curl -s -c /tmp/c.txt -u admin:<pass> 'http://localhost:30080/crumbIssuer/api/json' | python3 -c "import sys,json; print(json.load(sys.stdin)['crumb'])")
+> curl -s -b /tmp/c.txt -u admin:<pass> -X POST "http://localhost:30080/job/pc-store-microservice/build" -H "Jenkins-Crumb: $CRUMB"
+> ```
+>
+> **6. 3 app là project độc lập** — build riêng từng cái, không dùng chung `node_modules`.
 
 - [ ] Viết Dockerfile cho mỗi app (`UI/client`, `UI/manager`, `UI/admin`):
   ```dockerfile
@@ -243,20 +298,42 @@ Giữ nguyên `k8s/infra/*.yaml`, chỉ đổi passwords trước khi apply:
 ### Phase 9 — Monitoring namespace
 
 > **Lưu ý:**
-> - Grafana cần 2 env bắt buộc để embed được trong Admin UI iframe:
->   ```yaml
->   GF_SECURITY_ALLOW_EMBEDDING: "true"
->   GF_SERVER_ROOT_URL: "https://<domain>/grafana"
->   ```
->   Thiếu `GF_SERVER_ROOT_URL` → Grafana asset load sai path khi đứng sau sub-path `/grafana`.
+>
+> **1. Loki crash ngay khi start: `permission denied` tạo WAL**
+> Loki 2.9.x mặc định viết WAL vào `/wal` (root filesystem read-only) → crash liên tục.
+> **Bắt buộc** thêm vào config trước khi apply:
+> ```yaml
+> ingester:
+>   wal:
+>     enabled: true
+>     dir: /loki/wal   # phải nằm trong PVC mount (/loki)
+> ```
+>
+> **2. Grafana cần 3 env để hoạt động đúng sau sub-path `/grafana`:**
+> ```yaml
+> GF_SECURITY_ALLOW_EMBEDDING: "true"          # cho phép embed iframe trong Admin UI
+> GF_SERVER_ROOT_URL: "https://<domain>/grafana"  # asset load đúng path
+> GF_SERVER_SERVE_FROM_SUB_PATH: "true"          # thiếu cái này → redirect loop
+> ```
+> Thiếu `GF_SERVER_SERVE_FROM_SUB_PATH` → Grafana redirect vô hạn tại `/grafana/login`.
+>
+> **3. Deploy từng component một** — RAM VPS thấp, kéo image + start đồng thời dễ OOM:
+> ```bash
+> kubectl apply -f k8s/monitoring/zipkin.yaml  && kubectl rollout status deployment/zipkin -n monitoring
+> kubectl apply -f k8s/monitoring/loki.yaml    && kubectl rollout status deployment/loki -n monitoring
+> kubectl apply -f k8s/monitoring/promtail.yaml
+> kubectl apply -f k8s/monitoring/grafana.yaml && kubectl rollout status deployment/grafana -n monitoring
+> ```
+>
+> **4. Grafana Ingress đặt trong namespace `monitoring`** (không phải `app`) — Traefik và nginx-ingress đều đọc ingress cross-namespace.
+>
+> **5. Promtail log chỉ có raw text** cho đến khi BE thêm `logstash-logback-encoder` (Phase 10) — `json:` stage trong pipeline sẽ fail silently cho non-JSON lines, không gây lỗi.
 
-- [ ] `k8s/monitoring/zipkin.yaml` — Deployment + ClusterIP:9411
-- [ ] `k8s/monitoring/loki.yaml` — Deployment + PVC 2GB + ClusterIP:3100
-- [ ] `k8s/monitoring/promtail.yaml` — DaemonSet, mount `/var/log/pods`
-- [ ] `k8s/monitoring/grafana.yaml` — Deployment + PVC 1GB, expose qua Ingress `/grafana`
-  - Env: `GF_SECURITY_ALLOW_EMBEDDING=true`
-  - Env: `GF_SERVER_ROOT_URL=https://<your-domain>.com/grafana`
-- [ ] Apply: `kubectl apply -f k8s/monitoring/ -n monitoring`
+- [ ] Apply `k8s/monitoring/zipkin.yaml`
+- [ ] Apply `k8s/monitoring/loki.yaml` (nhớ thêm `wal.dir`)
+- [ ] Apply `k8s/monitoring/promtail.yaml`
+- [ ] Apply `k8s/monitoring/grafana.yaml` (nhớ `SERVE_FROM_SUB_PATH`)
+- [ ] Verify: 4 pod `1/1 Running`, `curl -I https://<domain>/grafana` trả 302
 
 ### Phase 10 — Vận hành
 

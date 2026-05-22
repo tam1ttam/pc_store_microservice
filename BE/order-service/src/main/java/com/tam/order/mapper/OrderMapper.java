@@ -9,9 +9,11 @@ import com.tam.order.entity.Order;
 
 @Mapper(componentModel = "spring")
 public interface OrderMapper {
-    @Mapping(target = "customerId", source = "customerId")
+
+    @Mapping(target = "items", ignore = true)
+    @Mapping(target = "orderVouchers", ignore = true)
     Order toOrder(OrderCreationRequest request);
 
-    @Mapping(target = "id", expression = "java(order.getId().toString())")
+    @Mapping(target = "items", ignore = true)
     OrderResponse toOrderResponse(Order order);
 }

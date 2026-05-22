@@ -4,9 +4,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.devteria.event.dto.StoreNotificationEvent;
 import com.tam.order.dto.request.PaymentRequest;
 import com.tam.order.dto.response.PaymentResponse;
 import com.tam.order.entity.Payment;
@@ -28,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentServiceImpl implements PaymentService {
     PaymentRepository paymentRepository;
     PaymentMapper paymentMapper;
+    KafkaTemplate<String, Object> kafkaTemplate;
 
     @NonFinal
     @Value("${paypal.cancel-url:http://localhost:3000/cancel}")
@@ -39,15 +42,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request) throws Exception {
-        // TODO: Tích hợp PayPal API để tạo payment
-        // Double totalAmount = Double.parseDouble(request.getAmount()) / 26000;
-        // Payment payment = new Payment();
-        // payment.create(apiContext);
-
         String paymentId = UUID.randomUUID().toString();
         Payment payment = Payment.builder()
                 .paymentId(paymentId)
                 .userId(request.getUserId())
+                .identityUserId(request.getIdentityUserId())
                 .paymentMethod(request.getPaymentMethod())
                 .amount(Double.parseDouble(request.getAmount()))
                 .currency("VND")
@@ -66,7 +65,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Optional<Payment> getPaymentByOrderId(String orderId) {
-        return Optional.ofNullable(paymentRepository.findByOrderId(orderId));
+        return paymentRepository.findByOrderId(orderId);
     }
 
     @Override
@@ -81,30 +80,53 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public boolean executePayment(String paymentId) {
-        // TODO: Thực thi thanh toán qua PayPal
-        // 1. Gọi PayPal execute payment API
-        // 2. Cập nhật payment status thành APPROVED
-        // 3. Cập nhật order status thành PAID
-        // 4. Gửi email xác nhận
-
         Payment payment = paymentRepository.findPaymentsByPaymentId(paymentId);
-        if (payment != null) {
-            payment.setStatus(PaymentStatus.APPROVED.toString());
-            paymentRepository.save(payment);
-            return true;
+        if (payment == null) return false;
+
+        payment.setStatus(PaymentStatus.APPROVED.toString());
+        paymentRepository.save(payment);
+
+        if (payment.getIdentityUserId() != null && !payment.getIdentityUserId().isBlank()) {
+            kafkaTemplate.send(
+                    "notification.store",
+                    StoreNotificationEvent.builder()
+                            .userId(payment.getIdentityUserId())
+                            .type("ORDER_PLACED")
+                            .title("Thanh toán thành công")
+                            .body(String.format(
+                                    "Thanh toán PayPal của bạn đã được xác nhận. Tổng tiền: %.0f VNĐ.",
+                                    payment.getAmount()))
+                            .isSystem(false)
+                            .actionRequired(false)
+                            .referenceId(payment.getPaymentId())
+                            .referenceType("PAYMENT")
+                            .build());
         }
-        return false;
+        return true;
     }
 
     @Override
     public boolean cancelPayment(String paymentId) {
-        // TODO: Hủy thanh toán trên PayPal
         Payment payment = paymentRepository.findPaymentsByPaymentId(paymentId);
-        if (payment != null) {
-            payment.setStatus(PaymentStatus.CANCELLED.toString());
-            paymentRepository.save(payment);
-            return true;
+        if (payment == null) return false;
+
+        payment.setStatus(PaymentStatus.CANCELLED.toString());
+        paymentRepository.save(payment);
+
+        if (payment.getIdentityUserId() != null && !payment.getIdentityUserId().isBlank()) {
+            kafkaTemplate.send(
+                    "notification.store",
+                    StoreNotificationEvent.builder()
+                            .userId(payment.getIdentityUserId())
+                            .type("PAYMENT_FAILED")
+                            .title("Thanh toán thất bại")
+                            .body("Thanh toán PayPal của bạn đã bị huỷ.")
+                            .isSystem(false)
+                            .actionRequired(false)
+                            .referenceId(payment.getPaymentId())
+                            .referenceType("PAYMENT")
+                            .build());
         }
-        return false;
+        return true;
     }
 }

@@ -50,6 +50,10 @@ message CreateCustomerResponse {
   string avatar = 7;
   string dob = 8;
   string city = 9;
+  string default_phone_number = 10;
+  string default_email = 11;
+  string gender = 12;
+  bool is_active = 13;
 }
 
 message GetCustomerRequest {
@@ -74,6 +78,11 @@ message GetCustomerResponse {
   string avatar = 7;
   string dob = 8;
   string city = 9;
+  string default_phone_number = 10;
+  string default_email = 11;
+  string gender = 12;
+  bool is_active = 13;
+  repeated AddressResponse addresses = 14;
 }
 
 message UpdateCustomerRequest {
@@ -85,6 +94,9 @@ message UpdateCustomerRequest {
   string avatar = 6;
   string dob = 7;
   string city = 8;
+  string default_phone_number = 9;
+  string default_email = 10;
+  string gender = 11;
 }
 
 message UpdateCustomerResponse {

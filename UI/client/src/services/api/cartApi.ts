@@ -1,29 +1,13 @@
-import { ENDPOINTS } from "@/constants";
 import ENDPOINT from "@/constants/endpoint";
-import { del, get, post } from "../api.service";
+import { del, get, put } from "../api.service";
 
 export const cartApi = {
-    getCartCount: (userId: string) => {
-        return get(`${ENDPOINTS.CART.CART_COUNT}/items/${userId}`);
-    },
+    getCart: () => get(ENDPOINT.CART.GET),
 
-    addToCart: (userId: string, productId: string, quantity: number = 1) => {
-        return post(`${ENDPOINTS.CART.ADD(userId)}?productId=${productId}&quantity=${quantity}`, {});
-    },
+    upsertItem: (productId: string, productName: string, productPrice: number, quantity: number, productImage?: string) =>
+        put(ENDPOINT.CART.UPDATE_ITEM, { productId, productName, productPrice, quantity, productImage }),
 
-    deleteCartItem: (customerId: string, productId: string) => {
-        return del(`${ENDPOINTS.CART.DELETE_ITEM}?customerId=${customerId}&productId=${productId}`, {});
-    },
+    deleteItem: (itemId: number) => del(ENDPOINT.CART.DELETE_ITEM(itemId)),
 
-    deleteAllCart: (customerId: string, headers?: any) => {
-        return del(ENDPOINT.CART.DELETE_ALL, { customerId }, headers);
-    },
-
-    decreaseQuantity: (customerId: string, productId: string) => {
-        return post(`${ENDPOINTS.CART.DECREASE}?customerId=${customerId}&productId=${productId}`, {});
-    },
-
-    increaseQuantity: (customerId: string, productId: string) => {
-        return post(`${ENDPOINTS.CART.INCREASE}?customerId=${customerId}&productId=${productId}`, {});
-    }
+    clearCart: () => del(ENDPOINT.CART.CLEAR),
 };

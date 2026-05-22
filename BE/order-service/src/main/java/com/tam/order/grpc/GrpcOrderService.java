@@ -2,10 +2,11 @@ package com.tam.order.grpc;
 
 import java.util.List;
 
-import org.bson.types.ObjectId;
-
+import com.tam.order.dto.request.CartItemRequest;
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.entity.Order;
+import com.tam.order.entity.OrderStatus;
+import com.tam.order.repository.OrderRepository;
 import com.tam.order.service.OrderService;
 import com.tam.proto.order.v1.CancelOrderRequest;
 import com.tam.proto.order.v1.CancelOrderResponse;
@@ -17,7 +18,6 @@ import com.tam.proto.order.v1.GetOrdersRequest;
 import com.tam.proto.order.v1.GetOrdersResponse;
 import com.tam.proto.order.v1.OrderResponse;
 import com.tam.proto.order.v1.OrderServiceGrpc;
-import com.tam.proto.order.v1.OrderStatus;
 import com.tam.proto.order.v1.UpdateOrderStatusRequest;
 
 import io.grpc.Status;
@@ -32,12 +32,13 @@ import net.devh.boot.grpc.server.service.GrpcService;
 public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
 
     private final OrderService orderService;
+    private final OrderRepository orderRepository;
 
     @Override
     public void createOrder(CreateOrderRequest request, StreamObserver<OrderResponse> responseObserver) {
         try {
-            List<com.tam.order.entity.CartItem> items = request.getItemsList().stream()
-                    .map(i -> com.tam.order.entity.CartItem.builder()
+            List<CartItemRequest> items = request.getItemsList().stream()
+                    .map(i -> CartItemRequest.builder()
                             .productId(i.getProductId())
                             .productName(i.getProductName())
                             .productPrice(i.getProductPrice())
@@ -68,7 +69,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void getOrders(GetOrdersRequest request, StreamObserver<GetOrdersResponse> responseObserver) {
         try {
-            List<Order> orders = orderService.getAllOrders(new ObjectId(request.getCustomerId()));
+            List<Order> orders = orderRepository.findByCustomerId(request.getCustomerId());
             GetOrdersResponse.Builder builder = GetOrdersResponse.newBuilder()
                     .setTotalPages(1)
                     .setCurrentPage(0)
@@ -86,8 +87,8 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void getOrderDetail(GetOrderDetailRequest request, StreamObserver<OrderResponse> responseObserver) {
         try {
-            orderService
-                    .getOrderById(new ObjectId(request.getOrderId()))
+            orderRepository
+                    .findById(Long.parseLong(request.getOrderId()))
                     .ifPresentOrElse(
                             o -> {
                                 responseObserver.onNext(toOrderResponse(o));
@@ -107,8 +108,8 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     public void getOrdersByStatus(
             GetOrdersByStatusRequest request, StreamObserver<GetOrdersResponse> responseObserver) {
         try {
-            List<Order> orders =
-                    orderService.getOrdersByStatus(new ObjectId(request.getCustomerId()), request.getStatus());
+            OrderStatus status = OrderStatus.valueOf(request.getStatus());
+            List<Order> orders = orderRepository.findByCustomerIdAndOrderStatus(request.getCustomerId(), status);
             GetOrdersResponse.Builder builder = GetOrdersResponse.newBuilder()
                     .setTotalPages(1)
                     .setCurrentPage(0)
@@ -126,7 +127,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void updateOrderStatus(UpdateOrderStatusRequest request, StreamObserver<OrderResponse> responseObserver) {
         try {
-            Order order = orderService.updateOrderStatus(new ObjectId(request.getOrderId()), request.getStatus());
+            Order order = orderService.updateOrderStatus(Long.parseLong(request.getOrderId()), request.getStatus());
             responseObserver.onNext(toOrderResponse(order));
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -139,7 +140,7 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     @Override
     public void cancelOrder(CancelOrderRequest request, StreamObserver<CancelOrderResponse> responseObserver) {
         try {
-            boolean deleted = orderService.deleteOrder(new ObjectId(request.getOrderId()));
+            boolean deleted = orderService.deleteOrder(Long.parseLong(request.getOrderId()));
             responseObserver.onNext(CancelOrderResponse.newBuilder()
                     .setSuccess(deleted)
                     .setOrderId(request.getOrderId())
@@ -156,13 +157,13 @@ public class GrpcOrderService extends OrderServiceGrpc.OrderServiceImplBase {
     private OrderResponse toOrderResponse(Order o) {
         OrderResponse.Builder builder = OrderResponse.newBuilder()
                 .setId(o.getId().toString())
-                .setCustomerId(o.getCustomerId())
+                .setCustomerId(o.getCustomerId() != null ? o.getCustomerId() : "")
                 .setShipAddress(o.getShipAddress() != null ? o.getShipAddress() : "")
-                .setOrderDate(o.getOrderDate() != null ? o.getOrderDate() : "")
+                .setOrderDate(o.getOrderDate() != null ? o.getOrderDate().toString() : "")
                 .setCurrency(o.getCurrency() != null ? o.getCurrency() : "")
                 .setTotalPrice(o.getTotalPrice())
                 .setIsPaid(o.isPaid())
-                .setOrderStatus(OrderStatus.forNumber(
+                .setOrderStatus(com.tam.proto.order.v1.OrderStatus.forNumber(
                         o.getOrderStatus() != null ? o.getOrderStatus().ordinal() : 0));
 
         if (o.getItems() != null) {

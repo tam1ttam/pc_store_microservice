@@ -1,5 +1,7 @@
 package com.tam.profile.dto.response;
 
+import java.util.List;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +24,9 @@ public class CustomerResponse {
     String avatar;
     String dob;
     String city;
-
-    // NOTE: Không trả về password
-    // Password được quản lý bởi Identity Service
+    String defaultPhoneNumber;
+    String defaultEmail;
+    String gender;
+    Boolean isActive;
+    List<AddressResponse> addresses;
 }

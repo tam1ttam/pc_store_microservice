@@ -1,5 +1,6 @@
 package com.tam.product.entity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.bson.types.ObjectId;
@@ -28,16 +29,6 @@ public class ProductDetail {
     @Field("productId")
     ObjectId productId;
 
-    String processor;
-    String ram;
-    String storage;
-    String graphicsCard;
-    String powerSupply;
-    String motherboard;
-
-    @Field("case")
-    String case_;
-
-    String coolingSystem;
-    String operatingSystem;
+    @Builder.Default
+    List<ProductAttribute> attributes = new ArrayList<>();
 }

@@ -1,10 +1,12 @@
 import { PUBLIC_ROUTES } from "@/constants/routes";
 import { Login } from "@/pages";
 import { RootState } from "@/redux/store";
+import { setUnreadCount } from "@/redux/slices/notification";
 import { checkTokenValid } from "@/redux/thunks/auth";
-import { getCartCount } from "@/redux/thunks/cart";
+import { getCart } from "@/redux/thunks/cart";
 import { viewOrder } from "@/redux/thunks/order";
 import { getUserInfo } from "@/redux/thunks/user";
+import { notificationApi } from "@/services/api/notificationApi";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
@@ -24,9 +26,16 @@ function ProtectedRoutes({ children }: { children: any }) {
                     const { payload: userPayload } = await dispatch(getUserInfo({ token }) as any);
                     if (userPayload.result) {
                         await Promise.all([
-                            dispatch(getCartCount({ userId: userPayload.result.id }) as any),
-                            dispatch(viewOrder({ userId: userPayload.result.id }) as any)
+                            dispatch(getCart() as any),
+                            dispatch(viewOrder() as any),
                         ]);
+                    }
+
+                    try {
+                        const countRes = await notificationApi.getUnreadCount();
+                        dispatch(setUnreadCount((countRes as any).data?.result ?? 0));
+                    } catch {
+                        // non-fatal
                     }
                 }
             }

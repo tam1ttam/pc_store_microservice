@@ -1,46 +1,56 @@
 package com.tam.order.entity;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.persistence.*;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-@Document(collection = "orders")
+@Entity
+@Table(name = "orders")
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Getter
-@Setter
 public class Order {
     @Id
-    @Field("_id")
-    @JsonSerialize(using = ToStringSerializer.class)
-    ObjectId id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
 
-    @Field("customer_id")
+    @Column(name = "customer_id")
     String customerId;
 
+    @Column(name = "identity_user_id")
+    String identityUserId;
+
+    @Column(name = "ship_address")
     String shipAddress;
-    String orderDate;
+
+    @Column(name = "order_date")
+    LocalDateTime orderDate;
+
     String currency;
-    List<CartItem> items;
+
+    @Column(name = "total_price")
     double totalPrice;
+
+    @Column(name = "is_paid")
     boolean isPaid;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_status")
     OrderStatus orderStatus;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    List<OrderItem> items = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    List<OrderVoucher> orderVouchers = new ArrayList<>();
 }

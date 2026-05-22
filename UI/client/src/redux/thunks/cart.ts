@@ -1,46 +1,49 @@
-import { CartCountResponse } from "@/types";
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { z } from "zod";
 import { cartApi } from "@/services/api/cartApi";
 
-export const getCartCount = createAsyncThunk(
-    "cart/getCartCount",
-    async ({ userId }: { userId: string }, { rejectWithValue }) => {
-        try {
-            const response = await cartApi.getCartCount(userId);
-            return response.data;
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                return rejectWithValue(error.errors);
-            }
-            return rejectWithValue((error as Error).message);
-        }
+export const getCart = createAsyncThunk("cart/getCart", async (_, { rejectWithValue }) => {
+    try {
+        const response = await cartApi.getCart();
+        return (response as any).data;
+    } catch (error: any) {
+        return rejectWithValue(error.response?.data?.message || "Không thể tải giỏ hàng");
     }
-);
+});
 
-export const addToCart = createAsyncThunk(
-    "cart/addToCart",
+export const upsertCartItem = createAsyncThunk(
+    "cart/upsertItem",
     async (
-        { userId, productId, quantity }: { userId: string; productId: string; quantity?: number },
+        payload: { productId: string; productName: string; productPrice: number; quantity: number; productImage?: string },
         { rejectWithValue }
     ) => {
         try {
-            const response = await cartApi.addToCart(userId, productId, quantity ?? 1);
-            return response.data;
+            const response = await cartApi.upsertItem(
+                payload.productId,
+                payload.productName,
+                payload.productPrice,
+                payload.quantity,
+                payload.productImage
+            );
+            return (response as any).data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || "Thêm vào giỏ hàng thất bại");
         }
     }
 );
 
-export const deleteCartItem = createAsyncThunk(
-    "cart/deleteCartItem",
-    async ({ userId, productId }: { userId: string; productId: string }, { rejectWithValue }) => {
+export const removeCartItem = createAsyncThunk(
+    "cart/removeItem",
+    async ({ itemId }: { itemId: number }, { rejectWithValue }) => {
         try {
-            const response = await cartApi.deleteCartItem(userId, productId);
-            return response.data;
+            const response = await cartApi.deleteItem(itemId);
+            return (response as any).data;
         } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Xóa sản phẩm trong giỏ hàng thất bại");
+            return rejectWithValue(error.response?.data?.message || "Xóa sản phẩm thất bại");
         }
     }
 );
+
+// keep old name as alias so ProtectedRoutes/Cart/etc can migrate gradually
+export const getCartCount = getCart;
+export const addToCart = upsertCartItem;
+export const deleteCartItem = removeCartItem;

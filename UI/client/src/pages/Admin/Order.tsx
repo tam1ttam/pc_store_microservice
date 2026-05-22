@@ -1,6 +1,6 @@
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/api/adminApi";
-import { Order, OrderAdmin } from "@/types";
+import { Order } from "@/types";
 import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/badge";
@@ -51,7 +51,7 @@ const OrderPage = () => {
 
     const getOrderStats = () => {
         const total = orders?.length ?? 0;
-        const paid = orders?.filter((order) => order.paid).length ?? 0;
+        const paid = orders?.filter((order) => order.isPaid).length ?? 0;
         const unpaid = total - paid;
         return { total, paid, unpaid };
     };
@@ -120,7 +120,7 @@ const OrderPage = () => {
                             <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                                 <TableCell className="font-medium">{order.id}</TableCell>
                                 <TableCell className="font-medium text-muted-foreground">
-                                    {order.customer?.firstName} {order.customer?.lastName}
+                                    {order.customerId ?? "-"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {order.orderDate
@@ -155,26 +155,26 @@ const OrderPage = () => {
                                 </TableCell>
                                 <TableCell>
                                     <Badge
-                                        variant={order.paid ? "default" : "destructive"}
+                                        variant={order.isPaid ? "default" : "destructive"}
                                         className={`
                                             ${
-                                                order.paid
+                                                order.isPaid
                                                     ? "bg-green-100 text-green-800 hover:bg-green-200"
                                                     : "bg-red-100 text-red-800 hover:bg-red-200"
                                             }
                                             transition-colors duration-200
                                         `}
                                     >
-                                        {order.paid ? "Paid" : "Unpaid"}
+                                        {order.isPaid ? "Paid" : "Unpaid"}
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
                                     <Button
-                                        onClick={() => handleUpdatePayment(order.id)}
-                                        disabled={order.paid}
-                                        variant={order.paid ? "ghost" : "default"}
+                                        onClick={() => handleUpdatePayment(String(order.id))}
+                                        disabled={order.isPaid}
+                                        variant={order.isPaid ? "ghost" : "default"}
                                         className={`hover:shadow-sm transition-all ${
-                                            order.paid ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/90"
+                                            order.isPaid ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/90"
                                         }`}
                                     >
                                         Update Payment

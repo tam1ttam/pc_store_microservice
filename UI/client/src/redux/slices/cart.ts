@@ -1,19 +1,19 @@
-import { BaseState, CartItem } from "@/types";
+import { CartItem } from "@/types/Cart";
 import { createSlice } from "@reduxjs/toolkit";
-import { addToCart, deleteCartItem, getCartCount } from "../thunks/cart";
+import { getCart, removeCartItem, upsertCartItem } from "../thunks/cart";
 
-interface CartState extends BaseState {
-    cartCount: number;
+interface CartState {
     status: "idle" | "loading" | "succeeded" | "failed";
     error: string | null;
     items: CartItem[];
+    cartCount: number;
 }
 
 const initialState: CartState = {
     status: "idle",
     error: null,
+    items: [],
     cartCount: 0,
-    items: []
 };
 
 const cartSlice = createSlice({
@@ -21,54 +21,50 @@ const cartSlice = createSlice({
     initialState,
     reducers: {
         clearCart: (state) => {
+            state.items = [];
             state.cartCount = 0;
             state.status = "idle";
             state.error = null;
-        }
+        },
+        optimisticAddToCart: (state, action: { payload: { quantity: number } }) => {
+            state.cartCount += action.payload.quantity;
+        },
+        optimisticRollbackAdd: (state, action: { payload: { quantity: number } }) => {
+            state.cartCount = Math.max(0, state.cartCount - action.payload.quantity);
+        },
     },
     extraReducers: (builder) => {
         builder
-            .addCase(getCartCount.pending, (state) => {
+            .addCase(getCart.pending, (state) => {
                 state.status = "loading";
                 state.error = null;
             })
-            .addCase(getCartCount.fulfilled, (state, action) => {
+            .addCase(getCart.fulfilled, (state, action) => {
                 state.status = "succeeded";
-                state.cartCount = action.payload.result.reduce((total: number, item: any) => {
-                    return total + item.quantity;
-                }, 0);
-                state.items = action.payload.result;
+                const cart = action.payload?.result;
+                state.items = cart?.items ?? [];
+                state.cartCount = cart?.totalItems ?? 0;
             })
-            .addCase(getCartCount.rejected, (state, action) => {
+            .addCase(getCart.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload as string;
             })
-            .addCase(addToCart.pending, (state) => {
-                state.status = "loading";
-                state.error = null;
+            .addCase(upsertCartItem.fulfilled, (state, action) => {
+                const cart = action.payload?.result;
+                if (cart) {
+                    state.items = cart.items ?? [];
+                    state.cartCount = cart.totalItems ?? 0;
+                }
             })
-            .addCase(addToCart.fulfilled, (state) => {
-                state.status = "succeeded";
-                state.error = null;
-            })
-            .addCase(addToCart.rejected, (state, action) => {
-                state.status = "failed";
-                state.error = action.payload as string;
-            })
-            .addCase(deleteCartItem.pending, (state) => {
-                state.status = "loading";
-                state.error = null;
-            })
-            .addCase(deleteCartItem.fulfilled, (state) => {
-                state.status = "succeeded";
-                state.error = null;
-            })
-            .addCase(deleteCartItem.rejected, (state, action) => {
-                state.status = "failed";
-                state.error = action.payload as string;
+            .addCase(removeCartItem.fulfilled, (state, action) => {
+                const cart = action.payload?.result;
+                if (cart) {
+                    state.items = cart.items ?? [];
+                    state.cartCount = cart.totalItems ?? 0;
+                }
             });
-    }
+    },
 });
 
-export const { clearCart } = cartSlice.actions;
+export const { clearCart, optimisticAddToCart, optimisticRollbackAdd } = cartSlice.actions;
 export default cartSlice.reducer;

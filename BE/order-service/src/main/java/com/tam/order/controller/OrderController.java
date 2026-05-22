@@ -1,15 +1,23 @@
 package com.tam.order.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import org.bson.types.ObjectId;
+import jakarta.validation.Valid;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import com.tam.order.dto.request.ApiResponse;
+import com.tam.order.dto.request.CheckoutRequest;
 import com.tam.order.dto.request.OrderCreationRequest;
+import com.tam.order.dto.response.OrderResponse;
 import com.tam.order.dto.response.OrderStatsResponse;
 import com.tam.order.entity.Order;
+import com.tam.order.entity.OrderStatus;
 import com.tam.order.service.OrderService;
 
 import lombok.RequiredArgsConstructor;
@@ -20,65 +28,87 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/api/orders")
 public class OrderController {
+
     OrderService orderService;
 
-    @PostMapping
-    public ApiResponse<Boolean> saveOrder(@RequestBody OrderCreationRequest request) {
-        orderService.saveOrder(request);
-        return ApiResponse.<Boolean>builder().result(true).build();
-    }
+    // ── Client endpoints ───────────────────────────────────────────────────────
 
-    @GetMapping("/{customerId}")
-    public ApiResponse<List<Order>> getOrders(@PathVariable String customerId) {
-        return ApiResponse.<List<Order>>builder()
-                .result(orderService.getAllOrders(new ObjectId(customerId)))
+    @PostMapping("/api/orders/checkout")
+    public ApiResponse<OrderResponse> checkout(
+            @AuthenticationPrincipal Jwt jwt, @RequestBody @Valid CheckoutRequest request) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.checkout(jwt.getSubject(), request))
                 .build();
     }
 
-    @GetMapping("/{customerId}/status/{status}")
-    public ApiResponse<List<Order>> getOrdersByStatus(@PathVariable String customerId, @PathVariable String status) {
-        return ApiResponse.<List<Order>>builder()
-                .result(orderService.getOrdersByStatus(new ObjectId(customerId), status))
-                .build();
-    }
-
-    @GetMapping("/id/{orderId}")
-    public ApiResponse<Order> getOrderById(@PathVariable String orderId) {
-        return orderService
-                .getOrderById(new ObjectId(orderId))
-                .map(order -> ApiResponse.<Order>builder().result(order).build())
-                .orElseGet(() -> ApiResponse.<Order>builder()
-                        .code(404)
-                        .message("Order not found")
-                        .build());
-    }
-
-    @PutMapping("/{orderId}")
-    public ApiResponse<Order> updateOrderStatus(@PathVariable String orderId, @RequestParam String status) {
-        Order result = orderService.updateOrderStatus(new ObjectId(orderId), status);
-        return ApiResponse.<Order>builder().result(result).build();
-    }
-
-    @DeleteMapping("/{orderId}")
-    public ApiResponse<Boolean> deleteOrder(@PathVariable String orderId) {
-        boolean result = orderService.deleteOrder(new ObjectId(orderId));
-        return ApiResponse.<Boolean>builder().result(result).build();
-    }
-
-    @GetMapping
-    public ApiResponse<List<Order>> getAllOrder() {
-        return com.tam.order.dto.request.ApiResponse.<List<Order>>builder()
-                .result(orderService.getAll())
-                .build();
-    }
-
-    @GetMapping("/stats")
+    @GetMapping("/api/orders/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<OrderStatsResponse> getStats() {
         return ApiResponse.<OrderStatsResponse>builder()
                 .result(orderService.getStats())
                 .build();
+    }
+
+    @GetMapping("/api/orders/all")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<List<Order>> getAllOrders() {
+        return ApiResponse.<List<Order>>builder().result(orderService.getAll()).build();
+    }
+
+    @GetMapping("/api/orders/{id}")
+    public ApiResponse<OrderResponse> getOrderById(@PathVariable Long id) {
+        return orderService
+                .getOrderById(id)
+                .map(o -> ApiResponse.<OrderResponse>builder().result(o).build())
+                .orElseGet(() -> ApiResponse.<OrderResponse>builder()
+                        .code(404)
+                        .message("Order not found")
+                        .build());
+    }
+
+    @GetMapping("/api/orders")
+    public ApiResponse<List<OrderResponse>> getOrders(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        OrderStatus orderStatus = status != null ? OrderStatus.valueOf(status) : null;
+        return ApiResponse.<List<OrderResponse>>builder()
+                .result(orderService.getOrdersFiltered(jwt.getSubject(), orderStatus, from, to))
+                .build();
+    }
+
+    @PatchMapping("/api/orders/{id}/cancel")
+    public ApiResponse<Boolean> cancelOrder(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.<Boolean>builder()
+                .result(orderService.cancelOrder(id, jwt.getSubject()))
+                .build();
+    }
+
+    // ── Manager endpoints ──────────────────────────────────────────────────────
+
+    @PatchMapping("/api/orders/{id}/status")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ApiResponse<Order> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
+        return ApiResponse.<Order>builder()
+                .result(orderService.updateOrderStatus(id, status))
+                .build();
+    }
+
+    @DeleteMapping("/manager/orders/{id}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ApiResponse<Boolean> deleteOrder(@PathVariable Long id) {
+        return ApiResponse.<Boolean>builder()
+                .result(orderService.deleteOrder(id))
+                .build();
+    }
+
+    // ── Legacy endpoint (used by gRPC/saga-orchestrator) ──────────────────────
+
+    @PostMapping("/api/orders")
+    public ApiResponse<Boolean> saveOrder(@RequestBody OrderCreationRequest request) {
+        orderService.saveOrder(request);
+        return ApiResponse.<Boolean>builder().result(true).build();
     }
 }

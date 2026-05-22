@@ -1,5 +1,6 @@
 package com.tam.product.dto.request;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.*;
@@ -13,15 +14,10 @@ import lombok.experimental.FieldDefaults;
 public class ProductDetailCreationRequest {
 
     String productId;
-    String processor;
-    String ram;
-    String storage;
-    String graphicsCard;
-    String powerSupply;
-    String motherboard;
-    String case_;
-    String coolingSystem;
-    String operatingSystem;
+
+    @Builder.Default
+    List<ProductAttributeRequest> attributes = new ArrayList<>();
+
     List<String> images; // pre-uploaded URLs (set internally before DB save)
     List<String> imagesUpload; // raw base64 from client
 }

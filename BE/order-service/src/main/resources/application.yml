@@ -10,9 +10,20 @@ spring:
     enabled: false
   main:
     allow-bean-definition-overriding: true
+  datasource:
+    url: ${ORDER_DB_URL:jdbc:mysql://localhost:6001/orderservice?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
+    username: ${ORDER_DB_USERNAME:root}
+    password: ${ORDER_DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false
   data:
-    mongodb:
-      uri: ${ORDER_MONGO_URI:mongodb://root:123456@localhost:6000/order-service?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6002}
@@ -27,6 +38,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 jwt:
   signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
@@ -37,6 +53,7 @@ app:
       - /v3/api-docs/**
       - /swagger-ui/**
       - /actuator/health
+      - /vouchers
     allowed-origins:
       - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
 

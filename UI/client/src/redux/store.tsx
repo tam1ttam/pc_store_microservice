@@ -8,6 +8,7 @@ import userReducer from "@/redux/slices/user";
 import orderReducer from "@/redux/slices/order";
 import chatReducer from "@/redux/slices/chat";
 import presenceReducer from "@/redux/slices/presence";
+import notificationReducer from "@/redux/slices/notification";
 
 const store = configureStore({
     reducer: {
@@ -19,6 +20,7 @@ const store = configureStore({
         order: orderReducer,
         chat: chatReducer,
         presence: presenceReducer,
+        notification: notificationReducer,
     }
 });
 

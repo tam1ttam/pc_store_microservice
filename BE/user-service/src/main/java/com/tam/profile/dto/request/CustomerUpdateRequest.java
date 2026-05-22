@@ -32,7 +32,7 @@ public class CustomerUpdateRequest {
     String avatar;
     String dob;
     String city;
-
-    // NOTE: Không thể cập nhật password qua endpoint này
-    // Để thay đổi password, sử dụng Identity Service
+    String defaultPhoneNumber;
+    String defaultEmail;
+    String gender;
 }

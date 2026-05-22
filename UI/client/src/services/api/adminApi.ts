@@ -31,11 +31,11 @@ export const adminApi = {
 
     // Orders
     listOrders: (page: number = 0) => {
-        return get(`${ENDPOINTS.LIST_ORDER}?page=${page}`);
+        return get(`${ENDPOINTS.ORDER}?page=${page}`);
     },
 
     updatePaymentStatus: (orderId: string, status: string) => {
-        return put(`${ENDPOINTS.UPDATE_PAYMENT_STATUS}/${orderId}?status=${status}`, {});
+        return put(`${ENDPOINTS.ORDER}/${orderId}/status?status=${status}`, {});
     },
 
     // Customers/Users

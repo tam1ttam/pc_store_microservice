@@ -37,7 +37,7 @@ spring:
         bucket: ${AWS_S3_BUCKET:}
 
 jwt:
-  signerKey: ${JWT_SIGNER_KEY}
+  signerKey: ${JWT_SIGNER_KEY:dev-only-jwt-signer-key-for-local-development-please-change-prod}
 
 gemini:
   api:

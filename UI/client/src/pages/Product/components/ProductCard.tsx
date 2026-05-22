@@ -1,5 +1,10 @@
-import { ShoppingCart, Heart, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { ShoppingCart, Heart, Star, Check, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
+import { getCart, upsertCartItem } from '@/redux/thunks/cart';
+import { useToast } from '@/hooks/use-toast';
 
 interface Supplier {
     id?: string;
@@ -25,6 +30,48 @@ const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 export default function ProductCard({ product }: Props) {
+    const dispatch = useDispatch<any>();
+    const { info: user } = useSelector((state: RootState) => state.user);
+    const cartItems = useSelector((state: RootState) => state.cart.items);
+    const { toast } = useToast();
+    const navigate = useNavigate();
+    const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
+
+    const handleAddToCart = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (adding === 'loading') return;
+        if (!user) {
+            toast({ title: 'Thông báo', description: 'Vui lòng đăng nhập để mua hàng' });
+            navigate('/login');
+            return;
+        }
+
+        const existing = cartItems.find((i) => i.productId === product.id);
+        const newQty = (existing?.quantity ?? 0) + 1;
+
+        setAdding('loading');
+        try {
+            await dispatch(upsertCartItem({
+                productId: product.id,
+                productName: product.name,
+                productPrice: product.priceAfterDiscount,
+                quantity: newQty,
+                productImage: product.img,
+            })).unwrap();
+            dispatch(getCart());
+            setAdding('done');
+            setTimeout(() => setAdding('idle'), 1500);
+        } catch (error: any) {
+            setAdding('idle');
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: error?.response?.data?.message ?? 'Không thể thêm vào giỏ hàng',
+            });
+        }
+    };
+
     return (
         <Link to={`/products/${product.id}`} className="block">
             <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-orange-500/50">
@@ -79,9 +126,19 @@ export default function ProductCard({ product }: Props) {
                         )}
                     </div>
 
-                    <button className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                        <ShoppingCart className="w-4 h-4" />
-                        Thêm vào giỏ
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={adding === 'loading'}
+                        className={`w-full py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2
+                            ${adding === 'done'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60 disabled:cursor-not-allowed'
+                            }`}
+                    >
+                        {adding === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {adding === 'done' && <Check className="w-4 h-4" />}
+                        {adding === 'idle' && <ShoppingCart className="w-4 h-4" />}
+                        {adding === 'done' ? 'Đã thêm' : 'Thêm vào giỏ'}
                     </button>
                 </div>
             </div>

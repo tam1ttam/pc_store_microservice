@@ -1,10 +1,14 @@
 package com.tam.profile.grpc;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import com.tam.profile.dto.request.CustomerCreationRequest;
 import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.response.AddressResponse;
 import com.tam.profile.dto.response.CustomerResponse;
 import com.tam.profile.service.CustomerService;
 import com.tam.proto.profile.v1.*;
@@ -38,11 +42,18 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
 
             responseObserver.onNext(CreateCustomerResponse.newBuilder()
                     .setId(customer.getId())
-                    .setUserName(customer.getUserName())
-                    .setFirstName(customer.getFirstName())
-                    .setLastName(customer.getLastName())
-                    .setEmail(customer.getEmail())
-                    .setPhoneNumber(customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "")
+                    .setUserName(safe(customer.getUserName()))
+                    .setFirstName(safe(customer.getFirstName()))
+                    .setLastName(safe(customer.getLastName()))
+                    .setEmail(safe(customer.getEmail()))
+                    .setPhoneNumber(safe(customer.getPhoneNumber()))
+                    .setAvatar(safe(customer.getAvatar()))
+                    .setDob(safe(customer.getDob()))
+                    .setCity(safe(customer.getCity()))
+                    .setDefaultPhoneNumber(safe(customer.getDefaultPhoneNumber()))
+                    .setDefaultEmail(safe(customer.getDefaultEmail()))
+                    .setGender(safe(customer.getGender()))
+                    .setIsActive(Boolean.TRUE.equals(customer.getIsActive()))
                     .build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -79,6 +90,20 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     }
 
     @Override
+    public void getCustomerByUserId(
+            GetCustomerByUserIdRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
+        try {
+            CustomerResponse customer = customerService.getCustomerByUserId(request.getUserId());
+            responseObserver.onNext(toGetCustomerResponse(customer));
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("getCustomerByUserId gRPC error", e);
+            responseObserver.onError(
+                    Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
     public void updateCustomer(UpdateCustomerRequest request, StreamObserver<UpdateCustomerResponse> responseObserver) {
         try {
             CustomerUpdateRequest updateRequest = CustomerUpdateRequest.builder()
@@ -86,6 +111,12 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
                     .lastName(request.getLastName())
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
+                    .avatar(request.getAvatar())
+                    .dob(request.getDob())
+                    .city(request.getCity())
+                    .defaultPhoneNumber(request.getDefaultPhoneNumber())
+                    .defaultEmail(request.getDefaultEmail())
+                    .gender(request.getGender())
                     .build();
 
             CustomerResponse customer = customerService.updateProfile(request.getUserName(), updateRequest);
@@ -138,28 +169,48 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
         }
     }
 
-    @Override
-    public void getCustomerByUserId(
-            GetCustomerByUserIdRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
-        try {
-            CustomerResponse customer = customerService.getCustomerByUserId(request.getUserId());
-            responseObserver.onNext(toGetCustomerResponse(customer));
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            log.error("getCustomerByUserId gRPC error", e);
-            responseObserver.onError(
-                    Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+    private GetCustomerResponse toGetCustomerResponse(CustomerResponse customer) {
+        GetCustomerResponse.Builder builder = GetCustomerResponse.newBuilder()
+                .setId(safe(customer.getId()))
+                .setUserName(safe(customer.getUserName()))
+                .setFirstName(safe(customer.getFirstName()))
+                .setLastName(safe(customer.getLastName()))
+                .setEmail(safe(customer.getEmail()))
+                .setPhoneNumber(safe(customer.getPhoneNumber()))
+                .setAvatar(safe(customer.getAvatar()))
+                .setDob(safe(customer.getDob()))
+                .setCity(safe(customer.getCity()))
+                .setDefaultPhoneNumber(safe(customer.getDefaultPhoneNumber()))
+                .setDefaultEmail(safe(customer.getDefaultEmail()))
+                .setGender(safe(customer.getGender()))
+                .setIsActive(Boolean.TRUE.equals(customer.getIsActive()));
+
+        List<AddressResponse> addresses = customer.getAddresses();
+        if (addresses != null) {
+            builder.addAllAddresses(addresses.stream().map(this::toProtoAddress).collect(Collectors.toList()));
         }
+
+        return builder.build();
     }
 
-    private GetCustomerResponse toGetCustomerResponse(CustomerResponse customer) {
-        return GetCustomerResponse.newBuilder()
-                .setId(customer.getId())
-                .setUserName(customer.getUserName())
-                .setFirstName(customer.getFirstName())
-                .setLastName(customer.getLastName())
-                .setEmail(customer.getEmail())
-                .setPhoneNumber(customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "")
-                .build();
+    private com.tam.proto.profile.v1.AddressResponse toProtoAddress(AddressResponse addr) {
+        com.tam.proto.profile.v1.AddressResponse.Builder b = com.tam.proto.profile.v1.AddressResponse.newBuilder()
+                .setId(safe(addr.getId()))
+                .setCountry(safe(addr.getCountry()))
+                .setProvince(safe(addr.getProvince()))
+                .setCity(safe(addr.getCity()))
+                .setWard(safe(addr.getWard()))
+                .setStreet(safe(addr.getStreet()))
+                .setIsDefault(Boolean.TRUE.equals(addr.getIsDefault()))
+                .setIsActive(Boolean.TRUE.equals(addr.getIsActive()));
+
+        if (addr.getPhoneContacts() != null) {
+            b.addAllPhoneContacts(addr.getPhoneContacts());
+        }
+        return b.build();
+    }
+
+    private String safe(String value) {
+        return value != null ? value : "";
     }
 }

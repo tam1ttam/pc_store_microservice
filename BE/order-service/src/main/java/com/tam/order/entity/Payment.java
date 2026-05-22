@@ -1,33 +1,37 @@
 package com.tam.order.entity;
 
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.persistence.*;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+@Entity
+@Table(name = "payments")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collection = "payments")
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Payment {
     @Id
-    @Field("_id")
-    @JsonSerialize(using = ToStringSerializer.class)
-    ObjectId id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
 
+    @Column(name = "payment_id", unique = true)
     String paymentId;
+
+    @Column(name = "user_id")
     String userId;
+
+    @Column(name = "identity_user_id")
+    String identityUserId;
+
+    @Column(name = "payment_method")
     String paymentMethod;
+
+    @Column(name = "order_id")
     String orderId;
+
     Double amount;
     String currency;
     String description;

@@ -311,11 +311,6 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ---
 
-## TODO (ưu tiên từ trên xuống)
-
-1. **Dashboard — Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
----
-
 ### [DONE] file-service — chuyển upload sang S3
 
 **BE — `file-service`**
@@ -331,135 +326,114 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - `app.file.download-prefix` trong yaml chỉ dành cho local storage mode cũ — với S3, FE dùng `url` từ `UploadImageResponse` trực tiếp.
 - `/media/**` đã được thêm vào `permit-all-endpoints` → upload không cần auth token.
 
-### [MISC] Xác nhận Gemini image validation hoạt động sau khi đổi model
-- Đã đổi sang `gemini-2.0-flash` + endpoint `v1` — cần test thực tế với ảnh upload.
+### [DONE] Notification system — lưu thông báo vào DB
 
-## Các lỗi hiện tại
+**Kafka topic `notification.store`** — notification-service consume và lưu MongoDB.
 
-(Không có lỗi đã biết hiện tại)
+**Đã publish:**
+- `identity-service/AuthenticationService.authenticate()` → type `LOGIN`
+- `identity-service/UserService.createUser()` → type `REGISTER`
+- `order-service/OrderServiceImpl.publishOrderCreatedEvent()` → type `ORDER_PLACED` (chỉ COD, dùng `identityUserId` từ request)
+
+**Kiến trúc notification cần nhớ**
+- `notification.store` topic → `NotificationEventConsumer` → `NotificationServiceImpl.create()` → MongoDB `notifications`.
+- `identityUserId` (JWT `sub`) ≠ `customerId` (MongoDB ObjectId của Customer profile) — luôn dùng identity userId khi publish `StoreNotificationEvent`.
+- FE decode JWT bằng `utils/jwtUtils.ts:decodeJwtSub()` để lấy identity userId.
+- `notification-service` REST: `GET /api/notifications`, `PUT /{id}/read`, `PUT /read-all`, `PUT /{id}/action-done`.
+
+### [DONE] Profile completion flow
+
+**BE — `user-service`**
+- `Customer.isActive` mặc định `false`. Set `true` sau khi `completeProfile()`.
+- `PUT /api/customers/complete-profile` — yêu cầu ít nhất 1 địa chỉ.
+
+**FE — `UI/client`**
+- `ProfileCompletionModal.tsx`: 2 bước (profile → fake OTP). Dispatch `setProfileActive()` sau OTP.
+- `Header.tsx`: dismissible banner khi `isActive === false`.
+- `Cart.tsx`: block checkout nếu `isActive === false`, hiện `ProfileCompletionModal`.
+
+### [DONE] Product image upload qua gRPC + avatar client qua file-service HTTP
+
+**BE — `product-service/ProductServiceImpl`**
+- `addProduct` + `updateProduct`: `isBase64(img)` check → nếu là base64 thì `fileServiceGrpcClient.uploadFile(base64, "product")` → lưu S3 URL. Tương tự cho `detailReq.getImagesUpload()` (gallery images).
+- Upload TRƯỚC khi ghi DB → tránh duplicate product khi client retry.
+
+**FE — `UI/client/Header.tsx`**
+- `handleAvatarChange`: gọi `messageApi.uploadFile(file)` → HTTP POST `/media/upload` lên file-service → S3 URL → `userApi.updateAvatar(url)`. FE không gọi gRPC trực tiếp (gRPC chỉ dành cho BE-to-BE).
+
+### [DONE] Flexible product attributes — thay thế fixed spec fields
+
+**BE — `product-service`**
+- `ProductAttribute.java` (entity embedded): `name`, `value`, `unit`, `description`.
+- `ProductDetail.java`: bỏ 9 field cứng (processor, ram, storage, ...), thay bằng `List<ProductAttribute> attributes`.
+- `ProductAttributeRequest.java` + `ProductAttributeResponse.java`: DTO mới.
+- `ProductDetailCreationRequest.java` + `UpdateProductDetailReq.java`: thay fixed fields bằng `List<ProductAttributeRequest> attributes`.
+- `ProductDetailResponse.java`: thay fixed fields bằng `List<ProductAttributeResponse> attributes`.
+- `ProductDetailMapper.java`: thêm mapping methods `toProductAttribute`, `toProductAttributeResponse`, `toProductAttributeList`, `toProductAttributeResponseList`.
+- `ProductDetailServiceImpl.java`: cập nhật `addProductDetail` + `updateProductDetail` dùng attribute list.
+
+**FE — `UI/manager`**
+- `product.schema.ts`: thêm `productAttributeSchema` + `ProductAttribute` type; `productDetailSchema` dùng `attributes: z.array(...)`.
+- `Admin/Product.tsx`: bỏ 9 spec input cứng; thêm section "Thông số kỹ thuật" với nút "+ Thêm thuộc tính" → mỗi row gồm Tên | Giá trị | Đơn vị | Mô tả | X. Dữ liệu lưu trong state `attributes` riêng, gửi kèm `detailRequest.attributes` khi submit. Đã bỏ Excel import (không phù hợp với cấu trúc động mới).
+
+**FE — `UI/client`**
+- `ProductDetail.tsx`: thay `specs` array cứng bằng `product.attributes ?? []`; `SpecRow` render label + value + unit; description block dùng `attributes.slice(0, 5)` thay vì hardcode field names.
+
+**Lưu ý migration**: Dữ liệu `ProductDetail` cũ trong MongoDB vẫn còn các field cứng — sẽ được bỏ qua (MongoDB schemaless). Sản phẩm mới sẽ dùng `attributes`.
+
+### [DONE] order-service — Cart, Order, Voucher (BE + FE client)
+
+**BE — `order-service`** (migrate MongoDB → MySQL, db `orderservice`)
+- Entity: `Cart 1──* CartItem`, `Order 1──* OrderItem`, `Order *──* Voucher` (qua `OrderVoucher`), tất cả JPA/Hibernate.
+- `CartItem`: thêm `productImage TEXT` để lưu S3 URL ảnh sản phẩm.
+- `CartServiceImpl.upsertItem`: lazy create cart, SET quantity (không ADD).
+- API Cart: `GET /cart`, `PUT /cart/items`, `DELETE /cart/items/{id}`, `DELETE /cart/clear`.
+- API Order client: `POST /api/orders/checkout`, `GET /api/orders`, `GET /api/orders/{id}`, `PATCH /api/orders/{id}/cancel`.
+- API Order manager: `PATCH /api/orders/{id}/status`, `DELETE /manager/orders/{id}`.
+- API Voucher manager: CRUD `/manager/vouchers/**`.
+- API Voucher client: `POST /vouchers/apply`, `DELETE /vouchers/unapply`, `GET /vouchers` (public).
+- Kafka: `UserRegistrationConsumer` lắng nghe `user.registered` → tạo Cart mới.
+- `PermissionInitConfig`: thêm đầy đủ quyền cart/order/voucher cho USER và MANAGER role.
+
+**FE — `UI/client`**
+- Toàn bộ cart/order layer migrate từ service cũ sang order-service mới (không còn dùng port 8282).
+- `cartApi`, `orderApi`, `voucherApi` mới; Redux thunks/slices cập nhật; types mới.
+- `ProductDetail`, `ProductSlider`, `ProductCard`: truyền `productImage` khi add to cart.
+- **Cart page** viết lại kiểu Shopee: checkbox per item, sticky bottom bar, "Mua hàng (N)" → navigate `/checkout`.
+- **Checkout page** (`/checkout`): địa chỉ, danh sách item, voucher picker/input, payment method, tóm tắt + "Đặt hàng".
+- **Order page** + **Order detail page**: hiển thị theo schema mới, nút "Hủy đơn hàng".
 
 ---
 
-## Production (GitLab → Jenkins → K8s → VPS)
+## TODO (ưu tiên từ trên xuống)
 
-### Kiến trúc tổng thể
+## Rule for todo: 
+- Nếu trong 1 job trong primary mà có liên quan đến việc hiện thông báo trong secondary, hãy làm sau khi làm xong cái job primary đó
+- Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
 
-```
-GitHub (source code)
-  → GitLab mirror (tự đồng bộ qua import)
-  → GitLab webhook → Jenkins trigger (Jenkins chạy trong k3s)
-  → Jenkinsfile:
-      1. Build common-lib + proto-common (tuần tự)
-      2. Build 10 service JAR (song song)
-      3. Build + push Docker image → GitLab Container Registry (tag = $GIT_COMMIT)
-      4. kubectl apply → k3s trên VPS
-```
+## primary
+1. Chức năng up file để tạo product, hãy hiện thực nó, ảnh thay bằng url
 
-### K8s Namespace layout
+### secondary: Notification — trigger thêm sự kiện
 
-```
-k3s (single node VPS)
-├── namespace: jenkins        — Jenkins CI server
-├── namespace: infra          — MongoDB, MySQL, Redis, Kafka, Elasticsearch
-├── namespace: monitoring     — Grafana, Loki, Promtail, Zipkin
-├── namespace: app            — 10 Spring Boot services
-└── namespace: web            — 3 React apps (nginx static)
-```
+1. **`CHAT_ASSIGNED`** — `chat-service/ConversationService.claimConversation()`:
+   - Publish tới `clientId` của conversation
+   - "Yêu cầu hỗ trợ của bạn đã được {manager} tiếp nhận"
 
-### Ingress routing (domain thật + TLS)
+2. **`PROFILE_COMPLETED`** — `user-service/CustomerServiceImpl.completeProfile()`:
+   - Cần thêm KafkaTemplate vào user-service (hiện chưa có)
+   - "Hồ sơ của bạn đã được hoàn thiện"
 
-```
-domain.com/           → web/client
-domain.com/manager    → web/manager
-domain.com/admin      → web/admin
-domain.com/api/       → app/api-gateway:6060
-domain.com/socket.io/ → app/chat-service:8099 (sticky session)
-domain.com/grafana/   → monitoring/grafana (embed iframe trong Admin UI)
-```
+### Dashboard — UI/admin
 
-### Giới hạn resource (VPS 8GB RAM)
+6. **Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
 
-- Mỗi Spring Boot service: `JAVA_OPTS="-Xms128m -Xmx256m"`
-- Elasticsearch: `ES_JAVA_OPTS="-Xms512m -Xmx512m"`
-- Tổng ước tính ~6GB, buffer ~2GB
+### Monitoring — Admin UI System Logs
+
+7. **BE — log JSON** (10 service): thêm `logstash-logback-encoder` vào `pom.xml`, thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
+8. **BE — proxy endpoint** `identity-service/AdminLogController.GET /api/admin/logs` → gọi Loki `query_range`
+9. **FE — `UI/admin/SystemLogs.tsx`**: dropdown service, filter level (ERROR/WARN/INFO/DEBUG), date range, bảng log badge màu
 
 ---
 
-### TODO (theo thứ tự thực hiện)
-
-#### Phase 1 — Chuẩn bị VPS & tooling
-- [ ] Cài **k3s** trên VPS (`curl -sfL https://get.k3s.io | sh`)
-- [ ] Cài **nginx Ingress controller** (`kubectl apply -f ingress-nginx`)
-- [ ] Cài **cert-manager** + ClusterIssuer Let's Encrypt → TLS tự động cho domain
-- [ ] Deploy **Jenkins** vào namespace `jenkins` (Deployment + PVC lưu workspace + Service NodePort)
-- [ ] Cấu hình Jenkins: cài plugin (Kubernetes, Docker Pipeline, GitLab), thêm credential GitLab registry + kubeconfig
-- [ ] Bật **GitLab Container Registry** cho project, tạo deploy token
-
-#### Phase 2 — Config management (K8s Secrets + ConfigMap)
-- [ ] Tách `.env.production` thành 2 phần:
-  - **Secret**: `JWT_SIGNER_KEY`, `AWS_SECRET_ACCESS_KEY`, `AWS_ACCESS_KEY_ID`, `MYSQL_ROOT_PASS`, `IDENTITY_DB_PASS`, `MONGO_ROOT_PASS`, `GEMINI_API_KEY`, `BREVO_API_KEY`, `CLOUDINARY_API_SECRET`, `ELASTICSEARCH_PASSWORD`
-  - **ConfigMap**: tất cả còn lại (URLs, ports, tên host, flags)
-- [ ] Tạo file `k8s/base/secrets.yaml` (không commit — thêm vào `.gitignore`)
-- [ ] Tạo file `k8s/base/configmap.yaml`
-
-#### Phase 3 — Jenkinsfile
-- [ ] Viết `Jenkinsfile` ở root `BE/` với các stage:
-  - `Build Libs`: `mvn install -DskipTests` cho `common-lib` + `proto-common` (tuần tự)
-  - `Build Services`: `mvn package -DskipTests` cho 10 service (song song với `parallel {}`)
-  - `Build & Push Images`: `docker build + push` lên GitLab registry, tag = `$GIT_COMMIT`
-  - `Deploy`: `kubectl set image` cho từng Deployment trong namespace `app`
-- [ ] Cấu hình Maven cache (`/root/.m2` mount vào Jenkins pod để persist giữa các build)
-
-#### Phase 4 — K8s manifests cho namespace `infra`
-- [ ] **MongoDB** — StatefulSet + PVC + ClusterIP Service (port 27017)
-- [ ] **MySQL** — StatefulSet + PVC + ClusterIP Service (port 3306)
-- [ ] **Redis** — Deployment + PVC + ClusterIP Service (port 6379)
-- [ ] **Kafka** — StatefulSet + PVC + ClusterIP Service (port 9092 internal only)
-- [ ] **Elasticsearch** — StatefulSet + PVC + ClusterIP Service (port 9200), giới hạn heap 512MB
-
-#### Phase 5 — K8s manifests cho namespace `app` (10 Spring Boot services)
-- [ ] Deployment + ClusterIP Service cho từng service, `envFrom` dùng Secret + ConfigMap
-- [ ] Port đặc biệt:
-  - `chat-service`: HTTP `8085` + Socket.IO `8099`
-  - `user-service`, `product-service`, `order-service`, `file-service`, `saga-orchestrator`: thêm gRPC port
-- [ ] `readinessProbe` + `livenessProbe` dùng `/actuator/health` (theo context-path từng service)
-- [ ] Thêm `JAVA_OPTS="-Xms128m -Xmx256m"` vào env mỗi service
-
-#### Phase 6 — Ingress (namespace `app` + `web`)
-- [ ] Ingress api-gateway: `domain.com/api/` → `api-gateway:6060`
-- [ ] Annotation WebSocket cho chat route (`proxy-read-timeout: 3600`, `proxy-send-timeout: 3600`)
-- [ ] Sticky session Socket.IO (`nginx.ingress.kubernetes.io/affinity: cookie`)
-- [ ] TLS: annotation `cert-manager.io/cluster-issuer: letsencrypt-prod` trên Ingress
-
-#### Phase 7 — Frontend (namespace `web`)
-- [ ] Viết Dockerfile cho mỗi app: `vite build` → nginx serve static
-- [ ] Cập nhật API base URL trong FE: `localhost:6060` → `https://domain.com/api`
-- [ ] K8s Deployment + ClusterIP Service + Ingress cho `client`, `manager`, `admin`
-
-#### Phase 8 — Monitoring (namespace `monitoring`)
-- [ ] **Zipkin** — Deployment + ClusterIP Service (port 9411)
-- [ ] **Loki** — Deployment + PVC + ClusterIP Service (port 3100)
-- [ ] **Promtail** — DaemonSet với ConfigMap pipeline parse JSON log → extract label `level` và `service`
-- [ ] **Grafana** — Deployment + PVC + ClusterIP Service, expose qua Ingress tại `domain.com/grafana/`, giữ `GF_SECURITY_ALLOW_EMBEDDING=true`
-- [ ] Cấu hình Grafana datasource: Loki + Zipkin
-
-#### Phase 9 — Admin UI System Logs (tích hợp monitoring vào UI)
-Mục tiêu: Admin xem và filter log thực từ tất cả service ngay trên UI, không cần SSH.
-
-**BE — cấu hình log JSON (10 service)**
-- [ ] Thêm dependency `logstash-logback-encoder` vào `pom.xml` mỗi service
-- [ ] Thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
-
-**BE — proxy endpoint (identity-service)**
-- [ ] `AdminLogController.GET /api/admin/logs` — nhận params `service`, `level`, `start`, `end`, `limit`
-- [ ] Build LogQL query: `{namespace="app", service="...", level="..."}` rồi gọi `http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/query_range`
-- [ ] Thêm route vào api-gateway + `PUBLIC_GET` hoặc ADMIN role check
-
-**FE — `UI/admin`**
-- [ ] Trang `SystemLogs.tsx`: dropdown chọn service, filter level (ERROR/WARN/INFO/DEBUG), date-time range picker
-- [ ] Bảng log: cột timestamp, level badge màu (đỏ/vàng/xanh/xám), service name, message
-- [ ] `adminApi.ts`: thêm `getLogs(params)` gọi `/api/admin/logs`
-
-#### Phase 10 — Vận hành
-- [ ] **HorizontalPodAutoscaler** cho `api-gateway` + `identity-service`
-- [ ] Backup định kỳ MongoDB + MySQL PVC (CronJob K8s)
+> **Deploy VPS** — xem [`DEPLOY-VPS.md`](DEPLOY-VPS.md) (Phase 1–10, lưu ý chi tiết từng bước).

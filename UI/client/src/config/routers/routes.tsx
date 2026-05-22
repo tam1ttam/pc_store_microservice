@@ -4,6 +4,7 @@ import Home from "@/pages/Home";
 import ProductsPage from "@/pages/Product/Product";
 import ProductDetail from "@/pages/Product/ProductDetail";
 import Cart from "@/pages/Cart/Cart";
+import Checkout from "@/pages/Checkout/Checkout";
 import About from "@/pages/About";
 import Order from "@/pages/Order";
 import OrderDetail from "@/pages/Order/[id]";
@@ -32,6 +33,10 @@ export const clientRoutes: RouteObject[] = [
     {
         path: "/cart",
         element: <Cart />
+    },
+    {
+        path: "/checkout",
+        element: <Checkout />
     },
     {
         path: "/order",

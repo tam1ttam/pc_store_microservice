@@ -1,25 +1,26 @@
 import { z } from "zod";
-import { productSchema } from "./product.schema";
 
 export const cartItemSchema = z.object({
-  product: productSchema,
-  quantity: z.number().min(1, "Số lượng phải lớn hơn 0"),
-});
-
-export const cartCountResponseSchema = z.object({
-  code: z.number(),
-  message: z.string().optional(),
-  result: z.array(cartItemSchema),
+    id: z.number(),
+    productId: z.string(),
+    productName: z.string(),
+    productPrice: z.number(),
+    productImage: z.string().optional(),
+    quantity: z.number().min(1),
+    subtotal: z.number(),
 });
 
 export const cartResponseSchema = z.object({
-  code: z.number(),
-  message: z.string().optional(),
-  result: z.object({
-    success: z.boolean(),
-  }),
+    code: z.number(),
+    message: z.string().optional(),
+    result: z.object({
+        id: z.number(),
+        identityUserId: z.string(),
+        items: z.array(cartItemSchema),
+        totalItems: z.number(),
+        totalPrice: z.number(),
+    }),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
-export type CartCountResponse = z.infer<typeof cartCountResponseSchema>;
 export type CartResponse = z.infer<typeof cartResponseSchema>;

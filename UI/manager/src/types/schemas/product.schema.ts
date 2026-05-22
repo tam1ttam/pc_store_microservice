@@ -5,6 +5,13 @@ export const supplierSchema = z.object({
     address: z.string()
 });
 
+export const productAttributeSchema = z.object({
+    name: z.string(),
+    value: z.string(),
+    unit: z.string().optional(),
+    description: z.string().optional()
+});
+
 export const productSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1, "Tên sản phẩm không được để trống"),
@@ -22,18 +29,10 @@ export const productSchema = z.object({
 });
 
 export const productDetailSchema = z.object({
-    id: z.string(),
+    id: z.string().optional(),
     images: z.array(z.string()),
-    productId: z.string(),
-    processor: z.string(),
-    ram: z.string(),
-    storage: z.string(),
-    graphicsCard: z.string(),
-    powerSupply: z.string(),
-    motherboard: z.string(),
-    case_: z.string(),
-    coolingSystem: z.string(),
-    operatingSystem: z.string(),
+    productId: z.string().optional(),
+    attributes: z.array(productAttributeSchema).default([]),
     imagesUpload: z.array(z.string()).optional()
 });
 
@@ -44,5 +43,6 @@ export const productResponseSchema = z.object({
 
 export type Supplier = z.infer<typeof supplierSchema>;
 export type Product = z.infer<typeof productSchema>;
+export type ProductAttribute = z.infer<typeof productAttributeSchema>;
 export type ProductDetail = z.infer<typeof productDetailSchema>;
 export type ProductResponse = z.infer<typeof productResponseSchema>;

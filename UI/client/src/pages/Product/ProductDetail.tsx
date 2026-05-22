@@ -9,32 +9,29 @@ import {
     Shield,
     Plus,
     Minus,
-    Cpu,
     CircuitBoard,
-    HardDrive,
-    Monitor,
-    Box,
-    Wind,
-    Settings,
     ChevronLeft,
     ChevronRight
 } from "lucide-react";
 import { fetchProductDetail } from "@/redux/thunks/product";
 import { clearCurrentProduct } from "@/redux/slices/product";
-import { addToCart, getCartCount } from "@/redux/thunks/cart";
+import { optimisticAddToCart, optimisticRollbackAdd } from "@/redux/slices/cart";
+import { cartApi } from "@/services/api/cartApi";
+import { getCart } from "@/redux/thunks/cart";
 import { AppDispatch, RootState } from "@/redux/store";
 import ProductDetailSkeleton from "./components/ProductDetailSkeleton";
 import ImageModal from "@/components/ImageModal";
 import { useToast } from "@/hooks/use-toast";
 import RecommendedSection from "@/components/RecommendedSection";
 
-const SpecRow = ({ label, value, icon: Icon }: { label: string; value?: string; icon?: any }) => {
+const SpecRow = ({ label, value, unit }: { label: string; value?: string; unit?: string }) => {
     if (!value) return null;
     return (
         <div className="flex items-center py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-2 rounded-md">
-            <div className="w-10 text-gray-400">{Icon && <Icon className="w-5 h-5" />}</div>
             <div className="w-40 font-medium text-gray-600">{label}</div>
-            <div className="flex-1 text-gray-800 font-medium">{value}</div>
+            <div className="flex-1 text-gray-800 font-medium">
+                {value}{unit ? ` ${unit}` : ""}
+            </div>
         </div>
     );
 };
@@ -88,34 +85,27 @@ export default function ProductDetail() {
     };
 
     const handleAddToCart = async () => {
+        if (isAddingToCart || !product) return;
+        setIsAddingToCart(true);
+        dispatch(optimisticAddToCart({ quantity }));
+
         try {
-            setIsAddingToCart(true);
-
-            await dispatch(
-                addToCart({
-                    userId: user?.id as string,
-                    productId: id as string,
-                    quantity
-                }) as any
-            ).unwrap();
-
-            await dispatch(
-                getCartCount({
-                    userId: user?.id as string
-                }) as any
+            await cartApi.upsertItem(
+                product.id as string,
+                product.name as string,
+                product.priceAfterDiscount as number,
+                quantity,
+                product.img as string | undefined
             );
-
-            toast({
-                title: "Thành công!",
-                description: `Đã thêm ${quantity} sản phẩm vào giỏ hàng`
-            });
-
+            dispatch(getCart() as any);
+            toast({ title: "Thành công!", description: `Đã thêm ${quantity} sản phẩm vào giỏ hàng` });
             setQuantity(1);
         } catch (error: any) {
+            dispatch(optimisticRollbackAdd({ quantity }));
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: error?.message ?? "Không thể thêm sản phẩm vào giỏ hàng"
+                description: error?.response?.data?.message ?? "Không thể thêm sản phẩm vào giỏ hàng"
             });
         } finally {
             setIsAddingToCart(false);
@@ -142,18 +132,7 @@ export default function ProductDetail() {
 
     if (!product) return <div>Không tìm thấy sản phẩm</div>;
 
-    // Data Mapping for UI
-    const specs = [
-        { label: "Vi xử lý (CPU)", value: product.processor, icon: Cpu },
-        { label: "RAM", value: product.ram, icon: CircuitBoard },
-        { label: "Lưu trữ", value: product.storage, icon: HardDrive },
-        { label: "Card đồ họa", value: product.graphicsCard, icon: Monitor },
-        { label: "Nguồn (PSU)", value: product.powerSupply, icon: Box },
-        { label: "Bo mạch chủ", value: product.motherboard, icon: CircuitBoard },
-        { label: "Vỏ máy (Case)", value: product.case_ || product.case, icon: Box },
-        { label: "Tản nhiệt", value: product.coolingSystem, icon: Wind },
-        { label: "Hệ điều hành", value: product.operatingSystem, icon: Settings }
-    ];
+    const attributes: { name: string; value: string; unit?: string }[] = product.attributes ?? [];
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans pt-20">
@@ -339,9 +318,13 @@ export default function ProductDetail() {
                                 Thông số kỹ thuật
                             </h3>
                             <div className="flex flex-col">
-                                {specs.map((spec, index) => (
-                                    <SpecRow key={index} label={spec.label} value={spec.value} icon={spec.icon} />
-                                ))}
+                                {attributes.length > 0 ? (
+                                    attributes.map((attr, index) => (
+                                        <SpecRow key={index} label={attr.name} value={attr.value} unit={attr.unit} />
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-gray-400 py-4 text-center">Chưa có thông số kỹ thuật</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -351,23 +334,19 @@ export default function ProductDetail() {
                             <h2 className="text-2xl font-bold text-gray-900 mb-6">Đánh giá & Mô tả chi tiết</h2>
                             <div className="prose prose-orange max-w-none text-gray-600">
                                 <p className="leading-relaxed mb-4">
-                                    Sản phẩm <strong>{product.name}</strong> mang đến hiệu năng vượt trội nhờ trang bị
-                                    vi xử lý {product.processor} kết hợp cùng {product.ram} RAM, đáp ứng tốt các nhu cầu
-                                    từ văn phòng cơ bản đến giải trí đa phương tiện.
+                                    Sản phẩm <strong>{product.name}</strong> từ nhà cung cấp {product.supplier?.name} với
+                                    chất lượng chính hãng, bảo hành 24 tháng.
                                 </p>
-                                <p className="leading-relaxed mb-4">
-                                    Thiết kế với case {product.case_ || product.case} hiện đại, tản nhiệt{" "}
-                                    {product.coolingSystem} giúp máy luôn hoạt động mát mẻ trong thời gian dài. Được cài
-                                    đặt sẵn {product.operatingSystem}, bạn có thể sử dụng ngay lập tức sau khi mua về.
-                                </p>
-                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 my-6">
-                                    <h4 className="font-bold text-orange-800 mb-2">Điểm nổi bật:</h4>
-                                    <ul className="list-disc list-inside space-y-1 text-orange-900">
-                                        <li>CPU: {product.processor} mạnh mẽ.</li>
-                                        <li>Đồ họa: {product.graphicsCard} xử lý hình ảnh sắc nét.</li>
-                                        <li>Lưu trữ: {product.storage} tốc độ cao.</li>
-                                    </ul>
-                                </div>
+                                {attributes.length > 0 && (
+                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 my-6">
+                                        <h4 className="font-bold text-orange-800 mb-2">Thông số nổi bật:</h4>
+                                        <ul className="list-disc list-inside space-y-1 text-orange-900">
+                                            {attributes.slice(0, 5).map((attr, i) => (
+                                                <li key={i}>{attr.name}: {attr.value}{attr.unit ? ` ${attr.unit}` : ""}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -1,22 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogIn, Monitor, ShoppingCart, User, X } from "lucide-react";
+import { Camera, LogIn, Monitor, ShoppingCart, User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { toast } from "@/hooks";
 import { logout } from "@/redux/thunks/auth";
+import { updateUserAvatar } from "@/redux/slices/user";
+import { getUserInfo } from "@/redux/thunks/user";
+import { messageApi } from "@/services/api/messageApi";
+import { userApi } from "@/services/api/userApi";
+import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Header() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const userMenuRef = useRef<HTMLDivElement>(null);
     const userModalRef = useRef<HTMLDivElement>(null);
-    const { info: user } = useSelector((state: RootState) => state.user);
+    const { info: user, status: userStatus } = useSelector((state: RootState) => state.user);
     const { isLogin, token } = useSelector((state: RootState) => state.auth);
     const { cartCount } = useSelector((state: RootState) => state.cart);
     const [isScrolled, setIsScrolled] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [showProfileBanner, setShowProfileBanner] = useState(true);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -87,8 +97,58 @@ export default function Header() {
         navigate("/order");
     };
 
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            toast({ title: "Chỉ chấp nhận file ảnh" });
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast({ title: "Ảnh không được vượt quá 5MB" });
+            return;
+        }
+        setUploadingAvatar(true);
+        try {
+            const { url } = await messageApi.uploadFile(file);
+            await userApi.updateAvatar(url);
+            dispatch(updateUserAvatar(url));
+            toast({ title: "Cập nhật ảnh đại diện thành công" });
+        } catch {
+            toast({ title: "Cập nhật ảnh đại diện thất bại" });
+        } finally {
+            setUploadingAvatar(false);
+            if (avatarInputRef.current) avatarInputRef.current.value = "";
+        }
+    };
+
     return (
         <>
+            {isLogin && user && user.isActive === false && showProfileBanner && (
+                <div className="fixed top-20 right-4 z-40 bg-white border border-orange-200 rounded-xl shadow-lg p-4 w-72 animate-in slide-in-from-right duration-300">
+                    <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <User className="w-4 h-4 text-orange-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800">Hoàn thiện hồ sơ</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Bổ sung thông tin để có trải nghiệm mua sắm tốt hơn.</p>
+                            <button
+                                onClick={() => { setShowProfileModal(true); setShowProfileBanner(false); }}
+                                className="mt-2 text-xs text-orange-500 font-medium hover:text-orange-600"
+                            >
+                                Hoàn thiện ngay →
+                            </button>
+                        </div>
+                        <button onClick={() => setShowProfileBanner(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showProfileModal && (
+                <ProfileCompletionModal onClose={() => setShowProfileModal(false)} />
+            )}
             <header
                 className={`flex justify-center items-center text-white fixed w-[90%] sm:w-[95%] top-2 z-50 max-h-16 rounded-full backdrop-blur-md left-1/2 -translate-x-1/2 transition-all duration-500  bg-black/50`}
                 style={{
@@ -158,6 +218,7 @@ export default function Header() {
 
                         {isLogin ? (
                             <div className="flex items-center gap-2 sm:gap-4">
+                                <NotificationBell />
                                 <div className="relative">
                                     <Link
                                         to="/cart"
@@ -176,10 +237,14 @@ export default function Header() {
                                 </div>
                                 <div className="relative" ref={userMenuRef}>
                                     <div
-                                        className="w-8 h-8 sm:w-10 sm:h-10 p-1.5 sm:p-2 rounded-full cursor-pointer hover:ring-2 hover:ring-orange-400 hover:scale-110 transition-all text-white bg-orange-500/20 flex items-center justify-center"
+                                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-orange-400 hover:scale-110 transition-all overflow-hidden bg-orange-500/20 flex items-center justify-center"
                                         onClick={() => setShowUserMenu(!showUserMenu)}
                                     >
-                                        <User className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                                        {user?.avatar ? (
+                                            <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                                        )}
                                     </div>
 
                                     {showUserMenu && (
@@ -188,6 +253,9 @@ export default function Header() {
                                                 onClick={() => {
                                                     setShowUserModal(true);
                                                     setShowUserMenu(false);
+                                                    if (!user && userStatus !== "loading") {
+                                                        dispatch(getUserInfo({ token: token as string }) as any);
+                                                    }
                                                 }}
                                                 className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-orange-100 transition-colors duration-200"
                                             >
@@ -251,12 +319,41 @@ export default function Header() {
                         </button>
 
                         <div className="text-center mb-4 sm:mb-6">
-                            <div className="bg-orange-500/10 w-12 h-12 sm:w-16 sm:h-16 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center">
-                                <User className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                            <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 group">
+                                <div className="w-full h-full rounded-full overflow-hidden bg-orange-500/10 flex items-center justify-center border-2 border-orange-200">
+                                    {user?.avatar ? (
+                                        <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-8 h-8 sm:w-10 sm:h-10 text-orange-500" />
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    disabled={uploadingAvatar}
+                                    className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                    {uploadingAvatar ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <Camera className="w-5 h-5 text-white" />
+                                    )}
+                                </button>
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleAvatarChange}
+                                />
                             </div>
                             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Thông tin người dùng</h2>
                         </div>
 
+                        {userStatus === "loading" && !user ? (
+                            <div className="flex justify-center py-8">
+                                <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : (
                         <div className="space-y-3 sm:space-y-4 bg-orange-50/50 p-4 sm:p-6 rounded-lg">
                             <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
                                 <span className="font-medium text-gray-600 text-sm sm:text-base">Họ tên:</span>
@@ -282,6 +379,7 @@ export default function Header() {
                                 <span className="text-gray-800 break-words text-sm sm:text-base">{user?.userName}</span>
                             </div>
                         </div>
+                        )}
                     </div>
                 </div>
             )}

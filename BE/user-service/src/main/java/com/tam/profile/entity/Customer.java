@@ -1,6 +1,7 @@
 package com.tam.profile.entity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
@@ -47,7 +48,12 @@ public class Customer {
     LocalDate dob;
     String city;
 
-    // NOTE: Không lưu password trong Profile Service
-    // Password được quản lý bởi Identity Service
-    // TODO: Gọi Identity Service để verify user identity khi cần
+    String defaultPhoneNumber;
+    String defaultEmail;
+    String gender;
+
+    @Builder.Default
+    Boolean isActive = false;
+
+    List<Address> addresses;
 }

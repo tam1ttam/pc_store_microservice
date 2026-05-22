@@ -20,7 +20,17 @@ const userSlice = createSlice({
             state.info = null;
             state.status = "idle";
             state.error = null;
-        }
+        },
+        updateUserAvatar: (state, action: PayloadAction<string>) => {
+            if (state.info) {
+                state.info.avatar = action.payload;
+            }
+        },
+        setProfileActive: (state) => {
+            if (state.info) {
+                state.info.isActive = true;
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -39,5 +49,5 @@ const userSlice = createSlice({
     }
 });
 
-export const { clearUser } = userSlice.actions;
+export const { clearUser, updateUserAvatar, setProfileActive } = userSlice.actions;
 export default userSlice.reducer;

@@ -1,31 +1,33 @@
 package com.tam.order.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.bson.types.ObjectId;
-
+import com.tam.order.dto.request.CheckoutRequest;
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.dto.response.OrderResponse;
 import com.tam.order.dto.response.OrderStatsResponse;
 import com.tam.order.entity.Order;
+import com.tam.order.entity.OrderStatus;
 
 public interface OrderService {
-    Order saveOrder(OrderCreationRequest request);
+    OrderResponse checkout(String identityUserId, CheckoutRequest request);
+
+    Optional<OrderResponse> getOrderById(Long orderId);
+
+    List<OrderResponse> getOrdersFiltered(
+            String identityUserId, OrderStatus status, LocalDateTime from, LocalDateTime to);
+
+    Order updateOrderStatus(Long orderId, String status);
+
+    boolean cancelOrder(Long orderId, String identityUserId);
+
+    boolean deleteOrder(Long orderId);
 
     OrderStatsResponse getStats();
 
-    List<Order> getAllOrders(ObjectId customerId);
-
-    Optional<Order> getOrderById(ObjectId orderId);
-
-    Order updateOrderStatus(ObjectId orderId, String status);
-
-    List<Order> getOrdersByStatus(ObjectId customerId, String status);
-
-    boolean deleteOrder(ObjectId orderId);
-
-    Optional<OrderResponse> getOrderResponse(ObjectId orderId);
+    Order saveOrder(OrderCreationRequest request);
 
     List<Order> getAll();
 }

@@ -13,11 +13,13 @@ import java.util.UUID;
 import jakarta.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import com.devteria.event.dto.StoreNotificationEvent;
 import com.devteria.identity.dto.request.AuthenticationRequest;
 import com.devteria.identity.dto.request.IntrospectRequest;
 import com.devteria.identity.dto.request.LogoutRequest;
@@ -49,6 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
+    KafkaTemplate<String, Object> kafkaTemplate;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -92,7 +95,24 @@ public class AuthenticationService {
 
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
-        return buildAuthenticationResponse(generateToken(user), true);
+        var result = buildAuthenticationResponse(generateToken(user), true);
+
+        try {
+            kafkaTemplate.send(
+                    "notification.store",
+                    StoreNotificationEvent.builder()
+                            .userId(user.getId())
+                            .type("LOGIN")
+                            .title("Đăng nhập thành công")
+                            .body("Bạn đã đăng nhập vào PC Store.")
+                            .isSystem(false)
+                            .actionRequired(false)
+                            .build());
+        } catch (Exception e) {
+            log.warn("Failed to publish login notification for userId={}", user.getId(), e);
+        }
+
+        return result;
     }
 
     public AuthenticationResponse authenticateForPortal(AuthenticationRequest request, Set<String> allowedRoles) {

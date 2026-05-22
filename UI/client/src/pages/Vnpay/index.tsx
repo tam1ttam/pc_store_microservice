@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ENDPOINTS } from "@/constants";
 import { useToast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
-import { getCartCount } from "@/redux/thunks/cart";
+import { getCart } from "@/redux/thunks/cart";
 import { viewOrder } from "@/redux/thunks/order";
 import { post } from "@/services/api.service";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -47,17 +47,9 @@ const PaymentResult = () => {
 
                         if (result.data.code === 1000) {
                             document.cookie = "orderInfo=; path=/; max-age=0";
-                            await dispatch(
-                                getCartCount({
-                                    userId: orderInfo.customerId
-                                }) as any
-                            );
+                            await dispatch(getCart() as any);
 
-                            await dispatch(
-                                viewOrder({
-                                    userId: orderInfo.customerId
-                                }) as any
-                            );
+                            await dispatch(viewOrder() as any);
 
                             toast({
                                 title: "Thanh toán thành công"

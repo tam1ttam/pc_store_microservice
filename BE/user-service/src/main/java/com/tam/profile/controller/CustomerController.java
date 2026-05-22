@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tam.profile.dto.request.AvatarUpdateRequest;
 import com.tam.profile.dto.request.CustomerCreationRequest;
 import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.request.ProfileCompletionRequest;
 import com.tam.profile.dto.response.ApiResponse;
 import com.tam.profile.dto.response.CustomerResponse;
 import com.tam.profile.service.CustomerService;
@@ -71,6 +73,18 @@ public class CustomerController {
                 .build());
     }
 
+    @PutMapping("/complete-profile")
+    public ResponseEntity<ApiResponse<CustomerResponse>> completeProfile(
+            @Valid @RequestBody ProfileCompletionRequest request) {
+        log.info("Completing profile for current user");
+        CustomerResponse response = customerService.completeProfile(request);
+        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+                .code(1000)
+                .message("Hoàn thiện hồ sơ thành công")
+                .result(response)
+                .build());
+    }
+
     @PutMapping("/{userName}")
     public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
             @PathVariable String userName, @RequestBody CustomerUpdateRequest request) {
@@ -79,6 +93,17 @@ public class CustomerController {
         return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
                 .code(1000)
                 .message("Cập nhật thành công")
+                .result(response)
+                .build());
+    }
+
+    @PutMapping("/avatar")
+    public ResponseEntity<ApiResponse<CustomerResponse>> updateAvatar(@RequestBody AvatarUpdateRequest request) {
+        log.info("Updating avatar for current user");
+        CustomerResponse response = customerService.updateAvatar(request.getAvatar());
+        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+                .code(1000)
+                .message("Cập nhật ảnh đại diện thành công")
                 .result(response)
                 .build());
     }

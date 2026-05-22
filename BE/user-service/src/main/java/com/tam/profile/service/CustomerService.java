@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.tam.profile.dto.request.CustomerCreationRequest;
 import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.request.ProfileCompletionRequest;
 import com.tam.profile.dto.response.CustomerResponse;
 
 public interface CustomerService {
@@ -19,6 +20,10 @@ public interface CustomerService {
     CustomerResponse updateProfile(String userName, CustomerUpdateRequest request);
 
     CustomerResponse updateCustomer(String userName, CustomerUpdateRequest request);
+
+    CustomerResponse completeProfile(ProfileCompletionRequest request);
+
+    CustomerResponse updateAvatar(String avatarUrl);
 
     Page<CustomerResponse> getAllCustomers(Pageable pageable);
 

@@ -17,6 +17,7 @@ import lombok.experimental.FieldDefaults;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PaymentRequest {
     String userId;
+    String identityUserId;
     String amount;
     String paymentMethod;
     String description;

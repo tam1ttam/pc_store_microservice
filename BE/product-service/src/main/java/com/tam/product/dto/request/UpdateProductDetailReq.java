@@ -11,15 +11,7 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateProductDetailReq {
-    String processor;
-    String ram;
-    String storage;
-    String graphicsCard;
-    String powerSupply;
-    String motherboard;
-    String case_;
-    String coolingSystem;
-    String operatingSystem;
+    List<ProductAttributeRequest> attributes;
     List<String> images; // existing image URLs to keep (null = keep all)
     List<String> imagesUpload; // new files (base64) to upload and append
 }

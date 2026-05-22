@@ -11,6 +11,7 @@ import com.tam.product.dto.request.ProductDetailCreationRequest;
 import com.tam.product.dto.request.UpdateProductDetailReq;
 import com.tam.product.dto.response.ProductDetailResponse;
 import com.tam.product.entity.Product;
+import com.tam.product.entity.ProductAttribute;
 import com.tam.product.entity.ProductDetail;
 import com.tam.product.grpc.FileServiceGrpcClient;
 import com.tam.product.mapper.ProductDetailMapper;
@@ -50,7 +51,10 @@ public class ProductDetailServiceImpl implements ProductDetailService {
         try {
             ProductDetail productDetail = productDetailMapper.toProductDetail(request);
             productDetail.setProductId(product.getId());
-            // Use pre-uploaded URLs if ProductServiceImpl already handled the upload
+
+            List<ProductAttribute> attrs = productDetailMapper.toProductAttributeList(request.getAttributes());
+            productDetail.setAttributes(attrs != null ? attrs : new ArrayList<>());
+
             List<String> images =
                     (request.getImages() != null && !request.getImages().isEmpty())
                             ? request.getImages()
@@ -79,20 +83,14 @@ public class ProductDetailServiceImpl implements ProductDetailService {
                     ProductDetail blank = new ProductDetail();
                     blank.setProductId(new ObjectId(productId));
                     blank.setImages(new ArrayList<>());
+                    blank.setAttributes(new ArrayList<>());
                     return blank;
                 });
 
-        if (request.getProcessor() != null) existing.setProcessor(request.getProcessor());
-        if (request.getRam() != null) existing.setRam(request.getRam());
-        if (request.getStorage() != null) existing.setStorage(request.getStorage());
-        if (request.getGraphicsCard() != null) existing.setGraphicsCard(request.getGraphicsCard());
-        if (request.getPowerSupply() != null) existing.setPowerSupply(request.getPowerSupply());
-        if (request.getMotherboard() != null) existing.setMotherboard(request.getMotherboard());
-        if (request.getCase_() != null) existing.setCase_(request.getCase_());
-        if (request.getCoolingSystem() != null) existing.setCoolingSystem(request.getCoolingSystem());
-        if (request.getOperatingSystem() != null) existing.setOperatingSystem(request.getOperatingSystem());
+        if (request.getAttributes() != null) {
+            existing.setAttributes(productDetailMapper.toProductAttributeList(request.getAttributes()));
+        }
 
-        // Use client-provided image list as the base (handles deletions); fall back to DB list
         List<String> baseImages = request.getImages() != null
                 ? new ArrayList<>(request.getImages())
                 : new ArrayList<>(existing.getImages() != null ? existing.getImages() : List.of());

@@ -1,5 +1,6 @@
 package com.tam.product.dto.response;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.*;
@@ -12,14 +13,9 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProductDetailResponse {
     String productId;
-    String processor;
-    String ram;
-    String storage;
-    String graphicsCard;
-    String powerSupply;
-    String motherboard;
-    String case_;
-    String coolingSystem;
-    String operatingSystem;
+
+    @Builder.Default
+    List<ProductAttributeResponse> attributes = new ArrayList<>();
+
     List<String> images;
 }

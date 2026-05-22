@@ -1,16 +1,11 @@
 package com.tam.order.dto.response;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.tam.order.entity.CartItem;
 import com.tam.order.entity.OrderStatus;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @Data
@@ -18,15 +13,15 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderResponse {
-    String id;
+    Long id;
     String customerId;
+    String identityUserId;
     String shipAddress;
-    String orderDate;
+    LocalDateTime orderDate;
     String currency;
-    List<CartItem> items;
     double totalPrice;
     boolean isPaid;
     OrderStatus orderStatus;
+    List<OrderItemResponse> items;
 }
