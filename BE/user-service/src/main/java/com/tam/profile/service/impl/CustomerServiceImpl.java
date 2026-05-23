@@ -175,7 +175,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public Page<CustomerResponse> getAllCustomers(Pageable pageable) {
         log.info("Getting all customers with pagination: {}", pageable);
 

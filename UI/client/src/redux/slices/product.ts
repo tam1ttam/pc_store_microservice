@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchProducts, fetchProductDetail } from "../thunks/product";
+import { fetchProducts, fetchProductDetail, fetchProductsByCategory, fetchProductsByCategories } from "../thunks/product";
 
 export interface Supplier {
     name: string;
@@ -146,6 +146,46 @@ const productSlice = createSlice({
             .addCase(fetchProductDetail.rejected, (state, action) => {
                 state.productDetailLoading = false;
                 state.productDetailError = (action.payload as string) || "Không thể tải thông tin sản phẩm";
+            })
+            .addCase(fetchProductsByCategory.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchProductsByCategory.fulfilled, (state, action: PayloadAction<ProductsResponse>) => {
+                state.loading = false;
+                state.products = action.payload.content;
+                state.pagination = {
+                    currentPage: action.payload.number,
+                    totalPages: action.payload.totalPages,
+                    totalElements: action.payload.totalElements,
+                    pageSize: action.payload.size,
+                    first: action.payload.first,
+                    last: action.payload.last
+                };
+            })
+            .addCase(fetchProductsByCategory.rejected, (state, action) => {
+                state.loading = false;
+                state.error = (action.payload as string) || "Không thể tải sản phẩm theo danh mục";
+            })
+            .addCase(fetchProductsByCategories.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchProductsByCategories.fulfilled, (state, action: PayloadAction<ProductsResponse>) => {
+                state.loading = false;
+                state.products = action.payload.content;
+                state.pagination = {
+                    currentPage: action.payload.number,
+                    totalPages: action.payload.totalPages,
+                    totalElements: action.payload.totalElements,
+                    pageSize: action.payload.size,
+                    first: action.payload.first,
+                    last: action.payload.last
+                };
+            })
+            .addCase(fetchProductsByCategories.rejected, (state, action) => {
+                state.loading = false;
+                state.error = (action.payload as string) || "Không thể tải sản phẩm theo danh mục";
             });
     }
 });

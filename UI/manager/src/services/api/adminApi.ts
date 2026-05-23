@@ -27,6 +27,19 @@ export const adminApi = {
         return del(`${ENDPOINTS.DELETE_PRODUCT}/${productId}`, {}, token);
     },
 
+    // Categories
+    listCategories: () => get(ENDPOINTS.CATEGORIES),
+    createCategory: (name: string) => post(ENDPOINTS.CATEGORIES, { name }),
+    deleteCategory: (id: string) => del(`${ENDPOINTS.CATEGORIES}/${id}`, {}),
+    listProductsByCategories: (categories: string[], page: number = 0) => {
+        const qs = categories.map(c => `names=${encodeURIComponent(c)}`).join("&");
+        return get(`${ENDPOINTS.PRODUCTS_BY_CATEGORIES}?${qs}&page=${page}`);
+    },
+    getCategoryCounts: (categoryNames: string[]) => {
+        const qs = categoryNames.map(c => `names=${encodeURIComponent(c)}`).join("&");
+        return get(`${ENDPOINTS.PRODUCTS_CATEGORY_COUNTS}?${qs}`);
+    },
+
     // Vouchers
     listVouchers: () => get(ENDPOINTS.VOUCHER.LIST),
     getVoucher: (id: number) => get(ENDPOINTS.VOUCHER.GET_BY_ID(id)),

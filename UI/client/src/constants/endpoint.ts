@@ -33,12 +33,14 @@ const ENDPOINT = {
     LIST_CUSTOMER:  `${USER_SVC}/api/admin/customers`,
 
     // ── Product-service ──────────────────────────────────────────────────────
-    PRODUCTS:      `${PRODUCT_SVC}/products`,
-    PRODUCT_DETAIL:`${PRODUCT_SVC}/product-detail`,
-    LIST_PRODUCT:  `${PRODUCT_SVC}/products`,
-    ADD_PRODUCT:   `${PRODUCT_SVC}/products/add`,
-    UPDATE_PRODUCT:`${PRODUCT_SVC}/products/update`, // append /{productId}
-    DELETE_PRODUCT:`${PRODUCT_SVC}/products/delete`, // append /{productId}
+    PRODUCTS:          `${PRODUCT_SVC}/products`,
+    PRODUCTS_CATEGORY: `${PRODUCT_SVC}/products/category`,
+    PRODUCTS_BY_CATEGORIES: `${PRODUCT_SVC}/products/by-categories`,
+    PRODUCT_DETAIL:    `${PRODUCT_SVC}/product-detail`,
+    LIST_PRODUCT:      `${PRODUCT_SVC}/products`,
+    ADD_PRODUCT:       `${PRODUCT_SVC}/products/add`,
+    UPDATE_PRODUCT:    `${PRODUCT_SVC}/products/update`, // append /{productId}
+    DELETE_PRODUCT:    `${PRODUCT_SVC}/products/delete`, // append /{productId}
 
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER:                `${ORDER_SVC}/api/orders`,

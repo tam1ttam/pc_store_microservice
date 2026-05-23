@@ -30,4 +30,10 @@ public interface ProductRepository extends MongoRepository<Product, ObjectId> {
 
     @Query("{ 'price': { $gte: ?0, $lte: ?1 } }")
     Page<Product> findByPriceAfterDiscountBetween(double minPrice, double maxPrice, Pageable pageable);
+
+    @Query("{ 'category': { $regex: ?0, $options: 'i' } }")
+    Page<Product> findByCategoryIgnoreCase(String category, Pageable pageable);
+
+    @Query("{ 'category': { $in: ?0 } }")
+    Page<Product> findByCategoryIn(List<String> categories, Pageable pageable);
 }

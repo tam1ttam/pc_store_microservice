@@ -16,6 +16,7 @@ interface ParsedProduct {
     price: number;
     unit: string;
     inStock: number;
+    category: string;
     supplier: { name: string; address: string };
     attributes: { name: string; value: string; unit: string; description: string }[];
 }
@@ -43,6 +44,7 @@ const FIXED_HEADERS = [
     "Số lượng kho",
     "Nhà cung cấp",
     "Địa chỉ NCC",
+    "Danh mục",
 ];
 const TEMPLATE_ATTR_COUNT = 5;
 
@@ -71,6 +73,7 @@ function downloadTemplate() {
         100,
         "Intel",
         "USA",
+        "PC",
         "Số nhân",
         "24",
         "",
@@ -110,7 +113,7 @@ function parseRow(row: any[]): ParsedProduct | null {
 
     const attributes: ParsedProduct["attributes"] = [];
     for (let i = 0; i < 20; i++) {
-        const base = 7 + i * 4;
+        const base = 8 + i * 4; // col 8+ after adding "Danh mục" at col 7
         const attrName = String(row[base] ?? "").trim();
         if (!attrName) continue;
         attributes.push({
@@ -131,6 +134,7 @@ function parseRow(row: any[]): ParsedProduct | null {
             name: String(row[5] ?? "").trim(),
             address: String(row[6] ?? "").trim(),
         },
+        category: String(row[7] ?? "").trim(),
         attributes,
     };
 }
@@ -248,6 +252,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                     price: p.price,
                     unit: p.unit,
                     inStock: p.inStock,
+                    category: p.category || undefined,
                     supplier: p.supplier,
                     productDetailCreationRequest: {
                         attributes: p.attributes.filter((a) => a.name),

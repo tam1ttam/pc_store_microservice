@@ -5,8 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/api/adminApi";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Ticket, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Ticket, Trash, User, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 type AccessType = "PUBLIC" | "PRIVATE";
 
@@ -67,6 +67,13 @@ export default function Voucher() {
     const [isLoading, setIsLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
+    // User picker state
+    const [userSearch, setUserSearch] = useState("");
+    const [userResults, setUserResults] = useState<any[]>([]);
+    const [isSearchingUser, setIsSearchingUser] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<{ id: string; display: string } | null>(null);
+    const userSearchTimer = useRef<any>(null);
+
     useEffect(() => {
         fetchVouchers();
     }, []);
@@ -86,6 +93,41 @@ export default function Voucher() {
     const reset = () => {
         setForm(emptyForm());
         setEditingId(null);
+        setUserSearch("");
+        setUserResults([]);
+        setSelectedUser(null);
+    };
+
+    const handleUserSearchChange = (value: string) => {
+        setUserSearch(value);
+        clearTimeout(userSearchTimer.current);
+        if (!value.trim()) { setUserResults([]); return; }
+        userSearchTimer.current = setTimeout(async () => {
+            setIsSearchingUser(true);
+            try {
+                const res = await adminApi.searchCustomers(value.trim());
+                setUserResults(res.data.result?.content ?? []);
+            } catch {
+                setUserResults([]);
+            } finally {
+                setIsSearchingUser(false);
+            }
+        }, 400);
+    };
+
+    const selectUser = (u: any) => {
+        set("userId", u.id);
+        setSelectedUser({
+            id: u.id,
+            display: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.userName,
+        });
+        setUserSearch("");
+        setUserResults([]);
+    };
+
+    const clearSelectedUser = () => {
+        set("userId", "");
+        setSelectedUser(null);
     };
 
     const handleOpen = (v?: VoucherItem) => {
@@ -103,6 +145,11 @@ export default function Voucher() {
                 accessType: v.accessType ?? "PUBLIC",
                 userId: v.userId ?? "",
             });
+            if (v.accessType === "PRIVATE" && v.userId) {
+                setSelectedUser({ id: v.userId, display: v.userId });
+            } else {
+                setSelectedUser(null);
+            }
         } else {
             reset();
         }
@@ -231,18 +278,59 @@ export default function Voucher() {
                                 />
                             </div>
 
-                            {/* User ID (private only) */}
+                            {/* User picker (private only) */}
                             {form.accessType === "PRIVATE" && (
                                 <div className="grid gap-2">
-                                    <Label>Identity User ID *</Label>
-                                    <Input
-                                        value={form.userId}
-                                        onChange={(e) => set("userId", e.target.value)}
-                                        placeholder="User ID từ identity-service (JWT sub)"
-                                    />
-                                    <p className="text-xs text-gray-500">
-                                        Lấy trong bảng users của identity-service hoặc decode JWT của user.
-                                    </p>
+                                    <Label>Người dùng *</Label>
+
+                                    {selectedUser ? (
+                                        <div className="flex items-center gap-2 p-2.5 rounded-md border border-purple-200 bg-purple-50">
+                                            <User className="w-4 h-4 text-purple-500 shrink-0" />
+                                            <span className="text-sm font-medium text-purple-800 flex-1 truncate">
+                                                {selectedUser.display}
+                                            </span>
+                                            <button type="button" onClick={clearSelectedUser} className="p-0.5 hover:text-red-500 transition-colors">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
+                                                <Input
+                                                    className="pl-8"
+                                                    placeholder="Tìm theo SĐT, email, tên..."
+                                                    value={userSearch}
+                                                    onChange={(e) => handleUserSearchChange(e.target.value)}
+                                                />
+                                            </div>
+                                            {(isSearchingUser || userResults.length > 0) && (
+                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                    {isSearchingUser && (
+                                                        <div className="px-3 py-2 text-sm text-gray-400">Đang tìm...</div>
+                                                    )}
+                                                    {!isSearchingUser && userResults.map((u) => (
+                                                        <button
+                                                            key={u.id}
+                                                            type="button"
+                                                            onClick={() => selectUser(u)}
+                                                            className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex flex-col border-b border-gray-100 last:border-0"
+                                                        >
+                                                            <span className="font-medium text-gray-800">
+                                                                {`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.userName}
+                                                            </span>
+                                                            <span className="text-xs text-gray-400">
+                                                                {u.phoneNumber} {u.email ? `· ${u.email}` : ""}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                    {!isSearchingUser && userSearch && userResults.length === 0 && (
+                                                        <div className="px-3 py-2 text-sm text-gray-400">Không tìm thấy</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

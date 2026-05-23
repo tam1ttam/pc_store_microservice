@@ -69,7 +69,10 @@ public class PermissionInitConfig {
             p("PRODUCT_DELETE", "Delete a product"),
             p("PRODUCT_COUNT", "Count total products"),
             p("PRODUCT_DETAIL_GET", "Get product detail entity"),
-            p("PRODUCT_DETAIL_UPDATE", "Update product detail entity"));
+            p("PRODUCT_DETAIL_UPDATE", "Update product detail entity"),
+            p("CATEGORY_LIST", "List product categories"),
+            p("CATEGORY_CREATE", "Create a product category"),
+            p("CATEGORY_DELETE", "Delete a product category"));
 
     // ── order-service ─────────────────────────────────────────────────────────
 
@@ -156,7 +159,8 @@ public class PermissionInitConfig {
             "AI_HISTORY",
             "AI_CLEAR",
             "FILE_UPLOAD",
-            "CONVERSATION_USER_ONLINE");
+            "CONVERSATION_USER_ONLINE",
+            "CATEGORY_LIST");
 
     static final Set<String> MANAGER_ROLE_PERMISSIONS = Set.of(
             "MY_INFO",
@@ -191,7 +195,10 @@ public class PermissionInitConfig {
             "AI_CLEAR",
             "FILE_UPLOAD",
             "INTERNAL_MANAGER_LIST",
-            "INTERNAL_MANAGER_DETAILS");
+            "INTERNAL_MANAGER_DETAILS",
+            "CATEGORY_LIST",
+            "CATEGORY_CREATE",
+            "CATEGORY_DELETE");
 
     // ADMIN gets everything — built dynamically from all lists
 

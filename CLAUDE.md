@@ -381,6 +381,31 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 **Lưu ý migration**: Dữ liệu `ProductDetail` cũ trong MongoDB vẫn còn các field cứng — sẽ được bỏ qua (MongoDB schemaless). Sản phẩm mới sẽ dùng `attributes`.
 
+### [DONE] Manager — multi-category filter + category management UI + fix 403
+
+**BE — `product-service`**
+- `ProductRepository`: thêm `findByCategoryIn(List<String> categories, Pageable pageable)` với `@Query("{ 'category': { $in: ?0 } }")`.
+- `ProductService` + `ProductServiceImpl`: thêm `getProductsByCategories(List<String>, int, int)` và `countProductsByCategories(List<String>)` (dùng `mongoTemplate.count` per-category).
+- `ProductController`: thêm `GET /products/by-categories?names=...&page=` và `GET /products/category-counts?names=...`.
+
+**FE — `UI/manager`**
+- `endpoint.ts`: thêm `PRODUCTS_BY_CATEGORIES`, `PRODUCTS_CATEGORY_COUNTS`.
+- `adminApi.ts`: thêm `listProductsByCategories(categories, page)` và `getCategoryCounts(categoryNames)` — build URL thủ công với repeated `names=` params (Spring `@RequestParam List<String>` không nhận `names[0]=`).
+- `Admin/Product.tsx`:
+  - Multi-select dropdown filter theo danh mục (checkbox, click-outside đóng).
+  - Filter chips hiển thị danh mục đang chọn, nút xóa từng chip.
+  - `loadProducts(page, catFilters)`: nếu có filter → `listProductsByCategories`, ngược lại `listProducts`.
+  - Category tab: search input, scrollable list `max-h-[calc(100vh-280px)]`, count badge per item, "X / Y danh mục" footer.
+  - "Thêm danh mục" input chuyển lên header (giống tab sản phẩm), bỏ `pt-24`.
+
+**BE — `user-service`** — fix 403 MANAGER gọi `GET /api/admin/customers`
+- `CustomerServiceImpl.getAllCustomers`: đổi `@PreAuthorize("hasRole('ADMIN')")` → `@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")`.
+- Root cause: controller cho phép MANAGER nhưng service method chặn lại → `AccessDeniedException` → `GlobalExceptionHandler` trả code 1007.
+
+**FE — `UI/client`**
+- `product.ts` slice: thêm `fetchProductsByCategories` thunk + reducers.
+- `Product.tsx`: dùng `fetchProductsByCategories` khi `selectedCategories.length > 0` (hỗ trợ multi-select thay cho single).
+
 ### [DONE] order-service — Cart, Order, Voucher (BE + FE client)
 
 **BE — `order-service`** (migrate MongoDB → MySQL, db `orderservice`)
@@ -412,7 +437,7 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
 
 ## primary
-1. Chức năng up file để tạo product trong manager, hãy hiện thực nó dựa trên luồng tạo product đơn lẻ, ảnh thay bằng url có sẵn. Các trường cố định thì luôn để đúng thứ tự, còn các trường có thể tùy biến (ProductDetail) thì sẽ tùy chọn ở các cột tiếp theo. Có thể đọc được file excel (upload lên hoặc đọc từ link file excel trên google drive), google sheet. Vẫn giữ nguyên chức năng tải file template mẫu 
+1. Chức năng up file để tạo product trong manager, hãy hiện thực nó dựa trên luồng tạo product đơn lẻ, ảnh thay bằng url có sẵn. Các trường cố định (model Product trong product service) thì luôn để đúng thứ tự, còn các trường có thể tùy biến (ProductDetail) thì sẽ tùy chọn ở các cột tiếp theo. Có thể đọc được file excel (upload lên hoặc đọc từ link file excel trên google drive), google sheet. Vẫn giữ nguyên chức năng tải file template mẫu 
 2. voucher hiện tại đang là tính theo lượt sử dụng chứ ko phải tính theo số lượng voucher mà mỗi người dùng có. Hãy cải tiến phần voucher, tách ra thành public voucher và private voucher (dùng type để phân biệt). Gợi ý như sau
     - Voucher công khai 
     Có một mã code duy nhất (ví dụ: SUMMER2025)
@@ -422,7 +447,7 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
     - Voucher cá nhân ()
     Mỗi user được cấp một mã riêng (ví dụ: USR-TAM-XK92)
-    Chỉ user đó mới dùng được (gắn với userId hoặc email)
+    Chỉ user đó mới dùng được (gắn với sdt hoặc email)
     Thường có usageLimit, dùng xong là hết, tự xóa khỏi db
     Phát sinh từ: tặng quà, hoàn tiền, referral, loyalty reward,...
     - Entity voucher sẽ có thêm 1 field là userId (để phân biệt là public hay private voucher, có thể null được)

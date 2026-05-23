@@ -37,6 +37,9 @@ const ENDPOINT = {
     ADD_PRODUCT: `${PRODUCT_SVC}/products/add`,
     UPDATE_PRODUCT: `${PRODUCT_SVC}/products/update`, // append /{productId}
     DELETE_PRODUCT: `${PRODUCT_SVC}/products/delete`, // append /{productId}
+    CATEGORIES: `${PRODUCT_SVC}/categories`,
+    PRODUCTS_BY_CATEGORIES: `${PRODUCT_SVC}/products/by-categories`,
+    PRODUCTS_CATEGORY_COUNTS: `${PRODUCT_SVC}/products/category-counts`,
 
     // ── Voucher (order-service) ──────────────────────────────────────────────
     VOUCHER: {

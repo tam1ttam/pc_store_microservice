@@ -108,4 +108,27 @@ public class ProductController {
                 .result(productService.countProducts())
                 .build();
     }
+
+    @GetMapping("/category")
+    public ApiResponse<Page<Product>> getProductsByCategory(
+            @RequestParam String name, @RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.<Page<Product>>builder()
+                .result(productService.getProductsByCategory(name, page, size))
+                .build();
+    }
+
+    @GetMapping("/by-categories")
+    public ApiResponse<Page<Product>> getProductsByCategories(
+            @RequestParam List<String> names, @RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.<Page<Product>>builder()
+                .result(productService.getProductsByCategories(names, page, size))
+                .build();
+    }
+
+    @GetMapping("/category-counts")
+    public ApiResponse<java.util.Map<String, Long>> getCategoryCounts(@RequestParam List<String> names) {
+        return ApiResponse.<java.util.Map<String, Long>>builder()
+                .result(productService.countProductsByCategories(names))
+                .build();
+    }
 }

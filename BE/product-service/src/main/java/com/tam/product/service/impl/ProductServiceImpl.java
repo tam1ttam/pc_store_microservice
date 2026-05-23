@@ -256,4 +256,28 @@ public class ProductServiceImpl implements ProductService {
     public long countProducts() {
         return productRepository.count();
     }
+
+    @Override
+    public Page<Product> getProductsByCategory(String category, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "_id"));
+        return productRepository.findByCategoryIgnoreCase(category, pageable);
+    }
+
+    @Override
+    public Page<Product> getProductsByCategories(List<String> categories, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "_id"));
+        return productRepository.findByCategoryIn(categories, pageable);
+    }
+
+    @Override
+    public java.util.Map<String, Long> countProductsByCategories(List<String> categories) {
+        java.util.Map<String, Long> result = new java.util.HashMap<>();
+        for (String category : categories) {
+            org.springframework.data.mongodb.core.query.Query q = new org.springframework.data.mongodb.core.query.Query(
+                    org.springframework.data.mongodb.core.query.Criteria.where("category")
+                            .is(category));
+            result.put(category, mongoTemplate.count(q, Product.class));
+        }
+        return result;
+    }
 }

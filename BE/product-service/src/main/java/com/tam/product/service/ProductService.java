@@ -38,4 +38,10 @@ public interface ProductService {
     Page<Product> getProductByName(String name);
 
     long countProducts();
+
+    Page<Product> getProductsByCategory(String category, int page, int size);
+
+    Page<Product> getProductsByCategories(List<String> categories, int page, int size);
+
+    java.util.Map<String, Long> countProductsByCategories(List<String> categories);
 }

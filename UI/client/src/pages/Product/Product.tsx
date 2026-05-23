@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
-import { fetchProducts } from "@/redux/thunks/product";
+import { fetchProducts, fetchProductsByCategories } from "@/redux/thunks/product";
 import { AppDispatch, RootState } from "@/redux/store";
 import ProductCard from "./components/ProductCard";
 import ProductSkeleton from "./components/ProductSkeleton";
@@ -11,41 +12,46 @@ import { removeAccents } from "@/utils/stringUtils";
 
 const ProductsPage = () => {
     const dispatch = useDispatch<AppDispatch>();
+    const [searchParams] = useSearchParams();
 
     // Lấy state từ Redux (products này là 1 trang 10 items từ server)
     const { products, loading, error, pagination } = useSelector((state: RootState) => state.product);
 
-    // Filter states
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    // Filter states — pre-select category from URL ?category=X
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+        const cat = searchParams.get("category");
+        return cat ? [cat] : [];
+    });
     const [searchQuery, setSearchQuery] = useState("");
     const [showFilters, setShowFilters] = useState(false);
     const [sortBy, setSortBy] = useState("newest");
 
-    // Fetch dữ liệu theo phân trang bình thường
+    // Fetch khi category thay đổi (bao gồm lần đầu load từ URL param)
     useEffect(() => {
-        dispatch(fetchProducts({ page: 0, size: 10 }));
-    }, [dispatch]);
+        if (selectedCategories.length > 0) {
+            dispatch(fetchProductsByCategories({ categories: selectedCategories, page: 0 }));
+        } else {
+            dispatch(fetchProducts({ page: 0, size: 10 }));
+        }
+    }, [selectedCategories, dispatch]);
 
     // --- LOGIC LỌC TRÊN TRANG HIỆN TẠI ---
     const displayedProducts = useMemo(() => {
         if (!products) return [];
 
-        // 1. Lọc và Tìm kiếm trên danh sách hiện có
+        // Khi có category được chọn: backend đã filter → chỉ cần search + sort client-side
+        const backendFiltered = selectedCategories.length > 0;
+
         let filtered = products.filter((product) => {
             const productNameNorm = removeAccents(product.name);
             const searchNorm = removeAccents(searchQuery);
 
-            // Check Search
-            const matchesSearch = productNameNorm.includes(searchNorm);
+            const matchesSearch = !searchQuery || productNameNorm.includes(searchNorm);
 
-            // Check Category
-            let matchesCategory = true;
-            if (selectedCategories.length > 0) {
-                matchesCategory = selectedCategories.some((catName) => {
-                    const keywords = CATEGORY_KEYWORDS[catName] || [removeAccents(catName)];
-                    return keywords.some((kw) => productNameNorm.includes(kw));
-                });
-            }
+            const matchesCategory = backendFiltered || selectedCategories.length === 0 || selectedCategories.some((catName) => {
+                const keywords = CATEGORY_KEYWORDS[catName] || [removeAccents(catName)];
+                return keywords.some((kw) => productNameNorm.includes(kw));
+            });
 
             return matchesSearch && matchesCategory;
         });
@@ -69,7 +75,11 @@ const ProductsPage = () => {
     }
 
     const handlePageChange = (newPage: number) => {
-        dispatch(fetchProducts({ page: newPage, size: pagination.pageSize }));
+        if (selectedCategories.length > 0) {
+            dispatch(fetchProductsByCategories({ categories: selectedCategories, page: newPage }));
+        } else {
+            dispatch(fetchProducts({ page: newPage, size: pagination.pageSize }));
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 

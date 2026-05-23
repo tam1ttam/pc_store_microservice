@@ -18,6 +18,7 @@ public class ProductCreationRequest {
     double price;
     String unit;
     int inStock;
+    String category;
     Supplier supplier;
     ProductDetailCreationRequest productDetailCreationRequest;
 }
