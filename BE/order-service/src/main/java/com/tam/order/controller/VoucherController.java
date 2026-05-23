@@ -64,9 +64,10 @@ public class VoucherController {
     // ── Client operations (/vouchers) ─────────────────────────────────────────
 
     @GetMapping("/vouchers")
-    public ApiResponse<List<VoucherResponse>> getAvailable() {
+    public ApiResponse<List<VoucherResponse>> getAvailable(@AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
         return ApiResponse.<List<VoucherResponse>>builder()
-                .result(voucherService.getAll())
+                .result(voucherService.getAvailableForUser(userId))
                 .build();
     }
 
@@ -74,7 +75,7 @@ public class VoucherController {
     public ApiResponse<Order> applyVoucher(
             @AuthenticationPrincipal Jwt jwt, @RequestBody @Valid ApplyVoucherRequest request) {
         return ApiResponse.<Order>builder()
-                .result(voucherService.applyVoucher(request))
+                .result(voucherService.applyVoucher(request, jwt.getSubject()))
                 .build();
     }
 
@@ -82,7 +83,7 @@ public class VoucherController {
     public ApiResponse<Order> unapplyVoucher(
             @AuthenticationPrincipal Jwt jwt, @RequestParam Long orderId, @RequestParam String voucherCode) {
         return ApiResponse.<Order>builder()
-                .result(voucherService.unapplyVoucher(orderId, voucherCode))
+                .result(voucherService.unapplyVoucher(orderId, voucherCode, jwt.getSubject()))
                 .build();
     }
 }

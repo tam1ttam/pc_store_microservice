@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { getCart, removeCartItem } from "@/redux/thunks/cart";
 import { cartApi } from "@/services/api/cartApi";
-import { Box, Loader2, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Box, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,7 +18,6 @@ function Cart() {
 
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [quantities, setQuantities] = useState<Record<number, number>>({});
-    const [updatingId, setUpdatingId] = useState<number | null>(null);
 
     useEffect(() => {
         dispatch(getCart());
@@ -61,20 +60,14 @@ function Cart() {
         [items, selectedIds, quantities]
     );
 
-    const handleChangeQuantity = async (item: CartItem, next: number) => {
+    const handleChangeQuantity = (item: CartItem, next: number) => {
         if (next < 1) return;
         const prev = quantities[item.id] ?? item.quantity;
         setQuantities((q) => ({ ...q, [item.id]: next }));
-        setUpdatingId(item.id);
-        try {
-            await cartApi.upsertItem(item.productId, item.productName, item.productPrice, next, item.productImage);
-            dispatch(getCart());
-        } catch {
+        cartApi.upsertItem(item.productId, item.productName, item.productPrice, next, item.productImage).catch(() => {
             setQuantities((q) => ({ ...q, [item.id]: prev }));
             toast({ variant: "destructive", title: "Cập nhật số lượng thất bại" });
-        } finally {
-            setUpdatingId(null);
-        }
+        });
     };
 
     const handleRemove = async (itemId: number) => {
@@ -143,7 +136,6 @@ function Cart() {
                     <div className="space-y-2 mb-2">
                         {items.map((item) => {
                             const qty = quantities[item.id] ?? item.quantity;
-                            const isUpdating = updatingId === item.id;
                             return (
                                 <div
                                     key={item.id}
@@ -185,19 +177,16 @@ function Cart() {
                                             size="icon"
                                             className="h-7 w-7"
                                             onClick={() => handleChangeQuantity(item, qty - 1)}
-                                            disabled={isUpdating || qty <= 1}
+                                            disabled={qty <= 1}
                                         >
                                             <Minus className="h-3 w-3" />
                                         </Button>
-                                        <span className="w-8 text-center text-sm font-medium">
-                                            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : qty}
-                                        </span>
+                                        <span className="w-8 text-center text-sm font-medium">{qty}</span>
                                         <Button
                                             variant="outline"
                                             size="icon"
                                             className="h-7 w-7"
                                             onClick={() => handleChangeQuantity(item, qty + 1)}
-                                            disabled={isUpdating}
                                         >
                                             <Plus className="h-3 w-3" />
                                         </Button>

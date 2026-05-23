@@ -4,7 +4,9 @@
       "Bash(Get-ChildItem -Path \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\" -Recurse)",
       "Bash(xargs grep -l \"permitAll\\\\|permit-all\\\\|SecurityConfig\")",
       "Bash(xargs grep -l \"SecurityFilterChain\\\\|HttpSecurity\\\\|permit\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(xargs grep -l \"PreAuthorize\\\\|hasAuthority\\\\|hasRole\")",
+      "Bash(xargs grep -l \"SecurityConfig\\\\|SecurityFilterChain\")"
     ]
   }
 }

@@ -18,10 +18,8 @@ export interface CartItemWithProduct extends CartItem {
         id: string;
         name: string;
         img: string;
-        priceAfterDiscount: number;
-        originalPrice: number;
-        discountPercent: number;
-        priceDiscount?: number;
+        price: number;
+        unit?: string;
         inStock?: number;
         supplier?: {
             name?: string;

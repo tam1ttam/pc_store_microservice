@@ -25,10 +25,8 @@ public class Product {
 
     String name;
     String img;
-    double priceAfterDiscount;
-    double originalPrice;
-    double discountPercent;
-    double priceDiscount;
+    double price;
+    String unit;
     int inStock;
     Supplier supplier;
     ProductDetail productDetail;

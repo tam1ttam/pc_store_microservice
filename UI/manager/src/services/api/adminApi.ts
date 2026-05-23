@@ -27,6 +27,13 @@ export const adminApi = {
         return del(`${ENDPOINTS.DELETE_PRODUCT}/${productId}`, {}, token);
     },
 
+    // Vouchers
+    listVouchers: () => get(ENDPOINTS.VOUCHER.LIST),
+    getVoucher: (id: number) => get(ENDPOINTS.VOUCHER.GET_BY_ID(id)),
+    createVoucher: (data: any) => post(ENDPOINTS.VOUCHER.CREATE, data),
+    updateVoucher: (id: number, data: any) => put(ENDPOINTS.VOUCHER.UPDATE(id), data),
+    deleteVoucher: (id: number) => del(ENDPOINTS.VOUCHER.DELETE(id), {}),
+
     // Orders
     listOrders: (page: number = 0) => {
         return get(`${ENDPOINTS.LIST_ORDER}?page=${page}`);

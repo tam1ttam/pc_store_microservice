@@ -2,6 +2,7 @@ package com.tam.order.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.tam.order.entity.VoucherAccessType;
 import com.tam.order.entity.VoucherType;
 
 import lombok.*;
@@ -23,4 +24,7 @@ public class VoucherResponse {
     LocalDateTime expiredAt;
     Boolean isActive;
     VoucherType voucherType;
+    VoucherAccessType accessType;
+    String userId;
+    Integer maxUsagePerUser;
 }

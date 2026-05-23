@@ -18,7 +18,9 @@ public interface VoucherService {
 
     List<VoucherResponse> getAll();
 
-    Order applyVoucher(ApplyVoucherRequest request);
+    List<VoucherResponse> getAvailableForUser(String userId);
 
-    Order unapplyVoucher(Long orderId, String voucherCode);
+    Order applyVoucher(ApplyVoucherRequest request, String userId);
+
+    Order unapplyVoucher(Long orderId, String voucherCode, String userId);
 }

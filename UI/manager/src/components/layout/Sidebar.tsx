@@ -4,6 +4,7 @@ import {
     Package,
     Users,
     ShoppingCart,
+    Ticket,
     Menu,
     X,
     LayoutDashboard,
@@ -28,6 +29,11 @@ export default function Sidebar() {
             label: "Quản lý đơn hàng",
             href: "/admin/orders",
             icon: ShoppingCart,
+        },
+        {
+            label: "Quản lý Voucher",
+            href: "/admin/vouchers",
+            icon: Ticket,
         },
     ];
 

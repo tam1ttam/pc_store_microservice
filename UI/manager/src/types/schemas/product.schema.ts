@@ -16,13 +16,8 @@ export const productSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1, "Tên sản phẩm không được để trống"),
     img: z.string(),
-    priceAfterDiscount: z.number().min(0, "Giá sau giảm không được âm"),
-    originalPrice: z.number().min(0, "Giá gốc không được âm"),
-    discountPercent: z
-        .number()
-        .min(0, "Phần trăm giảm giá không được âm")
-        .max(100, "Phần trăm giảm giá không được quá 100%"),
-    priceDiscount: z.number().min(0, "Số tiền giảm giá không được âm"),
+    price: z.number().min(0, "Giá không được âm"),
+    unit: z.string().optional(),
     supplier: supplierSchema,
     inStock: z.number().min(0, "Số lượng tồn kho không được âm"),
     updateDetail: z.boolean().optional()

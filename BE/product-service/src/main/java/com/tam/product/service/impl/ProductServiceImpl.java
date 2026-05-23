@@ -209,15 +209,13 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<Product> getProductsByPageAsc(int page, int size) {
-        Pageable pageable =
-                PageRequest.of(page, size, Sort.by("priceAfterDiscount").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("price").ascending());
         return productRepository.findAllBy(pageable);
     }
 
     @Override
     public Page<Product> getProductsByPageDesc(int page, int size) {
-        Pageable pageable =
-                PageRequest.of(page, size, Sort.by("priceAfterDiscount").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("price").descending());
         return productRepository.findAllBy(pageable);
     }
 

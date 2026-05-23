@@ -22,12 +22,12 @@ public interface ProductRepository extends MongoRepository<Product, ObjectId> {
 
     List<Product> findAllByName(String name);
 
-    @Query("{ 'priceAfterDiscount': { $lte: ?0 } }")
+    @Query("{ 'price': { $lte: ?0 } }")
     Page<Product> findByPriceAfterDiscountLessThanEqual(double maxPrice, Pageable pageable);
 
-    @Query("{ 'name': { $regex: ?0, $options: 'i' }, 'priceAfterDiscount': { $lte: ?1 } }")
+    @Query("{ 'name': { $regex: ?0, $options: 'i' }, 'price': { $lte: ?1 } }")
     Page<Product> findByNameContainingAndPriceLessThanEqual(String name, double maxPrice, Pageable pageable);
 
-    @Query("{ 'priceAfterDiscount': { $gte: ?0, $lte: ?1 } }")
+    @Query("{ 'price': { $gte: ?0, $lte: ?1 } }")
     Page<Product> findByPriceAfterDiscountBetween(double minPrice, double maxPrice, Pageable pageable);
 }

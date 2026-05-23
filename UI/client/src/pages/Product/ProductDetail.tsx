@@ -11,7 +11,7 @@ import {
     Minus,
     CircuitBoard,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
 } from "lucide-react";
 import { fetchProductDetail } from "@/redux/thunks/product";
 import { clearCurrentProduct } from "@/redux/slices/product";
@@ -93,7 +93,7 @@ export default function ProductDetail() {
             await cartApi.upsertItem(
                 product.id as string,
                 product.name as string,
-                product.priceAfterDiscount as number,
+                product.price as number,
                 quantity,
                 product.img as string | undefined
             );
@@ -231,27 +231,16 @@ export default function ProductDetail() {
                             </div>
 
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <div className="flex items-baseline gap-3 mb-2">
+                                <div className="flex items-baseline gap-3">
                                     <span className="text-3xl font-bold text-red-600">
                                         {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-                                            product.priceAfterDiscount
+                                            product.price
                                         )}
                                     </span>
-                                    {product.originalPrice && (
-                                        <span className="text-lg text-gray-400 line-through">
-                                            {new Intl.NumberFormat("vi-VN", {
-                                                style: "currency",
-                                                currency: "VND"
-                                            }).format(product.originalPrice)}
-                                        </span>
+                                    {product.unit && (
+                                        <span className="text-base text-gray-500">/ {product.unit}</span>
                                     )}
                                 </div>
-                                {product.discountPercent > 0 && (
-                                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 text-sm font-bold px-2.5 py-1 rounded-full">
-                                        <Minus className="w-3 h-3" />
-                                        Giảm {product.discountPercent}%
-                                    </span>
-                                )}
                             </div>
 
                             <div className="space-y-6 pt-4">

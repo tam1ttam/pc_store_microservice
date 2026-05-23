@@ -25,7 +25,7 @@ import com.tam.proto.product.v1.GetProductRequest;
 import com.tam.proto.product.v1.GetProductResponse;
 import com.tam.proto.product.v1.GetProductsByIdsRequest;
 import com.tam.proto.product.v1.GetProductsByIdsResponse;
-import com.tam.proto.product.v1.ProductDetail;
+import com.tam.proto.product.v1.ProductInfo;
 import com.tam.proto.product.v1.ProductServiceGrpc;
 import com.tam.proto.product.v1.SearchProductsRequest;
 import com.tam.proto.product.v1.SearchProductsResponse;
@@ -54,7 +54,7 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
         try {
             List<Product> products = productService.getNewestProducts(request.getLimit());
             GetNewestProductsResponse.Builder builder = GetNewestProductsResponse.newBuilder();
-            products.forEach(p -> builder.addProducts(toProductDetail(p)));
+            products.forEach(p -> builder.addProducts(toProductInfo(p)));
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -70,7 +70,7 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
         try {
             List<Product> products = productService.getBestSellingProducts(request.getLimit());
             GetBestSellingProductsResponse.Builder builder = GetBestSellingProductsResponse.newBuilder();
-            products.forEach(p -> builder.addProducts(toProductDetail(p)));
+            products.forEach(p -> builder.addProducts(toProductInfo(p)));
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -84,15 +84,17 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
     public void getProduct(GetProductRequest request, StreamObserver<GetProductResponse> responseObserver) {
         try {
             ProductResponse product = productService.getProductById(request.getProductId());
-            responseObserver.onNext(GetProductResponse.newBuilder()
+            GetProductResponse.Builder builder = GetProductResponse.newBuilder()
                     .setId(product.getId() != null ? product.getId().toString() : "")
                     .setName(product.getName())
                     .setImg(product.getImg() != null ? product.getImg() : "")
-                    .setPriceAfterDiscount(product.getPriceAfterDiscount())
-                    .setOriginalPrice(product.getOriginalPrice())
-                    .setDiscountPercent(product.getDiscountPercent())
-                    .setPriceDiscount(product.getPriceDiscount())
-                    .build());
+                    .setPrice(product.getPrice())
+                    .setUnit(product.getUnit() != null ? product.getUnit() : "");
+            if (product.getSupplier() != null) {
+                builder.setSupplier(toSupplierInfo(
+                        product.getSupplier().getName(), product.getSupplier().getAddress()));
+            }
+            responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("getProduct gRPC error", e);
@@ -109,7 +111,7 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
             request.getProductIdsList().forEach(id -> {
                 try {
                     ProductResponse p = productService.getProductById(id);
-                    builder.addProducts(toProductDetailFromResponse(p));
+                    builder.addProducts(toProductInfoFromResponse(p));
                 } catch (Exception ignored) {
                     // skip products not found
                 }
@@ -158,7 +160,7 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
         try {
             List<ProductResponse> products = productService.getProductByNameOrSupplier(request.getKeyword());
             SearchProductsResponse.Builder builder = SearchProductsResponse.newBuilder();
-            products.forEach(p -> builder.addProducts(toProductDetailFromResponse(p)));
+            products.forEach(p -> builder.addProducts(toProductInfoFromResponse(p)));
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -235,36 +237,40 @@ public class GrpcProductService extends ProductServiceGrpc.ProductServiceImplBas
                 .asRuntimeException());
     }
 
-    private ProductDetail toProductDetail(Product p) {
-        ProductDetail.Builder builder = ProductDetail.newBuilder()
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private ProductInfo toProductInfo(Product p) {
+        ProductInfo.Builder builder = ProductInfo.newBuilder()
                 .setId(p.getId().toString())
                 .setName(p.getName())
                 .setImg(p.getImg() != null ? p.getImg() : "")
-                .setPriceAfterDiscount(p.getPriceAfterDiscount())
-                .setOriginalPrice(p.getOriginalPrice())
-                .setDiscountPercent(p.getDiscountPercent())
-                .setPriceDiscount(p.getPriceDiscount());
+                .setPrice(p.getPrice())
+                .setUnit(p.getUnit() != null ? p.getUnit() : "");
         if (p.getSupplier() != null) {
-            builder.setSupplier(SupplierInfo.newBuilder()
-                    .setName(p.getSupplier().getName() != null ? p.getSupplier().getName() : "")
-                    .setAddress(
-                            p.getSupplier().getAddress() != null
-                                    ? p.getSupplier().getAddress()
-                                    : "")
-                    .build());
+            builder.setSupplier(
+                    toSupplierInfo(p.getSupplier().getName(), p.getSupplier().getAddress()));
         }
         return builder.build();
     }
 
-    private ProductDetail toProductDetailFromResponse(ProductResponse p) {
-        ProductDetail.Builder builder = ProductDetail.newBuilder()
+    private ProductInfo toProductInfoFromResponse(ProductResponse p) {
+        ProductInfo.Builder builder = ProductInfo.newBuilder()
                 .setId(p.getId() != null ? p.getId().toString() : "")
                 .setName(p.getName())
                 .setImg(p.getImg() != null ? p.getImg() : "")
-                .setPriceAfterDiscount(p.getPriceAfterDiscount())
-                .setOriginalPrice(p.getOriginalPrice())
-                .setDiscountPercent(p.getDiscountPercent())
-                .setPriceDiscount(p.getPriceDiscount());
+                .setPrice(p.getPrice())
+                .setUnit(p.getUnit() != null ? p.getUnit() : "");
+        if (p.getSupplier() != null) {
+            builder.setSupplier(
+                    toSupplierInfo(p.getSupplier().getName(), p.getSupplier().getAddress()));
+        }
         return builder.build();
+    }
+
+    private SupplierInfo toSupplierInfo(String name, String address) {
+        return SupplierInfo.newBuilder()
+                .setName(name != null ? name : "")
+                .setAddress(address != null ? address : "")
+                .build();
     }
 }

@@ -55,11 +55,9 @@ const ProductsPage = () => {
         return filtered.sort((a, b) => {
             switch (sortBy) {
                 case "price-asc":
-                    return a.priceAfterDiscount - b.priceAfterDiscount;
+                    return a.price - b.price;
                 case "price-desc":
-                    return b.priceAfterDiscount - a.priceAfterDiscount;
-                case "discount":
-                    return b.discountPercent - a.discountPercent;
+                    return b.price - a.price;
                 default:
                     return 0;
             }
@@ -120,7 +118,6 @@ const ProductsPage = () => {
                                 <option value="newest">Mới nhất</option>
                                 <option value="price-asc">Giá thấp đến cao</option>
                                 <option value="price-desc">Giá cao đến thấp</option>
-                                <option value="discount">Giảm giá nhiều nhất</option>
                             </select>
                         </div>
 

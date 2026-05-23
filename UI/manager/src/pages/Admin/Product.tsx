@@ -6,10 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { adminApi } from "@/services/api/adminApi";
-import { ProductAttribute, ProductResponse, Product as ProductType } from "@/types";
-import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash, X } from "lucide-react";
+import { Product as ProductType } from "@/types";
+import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, Pencil, Plus, Trash, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import ImportProductDialog from "./ImportProductDialog";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -31,17 +32,16 @@ const Product = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const { token } = useSelector((state: RootState) => state.auth);
 
     const initialFormData = {
         name: "",
         img: "",
-        originalPrice: 0,
-        discountPercent: 0,
+        price: 0,
+        unit: "",
         inStock: 0,
         supplier: { name: "", address: "" },
-        priceAfterDiscount: 0,
-        priceDiscount: 0,
         images: [] as string[],
         imagesUpload: [] as string[]
     };
@@ -79,19 +79,10 @@ const Product = () => {
                 }
             });
         } else {
-            const value = ["originalPrice", "discountPercent", "inStock", "priceAfterDiscount", "priceDiscount"].includes(field)
+            const value = ["price", "inStock"].includes(field)
                 ? Number(e.target.value)
                 : e.target.value;
-
-            if (field === "originalPrice" || field === "discountPercent") {
-                const originalPrice = field === "originalPrice" ? Number(e.target.value) : formData.originalPrice;
-                const discountPercent = field === "discountPercent" ? Number(e.target.value) : formData.discountPercent;
-                const priceDiscount = (originalPrice * discountPercent) / 100;
-                const priceAfterDiscount = originalPrice - priceDiscount;
-                setFormData({ ...formData, [field]: value, priceDiscount, priceAfterDiscount });
-            } else {
-                setFormData({ ...formData, [field]: value });
-            }
+            setFormData({ ...formData, [field]: value });
         }
     };
 
@@ -193,12 +184,10 @@ const Product = () => {
             setFormData({
                 name: product.name,
                 img: product.img,
-                originalPrice: product.originalPrice,
-                discountPercent: product.discountPercent,
+                price: product.price,
+                unit: product.unit ?? "",
                 inStock: product.inStock,
                 supplier: { name: product.supplier.name, address: product.supplier.address },
-                priceAfterDiscount: product.priceAfterDiscount,
-                priceDiscount: product.priceDiscount,
                 images: detail.images || [],
                 imagesUpload: []
             });
@@ -215,12 +204,10 @@ const Product = () => {
                 ...initialFormData,
                 name: product.name,
                 img: product.img,
-                originalPrice: product.originalPrice,
-                discountPercent: product.discountPercent,
+                price: product.price,
+                unit: product.unit ?? "",
                 inStock: product.inStock,
                 supplier: { name: product.supplier.name, address: product.supplier.address },
-                priceAfterDiscount: product.priceAfterDiscount,
-                priceDiscount: product.priceDiscount
             });
             setAttributes([]);
         } finally {
@@ -255,6 +242,12 @@ const Product = () => {
         <div className="container mx-auto py-6 pt-24">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Product Management</h1>
+
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsImportOpen(true)} className="gap-2">
+                        <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                        Import Excel
+                    </Button>
 
                 <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
                     <DialogTrigger asChild>
@@ -342,22 +335,14 @@ const Product = () => {
                             </div>
 
                             {/* Price fields */}
-                            <div className="grid gap-2">
-                                <Label>Original Price</Label>
-                                <Input type="number" value={formData.originalPrice} onChange={(e) => handleInputChange(e, "originalPrice")} readOnly={isReadOnly} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Discount Percent (%)</Label>
-                                <Input type="number" min="0" max="100" value={formData.discountPercent} onChange={(e) => handleInputChange(e, "discountPercent")} readOnly={isReadOnly} />
-                            </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Discount Amount</Label>
-                                    <Input type="number" value={formData.priceDiscount} disabled className="bg-gray-100" />
+                                <div className="grid gap-2">
+                                    <Label>Giá (VND)</Label>
+                                    <Input type="number" min="0" value={formData.price} onChange={(e) => handleInputChange(e, "price")} readOnly={isReadOnly} />
                                 </div>
-                                <div>
-                                    <Label>Final Price</Label>
-                                    <Input type="number" value={formData.priceAfterDiscount} disabled className="bg-gray-100" />
+                                <div className="grid gap-2">
+                                    <Label>Đơn vị tính</Label>
+                                    <Input value={formData.unit} onChange={(e) => handleInputChange(e, "unit")} placeholder="VD: cái, chiếc, bộ" readOnly={isReadOnly} />
                                 </div>
                             </div>
                             <div className="grid gap-2">
@@ -458,15 +443,22 @@ const Product = () => {
                         </div>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
+
+            <ImportProductDialog
+                open={isImportOpen}
+                onOpenChange={setIsImportOpen}
+                onImported={fetchProducts}
+            />
 
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Image</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Discount</TableHead>
+                        <TableHead>Giá</TableHead>
+                        <TableHead>Đơn vị</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Actions</TableHead>
@@ -480,9 +472,9 @@ const Product = () => {
                             </TableCell>
                             <TableCell>{product.name}</TableCell>
                             <TableCell>
-                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(product.originalPrice)}
+                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(product.price)}
                             </TableCell>
-                            <TableCell>{product.discountPercent}%</TableCell>
+                            <TableCell>{product.unit ?? "—"}</TableCell>
                             <TableCell>{product.inStock}</TableCell>
                             <TableCell>{product.supplier.name}</TableCell>
                             <TableCell>

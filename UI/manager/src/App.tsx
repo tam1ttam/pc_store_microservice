@@ -14,7 +14,7 @@ import { managerRoutes } from "./config/routers/routes";
 import { cartApi } from "./services/api/cartApi";
 import { orderApi } from "./services/api/orderApi";
 import AdminLayout from "./layouts/AdminLayout";
-import { Customer, OrderPage, Product } from "./pages/Admin";
+import { Customer, OrderPage, Product, VoucherPage } from "./pages/Admin";
 
 function App() {
     const dispatch = useDispatch();
@@ -87,6 +87,14 @@ function App() {
                         element={
                             <AdminLayout>
                                 <OrderPage />
+                            </AdminLayout>
+                        }
+                    />
+                    <Route
+                        path="/admin/vouchers"
+                        element={
+                            <AdminLayout>
+                                <VoucherPage />
                             </AdminLayout>
                         }
                     />

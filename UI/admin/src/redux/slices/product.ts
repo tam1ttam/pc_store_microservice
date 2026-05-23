@@ -6,14 +6,19 @@ export interface Supplier {
     address: string;
 }
 
+export interface ProductAttribute {
+    name: string;
+    value: string;
+    unit?: string;
+    description?: string;
+}
+
 export interface Product {
     id: string;
     name: string;
     img: string;
-    priceAfterDiscount: number;
-    originalPrice: number;
-    discountPercent: number;
-    priceDiscount: number;
+    price: number;
+    unit?: string;
     inStock: number;
     supplier: Supplier;
     updateDetail: boolean;
@@ -22,16 +27,8 @@ export interface Product {
 export interface ProductDetail {
     _id: string;
     images: string[];
-    product: String;
-    processor: string;
-    ram: string;
-    storage: string;
-    graphicsCard: string;
-    powerSupply: string;
-    motherboard: string;
-    case: string;
-    coolingSystem: string;
-    operatingSystem: string;
+    productId: string;
+    attributes: ProductAttribute[];
 }
 
 export interface Pageable {

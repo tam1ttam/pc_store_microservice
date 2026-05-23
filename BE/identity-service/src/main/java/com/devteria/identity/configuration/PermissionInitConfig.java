@@ -174,6 +174,8 @@ public class PermissionInitConfig {
             "VOUCHER_CREATE",
             "VOUCHER_UPDATE",
             "VOUCHER_DELETE",
+            "ADMIN_CUSTOMER_LIST",
+            "CONVERSATION_CREATE",
             "CONVERSATION_LIST",
             "CONVERSATION_SUPPORT_LIST",
             "CONVERSATION_CLAIM",

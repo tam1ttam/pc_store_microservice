@@ -73,14 +73,11 @@ export default function CartItem({ item, selected, onToggle, onIncrease, onDecre
 
                 <div className="flex items-center gap-3">
                     <span className="text-lg font-bold text-blue-600">
-                        {formatPrice(item.product.priceAfterDiscount)}
+                        {formatPrice(item.product.price)}
                     </span>
-                    {typeof item.product.originalPrice === "number" &&
-                        item.product.originalPrice > item.product.priceAfterDiscount && (
-                            <span className="text-sm text-gray-400 line-through">
-                                {formatPrice(item.product.originalPrice)}
-                            </span>
-                        )}
+                    {item.product.unit && (
+                        <span className="text-sm text-gray-500">/ {item.product.unit}</span>
+                    )}
                 </div>
             </div>
 

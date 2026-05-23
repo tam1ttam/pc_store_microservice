@@ -38,6 +38,15 @@ const ENDPOINT = {
     UPDATE_PRODUCT: `${PRODUCT_SVC}/products/update`, // append /{productId}
     DELETE_PRODUCT: `${PRODUCT_SVC}/products/delete`, // append /{productId}
 
+    // ── Voucher (order-service) ──────────────────────────────────────────────
+    VOUCHER: {
+        LIST: `${ORDER_SVC}/manager/vouchers`,
+        CREATE: `${ORDER_SVC}/manager/vouchers`,
+        UPDATE: (id: number) => `${ORDER_SVC}/manager/vouchers/${id}`,
+        DELETE: (id: number) => `${ORDER_SVC}/manager/vouchers/${id}`,
+        GET_BY_ID: (id: number) => `${ORDER_SVC}/manager/vouchers/${id}`,
+    },
+
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER: `${ORDER_SVC}/api/orders`,
     LIST_ORDER: `${ORDER_SVC}/api/orders`,

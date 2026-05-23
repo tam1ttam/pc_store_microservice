@@ -7,40 +7,17 @@ option java_package = "com.tam.proto.product.v1";
 option java_outer_classname = "ProductServiceProto";
 
 service ProductService {
-  // Lấy sản phẩm mới nhất
   rpc GetNewestProducts(GetNewestProductsRequest) returns (GetNewestProductsResponse);
-  
-  // Lấy sản phẩm bán chạy nhất
   rpc GetBestSellingProducts(GetBestSellingProductsRequest) returns (GetBestSellingProductsResponse);
-  
-  // Lấy thông tin chi tiết sản phẩm
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
-  
-  // Lấy nhiều sản phẩm theo danh sách ID
   rpc GetProductsByIds(GetProductsByIdsRequest) returns (GetProductsByIdsResponse);
-  
-  // Tạo sản phẩm mới
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
-  
-  // Cập nhật sản phẩm
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
-  
-  // Xóa sản phẩm
   rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
-  
-  // Tìm kiếm sản phẩm theo tên hoặc nhà cung cấp
   rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
-  
-  // Kiểm tra tính khả dụng của sản phẩm (stock)
   rpc CheckProductAvailability(CheckProductAvailabilityRequest) returns (CheckProductAvailabilityResponse);
-  
-  // Cập nhật số lượng hàng trong kho
   rpc UpdateStock(UpdateStockRequest) returns (UpdateStockResponse);
-  
-  // Kiểm tra số lượng hàng còn lại
   rpc CheckRemainingStock(CheckRemainingStockRequest) returns (CheckRemainingStockResponse);
-  
-  // Lấy chi tiết sản phẩm
   rpc GetProductDetail(GetProductDetailRequest) returns (GetProductDetailResponse);
 }
 
@@ -54,11 +31,9 @@ message GetProductResponse {
   string id = 1;
   string name = 2;
   string img = 3;
-  double priceAfterDiscount = 4;
-  double originalPrice = 5;
-  double discountPercent = 6;
-  double priceDiscount = 7;
-  SupplierInfo supplier = 8;
+  double price = 4;
+  string unit = 5;
+  SupplierInfo supplier = 6;
 }
 
 // ==================== GET NEWEST PRODUCTS MESSAGES ====================
@@ -68,7 +43,7 @@ message GetNewestProductsRequest {
 }
 
 message GetNewestProductsResponse {
-  repeated ProductDetail products = 1;
+  repeated ProductInfo products = 1;
 }
 
 // ==================== GET BEST SELLING PRODUCTS MESSAGES ====================
@@ -78,7 +53,7 @@ message GetBestSellingProductsRequest {
 }
 
 message GetBestSellingProductsResponse {
-  repeated ProductDetail products = 1;
+  repeated ProductInfo products = 1;
 }
 
 // ==================== GET PRODUCTS BY IDS MESSAGES ====================
@@ -88,18 +63,16 @@ message GetProductsByIdsRequest {
 }
 
 message GetProductsByIdsResponse {
-  repeated ProductDetail products = 1;
+  repeated ProductInfo products = 1;
 }
 
-message ProductDetail {
+message ProductInfo {
   string id = 1;
   string name = 2;
   string img = 3;
-  double priceAfterDiscount = 4;
-  double originalPrice = 5;
-  double discountPercent = 6;
-  double priceDiscount = 7;
-  SupplierInfo supplier = 8;
+  double price = 4;
+  string unit = 5;
+  SupplierInfo supplier = 6;
 }
 
 // ==================== CREATE PRODUCT MESSAGES ====================
@@ -107,19 +80,16 @@ message ProductDetail {
 message CreateProductRequest {
   string name = 1;
   string img = 2;
-  double priceAfterDiscount = 3;
-  double originalPrice = 4;
-  double discountPercent = 5;
-  double priceDiscount = 6;
-  int32 inStock = 7;
-  SupplierInfo supplier = 8;
-  ProductDetailCreationRequest productDetail = 9;
+  double price = 3;
+  string unit = 4;
+  int32 inStock = 5;
+  SupplierInfo supplier = 6;
 }
 
 message CreateProductResponse {
   bool success = 1;
   string message = 2;
-  ProductDetail product = 3;
+  ProductInfo product = 3;
 }
 
 // ==================== UPDATE PRODUCT MESSAGES ====================
@@ -128,19 +98,16 @@ message UpdateProductRequest {
   string productId = 1;
   string name = 2;
   string img = 3;
-  double priceAfterDiscount = 4;
-  double originalPrice = 5;
-  double discountPercent = 6;
-  double priceDiscount = 7;
-  int32 inStock = 8;
-  SupplierInfo supplier = 9;
-  ProductDetailCreationRequest productDetail = 10;
+  double price = 4;
+  string unit = 5;
+  int32 inStock = 6;
+  SupplierInfo supplier = 7;
 }
 
 message UpdateProductResponse {
   bool success = 1;
   string message = 2;
-  ProductDetail product = 3;
+  ProductInfo product = 3;
 }
 
 // ==================== DELETE PRODUCT MESSAGES ====================
@@ -161,7 +128,7 @@ message SearchProductsRequest {
 }
 
 message SearchProductsResponse {
-  repeated ProductDetail products = 1;
+  repeated ProductInfo products = 1;
 }
 
 // ==================== CHECK PRODUCT AVAILABILITY MESSAGES ====================
@@ -187,16 +154,11 @@ message SupplierInfo {
 
 // ==================== PRODUCT DETAIL MESSAGES ====================
 
-message ProductDetailCreationRequest {
-  string processor = 1;
-  string ram = 2;
-  string storage = 3;
-  string graphicsCard = 4;
-  string powerSupply = 5;
-  string motherboard = 6;
-  string case_ = 7;
-  string coolingSystem = 8;
-  string operatingSystem = 9;
+message ProductAttributeProto {
+  string name = 1;
+  string value = 2;
+  string unit = 3;
+  string description = 4;
 }
 
 message GetProductDetailRequest {
@@ -205,16 +167,8 @@ message GetProductDetailRequest {
 
 message GetProductDetailResponse {
   string productId = 1;
-  string processor = 2;
-  string ram = 3;
-  string storage = 4;
-  string graphicsCard = 5;
-  string powerSupply = 6;
-  string motherboard = 7;
-  string case_ = 8;
-  string coolingSystem = 9;
-  string operatingSystem = 10;
-  repeated string images = 11;
+  repeated ProductAttributeProto attributes = 2;
+  repeated string images = 3;
 }
 
 // ==================== STOCK MANAGEMENT MESSAGES ====================

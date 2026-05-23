@@ -11,10 +11,8 @@ interface Product {
     name: string;
     img?: string;
     supplier?: Supplier;
-    priceAfterDiscount: number;
-    originalPrice?: number;
-    priceDiscount?: number;
-    discountPercent?: number;
+    price: number;
+    unit?: string;
 }
 
 type Props = {
@@ -28,12 +26,6 @@ export default function ProductCard({ product }: Props) {
     return (
         <Link to={`/products/${product.id}`} className="block">
             <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-blue-500/50">
-                {typeof product.discountPercent === 'number' && product.discountPercent > 0 && (
-                    <div className="absolute top-3 left-3 z-10 bg-red-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold shadow-lg">
-                        -{product.discountPercent}%
-                    </div>
-                )}
-
                 <button className="absolute top-3 right-3 z-10 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-gray-700 shadow-lg">
                     <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 </button>
@@ -64,19 +56,12 @@ export default function ProductCard({ product }: Props) {
                     <div className="mb-3">
                         <div className="flex items-baseline gap-2">
                             <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                                {formatPrice(product.priceAfterDiscount ?? 0)}
+                                {formatPrice(product.price ?? 0)}
                             </span>
-                            {typeof product.originalPrice === 'number' && product.originalPrice > (product.priceAfterDiscount ?? 0) && (
-                                <span className="text-xs text-gray-400 dark:text-gray-500 line-through">
-                                    {formatPrice(product.originalPrice)}
-                                </span>
+                            {product.unit && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
                             )}
                         </div>
-                        {typeof product.priceDiscount === 'number' && product.priceDiscount > 0 && (
-                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                Tiết kiệm {formatPrice(product.priceDiscount)}
-                            </p>
-                        )}
                     </div>
 
                     <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">

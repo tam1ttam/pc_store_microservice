@@ -29,8 +29,10 @@ interface Voucher {
     discountPercent?: number;
     maxUsage?: number;
     usedCount?: number;
+    maxUsagePerUser?: number;
     expiredAt?: string;
     isActive?: boolean;
+    accessType?: "PUBLIC" | "PRIVATE";
 }
 
 function Checkout() {
@@ -488,7 +490,12 @@ function Checkout() {
                                 >
                                     <Ticket className="w-5 h-5 text-orange-500 shrink-0" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-sm text-orange-600">{v.code}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-semibold text-sm text-orange-600">{v.code}</p>
+                                            {v.accessType === "PRIVATE" && (
+                                                <span className="px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700 font-medium">Cá nhân</span>
+                                            )}
+                                        </div>
                                         {v.description && <p className="text-xs text-gray-500 truncate">{v.description}</p>}
                                         <p className="text-xs text-green-600 font-medium">
                                             {v.discountAmount && v.discountAmount > 0

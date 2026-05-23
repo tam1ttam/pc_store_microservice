@@ -26,7 +26,7 @@ const Home = () => {
             <ProductSlider title="Sản Phẩm Bán Chạy" type="best-selling" />
 
             {/* Slider 2: New Arrivals */}
-            <ProductSlider title="Sản Phẩm Mới Về" type="newest" />
+            <ProductSlider title="SẢN PHẨM" type="newest" />
 
             <section className="container py-14">
                 <h2 className="text-2xl font-bold tracking-tight mb-8 text-center">Categories</h2>

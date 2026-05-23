@@ -412,7 +412,22 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
 
 ## primary
-1. Chức năng up file để tạo product, hãy hiện thực nó, ảnh thay bằng url
+1. Chức năng up file để tạo product trong manager, hãy hiện thực nó dựa trên luồng tạo product đơn lẻ, ảnh thay bằng url có sẵn. Các trường cố định thì luôn để đúng thứ tự, còn các trường có thể tùy biến (ProductDetail) thì sẽ tùy chọn ở các cột tiếp theo. Có thể đọc được file excel (upload lên hoặc đọc từ link file excel trên google drive), google sheet. Vẫn giữ nguyên chức năng tải file template mẫu 
+2. voucher hiện tại đang là tính theo lượt sử dụng chứ ko phải tính theo số lượng voucher mà mỗi người dùng có. Hãy cải tiến phần voucher, tách ra thành public voucher và private voucher (dùng type để phân biệt). Gợi ý như sau
+    - Voucher công khai 
+    Có một mã code duy nhất (ví dụ: SUMMER2025)
+    Ai cũng có thể nhập và dùng
+    Mỗi lần dùng → quantity giảm đi 1
+    Có thể giới hạn thêm: mỗi user chỉ được dùng tối đa N lần
+
+    - Voucher cá nhân ()
+    Mỗi user được cấp một mã riêng (ví dụ: USR-TAM-XK92)
+    Chỉ user đó mới dùng được (gắn với userId hoặc email)
+    Thường có usageLimit, dùng xong là hết, tự xóa khỏi db
+    Phát sinh từ: tặng quà, hoàn tiền, referral, loyalty reward,...
+    - Entity voucher sẽ có thêm 1 field là userId (để phân biệt là public hay private voucher, có thể null được)
+Hãy cập nhật lại dto/service/grpc (nếu có) cho phần voucher này
+3. Shopee khi hiển thị sản phẩm ở trang chính & giá của chúng thì giá sẽ được tính sau khi apply voucher mà người dùng có thể sử dụng để áp dụng
 
 ### secondary: Notification — trigger thêm sự kiện
 

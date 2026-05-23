@@ -24,20 +24,20 @@ function Cart() {
     const dispatch = useDispatch();
     const { toast } = useToast();
     const { info: user } = useSelector((state: RootState) => state.user);
-    const [isLoading, setIsloading] = useState(false);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [address, setAddress] = useState(localStorage.getItem("addressShipping") || "");
 
     const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
     const [isOrdering, setIsOrdering] = useState(false);
+
     const [paymentMethod, setPaymentMethod] = useState<string>("ship");
 
     const totalPrice = useMemo(() => {
         return (
             items?.reduce((total, item) => {
-                if (!item?.product?.priceAfterDiscount) return total;
+                if (!item?.product?.price) return total;
                 const quantity = quantities[item.product.id as string] || item.quantity;
-                return total + item.product.priceAfterDiscount * quantity;
+                return total + item.product.price * quantity;
             }, 0) || 0
         );
     }, [items, quantities]);
@@ -84,82 +84,38 @@ function Cart() {
         }
     };
 
-    const handleDecreaseQuantity = async (productId: string) => {
+    const handleDecreaseQuantity = (productId: string) => {
         const currentQuantity = quantities[productId];
         if (currentQuantity <= 1) return;
-
-        setIsloading(true);
         setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
-
-        try {
-            const result = await cartApi.decreaseQuantity(user?.id as string, productId);
-
-            dispatch(getCartCount({ userId: user?.id as string }) as any);
-
+        cartApi.decreaseQuantity(user?.id as string, productId).then((result) => {
             if (result.data.code !== 1000) {
-                setQuantities((prev) => ({
-                    ...prev,
-                    [productId]: prev[productId] + 1
-                }));
-                toast({
-                    title: "Giảm số lượng thất bại",
-                    variant: "destructive"
-                });
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
+                toast({ title: "Giảm số lượng thất bại", variant: "destructive" });
             }
-        } catch (error) {
+        }).catch(() => {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
-            toast({
-                title: "Đã có lỗi xảy ra",
-                variant: "destructive"
-            });
-        } finally {
-            setIsloading(false);
-        }
+            toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
+        });
     };
 
-    const handleIncreaseQuantity = async (productId: string) => {
-        setIsloading(true);
+    const handleIncreaseQuantity = (productId: string) => {
         setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
-
-        try {
-            const result = await cartApi.increaseQuantity(user?.id as string, productId);
-
-            dispatch(getCartCount({ userId: user?.id as string }) as any);
-
+        cartApi.increaseQuantity(user?.id as string, productId).then((result) => {
             if (result.data.code !== 1000) {
-                setQuantities((prev) => ({
-                    ...prev,
-                    [productId]: prev[productId] - 1
-                }));
-
-                if (result.data.code === 6001) {
-                    toast({
-                        title: "Sản phẩm không đủ số lượng trong kho",
-                        variant: "destructive"
-                    });
-                } else {
-                    toast({
-                        title: "Tăng số lượng thất bại",
-                        variant: "destructive"
-                    });
-                }
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
+                toast({
+                    title: result.data.code === 6001 ? "Sản phẩm không đủ số lượng trong kho" : "Tăng số lượng thất bại",
+                    variant: "destructive"
+                });
             }
-        } catch (error: any) {
+        }).catch((error: any) => {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
-            if (error.response && error.response.data.code === 6001) {
-                toast({
-                    title: "Sản phẩm không đủ số lượng trong kho",
-                    variant: "destructive"
-                });
-            } else {
-                toast({
-                    title: "Đã có lỗi xảy ra",
-                    variant: "destructive"
-                });
-            }
-        } finally {
-            setIsloading(false);
-        }
+            toast({
+                title: error?.response?.data?.code === 6001 ? "Sản phẩm không đủ số lượng trong kho" : "Đã có lỗi xảy ra",
+                variant: "destructive"
+            });
+        });
     };
 
     const handleOrder = async () => {
@@ -288,11 +244,11 @@ function Cart() {
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="font-medium text-orange-500">
-                                                {item.product.priceAfterDiscount.toLocaleString("vi-VN")}đ
+                                                {item.product.price.toLocaleString("vi-VN")}đ
                                             </span>
-                                            <span className="text-muted-foreground line-through text-sm">
-                                                {item.product.originalPrice.toLocaleString("vi-VN")}đ
-                                            </span>
+                                            {item.product.unit && (
+                                                <span className="text-muted-foreground text-sm">/ {item.product.unit}</span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2 ">
                                             <Button
@@ -300,7 +256,7 @@ function Cart() {
                                                 size="icon"
                                                 className="h-8 w-8 cursor-pointer"
                                                 onClick={() => handleDecreaseQuantity(item.product.id as string)}
-                                                disabled={isLoading || quantities[item.product.id as string] <= 1}
+                                                disabled={quantities[item.product.id as string] <= 1}
                                             >
                                                 <Minus className="h-4 w-4" />
                                             </Button>
@@ -312,7 +268,6 @@ function Cart() {
                                                 size="icon"
                                                 className="h-8 w-8 cursor-pointer"
                                                 onClick={() => handleIncreaseQuantity(item.product.id as string)}
-                                                disabled={isLoading}
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>

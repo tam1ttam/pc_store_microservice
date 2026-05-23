@@ -7,7 +7,7 @@ import Cart from "@/pages/Cart/Cart";
 import About from "@/pages/About";
 import Order from "@/pages/Order";
 import OrderDetail from "@/pages/Order/[id]";
-import { Customer, OrderPage, Product } from "@/pages/Admin";
+import { Customer, OrderPage, Product, VoucherPage } from "@/pages/Admin";
 import MessagesPage from "@/pages/Messages";
 
 export const managerRoutes: RouteObject[] = [
@@ -58,6 +58,10 @@ export const managerRoutes: RouteObject[] = [
     {
         path: "admin/orders",
         element: <OrderPage />
+    },
+    {
+        path: "admin/vouchers",
+        element: <VoucherPage />
     },
     {
         path: "/messages",

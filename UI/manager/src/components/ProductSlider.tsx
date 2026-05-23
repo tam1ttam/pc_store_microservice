@@ -55,13 +55,6 @@ const SimpleProductCard = ({ product }: { product: any }) => {
                 />
             </div>
 
-            {/* Discount Badge */}
-            {product.discountPercent > 0 && (
-                <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs font-bold px-2.5 py-1 rounded-full z-10 shadow-md">
-                    -{product.discountPercent}%
-                </div>
-            )}
-
             {/* 2. HOVER OVERLAY (BUTTONS & INFO) */}
             <div className="absolute inset-0 bg-[#0f0f1a]/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-4 p-4 text-center backdrop-blur-[2px] z-20">
                 {/* Product Name & Price */}
@@ -69,7 +62,7 @@ const SimpleProductCard = ({ product }: { product: any }) => {
                     <h3 className="text-white font-bold text-lg line-clamp-2 px-2 drop-shadow-md">{product.name}</h3>
                     <p className="text-yellow-400 font-bold text-xl mt-2 drop-shadow-md">
                         {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-                            product.priceAfterDiscount
+                            product.price
                         )}
                     </p>
                 </div>

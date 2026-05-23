@@ -29,12 +29,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/admin/customers")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@PreAuthorize("hasRole('ADMIN')")
 @Slf4j
 public class ProfileAdminController {
     CustomerService customerService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Page<CustomerResponse>>> getAllCustomers(Pageable pageable) {
         log.info("Admin: Getting all customers with pagination");
 
@@ -48,6 +48,7 @@ public class ProfileAdminController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Page<CustomerResponse>>> searchCustomers(
             @RequestParam String searchKey, Pageable pageable) {
         log.info("Admin: Searching customers with key: {}", searchKey);
@@ -62,6 +63,7 @@ public class ProfileAdminController {
     }
 
     @PutMapping("/{userName}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
             @PathVariable String userName, @Valid @RequestBody CustomerUpdateRequest request) {
         log.info("Admin: Updating customer profile: {}", userName);
@@ -76,6 +78,7 @@ public class ProfileAdminController {
     }
 
     @DeleteMapping("/{userName}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteCustomer(@PathVariable String userName) {
         log.info("Admin: Deleting customer: {}", userName);
 
@@ -89,6 +92,7 @@ public class ProfileAdminController {
     }
 
     @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Long>> countCustomers() {
         return ResponseEntity.ok(ApiResponse.<Long>builder()
                 .code(1000)

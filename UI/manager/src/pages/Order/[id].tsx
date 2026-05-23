@@ -165,25 +165,13 @@ function OrderDetail() {
                                                     <div className="text-sm text-gray-600">
                                                         Số lượng: <span className="font-medium">{item.quantity}</span>
                                                     </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        Giảm giá:{" "}
-                                                        <span className="font-medium text-red-500">
-                                                            {item.product.discountPercent}%
-                                                        </span>
-                                                    </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-sm line-through text-gray-400">
-                                                        {new Intl.NumberFormat("vi-VN", {
-                                                            style: "currency",
-                                                            currency: "VND"
-                                                        }).format(item.product.originalPrice)}
-                                                    </div>
                                                     <div className="text-base font-medium text-orange-500">
                                                         {new Intl.NumberFormat("vi-VN", {
                                                             style: "currency",
                                                             currency: "VND"
-                                                        }).format(item.product.priceAfterDiscount * item.quantity)}
+                                                        }).format((item.product.price ?? 0) * item.quantity)}
                                                     </div>
                                                 </div>
                                             </div>

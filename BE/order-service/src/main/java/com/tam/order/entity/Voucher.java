@@ -50,6 +50,17 @@ public class Voucher {
     @Column(name = "voucher_type")
     VoucherType voucherType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "access_type", nullable = false)
+    @Builder.Default
+    VoucherAccessType accessType = VoucherAccessType.PUBLIC;
+
+    @Column(name = "user_id")
+    String userId;
+
+    @Column(name = "max_usage_per_user")
+    Integer maxUsagePerUser;
+
     @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
