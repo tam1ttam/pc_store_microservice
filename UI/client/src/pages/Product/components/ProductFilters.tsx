@@ -43,19 +43,18 @@ const ProductFilters = ({ searchQuery, setSearchQuery, selectedCategories, setSe
                     <div className="space-y-2">
                         {CATEGORIES.map((cat) => (
                             <label
-                                key={cat.name}
+                                key={cat.keyword}
                                 className="flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors"
                             >
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
                                         className="rounded text-orange-600 focus:ring-orange-500"
-                                        checked={selectedCategories.includes(cat.name)}
-                                        onChange={() => handleCheck(cat.name)}
+                                        checked={selectedCategories.includes(cat.keyword)}
+                                        onChange={() => handleCheck(cat.keyword)}
                                     />
                                     <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
                                 </div>
-                                {/* Đã xóa phần hiển thị count */}
                             </label>
                         ))}
                     </div>

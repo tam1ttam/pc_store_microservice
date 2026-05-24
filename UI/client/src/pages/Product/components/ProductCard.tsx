@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { ShoppingCart, Heart, Star, Check, Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ShoppingCart, Heart, Star, Check, Loader2, Tag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
 import { getCart, upsertCartItem } from '@/redux/thunks/cart';
 import { useToast } from '@/hooks/use-toast';
+import { findBestVoucher } from '@/redux/slices/voucher';
 
 interface Supplier {
     id?: string;
@@ -30,10 +31,35 @@ const formatPrice = (price: number) =>
 export default function ProductCard({ product }: Props) {
     const dispatch = useDispatch<any>();
     const { info: user } = useSelector((state: RootState) => state.user);
+    const isLogin = useSelector((state: RootState) => state.auth.isLogin);
     const cartItems = useSelector((state: RootState) => state.cart.items);
+    const availableVouchers = useSelector((state: RootState) => state.voucher.available);
     const { toast } = useToast();
     const navigate = useNavigate();
     const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
+
+    /**
+     * Tìm voucher tốt nhất cho sản phẩm này (chỉ khi đăng nhập).
+     * VD: User A có public 5% + private 3% → best = 5%  → giá 95.000đ
+     *     User B có public 5% + private 8% → best = 8%  → giá 92.000đ
+     */
+    const bestResult = useMemo(() => {
+        if (!isLogin || !availableVouchers.length) return null;
+        return findBestVoucher(product.price ?? 0, availableVouchers);
+    }, [isLogin, availableVouchers, product.price]);
+
+    const discountedPrice = bestResult
+        ? Math.max(0, (product.price ?? 0) - bestResult.discount)
+        : (product.price ?? 0);
+
+    const discountLabel = useMemo(() => {
+        if (!bestResult) return null;
+        const v = bestResult.voucher;
+        if (v.discountPercent && v.discountPercent > 0) return `-${v.discountPercent}%`;
+        if (v.discountAmount && v.discountAmount > 0)
+            return `-${new Intl.NumberFormat('vi-VN').format(v.discountAmount)}đ`;
+        return null;
+    }, [bestResult]);
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -77,6 +103,14 @@ export default function ProductCard({ product }: Props) {
                     <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 </button>
 
+                {/* Badge % voucher tốt nhất của user */}
+                {discountLabel && (
+                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                        <Tag className="w-3 h-3" />
+                        {discountLabel}
+                    </div>
+                )}
+
                 <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900">
                     <img
                         src={product.img}
@@ -101,14 +135,32 @@ export default function ProductCard({ product }: Props) {
                     </h3>
 
                     <div className="mb-3">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                                {formatPrice(product.price ?? 0)}
-                            </span>
-                            {product.unit && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
-                            )}
-                        </div>
+                        {bestResult ? (
+                            /* Hiện giá sau voucher + gạch giá gốc */
+                            <div className="space-y-0.5">
+                                <div className="text-xs text-gray-400 line-through">
+                                    {formatPrice(product.price ?? 0)}
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-xl font-bold text-red-500 dark:text-red-400">
+                                        {formatPrice(discountedPrice)}
+                                    </span>
+                                    {product.unit && (
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* Không có voucher → giá gốc */
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                                    {formatPrice(product.price ?? 0)}
+                                </span>
+                                {product.unit && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <button

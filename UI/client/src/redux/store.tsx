@@ -9,6 +9,7 @@ import orderReducer from "@/redux/slices/order";
 import chatReducer from "@/redux/slices/chat";
 import presenceReducer from "@/redux/slices/presence";
 import notificationReducer from "@/redux/slices/notification";
+import voucherReducer from "@/redux/slices/voucher";
 
 const store = configureStore({
     reducer: {
@@ -21,6 +22,7 @@ const store = configureStore({
         chat: chatReducer,
         presence: presenceReducer,
         notification: notificationReducer,
+        voucher: voucherReducer,
     }
 });
 

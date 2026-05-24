@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
-import { ChevronLeft, ChevronRight, ShoppingCart, Eye, Flame, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Eye, Flame, Clock, Tag } from "lucide-react";
 import { productApi } from "@/services/api/productApi";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getCart, upsertCartItem } from "@/redux/thunks/cart";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSelector } from "@/hooks";
 import { RootState } from "@/redux/store";
+import { findBestVoucher } from "@/redux/slices/voucher";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -18,11 +19,26 @@ interface ProductSliderProps {
     type: "newest" | "best-selling";
 }
 
+const fmt = (n: number) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+
 const SimpleProductCard = ({ product }: { product: any }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
     const { toast } = useToast();
     const { info: user } = useAppSelector((state: RootState) => state.user);
+    const isLogin = useSelector((state: RootState) => state.auth.isLogin);
+    const availableVouchers = useSelector((state: RootState) => state.voucher.available);
+
+    const bestResult = useMemo(() => {
+        if (!isLogin || !availableVouchers.length) return null;
+        return findBestVoucher(product.price ?? 0, availableVouchers);
+    }, [isLogin, availableVouchers, product.price]);
+
+    const discountedPrice = bestResult
+        ? Math.max(0, (product.price ?? 0) - bestResult.discount)
+        : (product.price ?? 0);
+    const hasDiscount = !!bestResult;
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -80,14 +96,29 @@ const SimpleProductCard = ({ product }: { product: any }) => {
                 </div>
             </div>
 
+            {/* Badge voucher: hiện "-X%" hoặc "-Yđ" tùy loại voucher tốt nhất */}
+            {hasDiscount && bestResult && (
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                    <Tag className="w-3 h-3" />
+                    {bestResult.voucher.discountPercent
+                        ? `-${bestResult.voucher.discountPercent}%`
+                        : `-${new Intl.NumberFormat("vi-VN").format(bestResult.voucher.discountAmount ?? 0)}đ`}
+                </div>
+            )}
+
             {/* Info always visible */}
             <div className="p-3 flex flex-col gap-1">
                 <h3 className="text-white font-semibold text-sm line-clamp-2 leading-snug min-h-[40px]">
                     {product.name}
                 </h3>
-                <p className="text-yellow-400 font-bold text-base">
-                    {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(product.price)}
-                </p>
+                {hasDiscount ? (
+                    <div>
+                        <p className="text-gray-400 text-xs line-through">{fmt(product.price)}</p>
+                        <p className="text-red-400 font-bold text-base">{fmt(discountedPrice)}</p>
+                    </div>
+                ) : (
+                    <p className="text-yellow-400 font-bold text-base">{fmt(product.price)}</p>
+                )}
             </div>
         </div>
     );

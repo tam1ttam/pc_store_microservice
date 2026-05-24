@@ -30,7 +30,7 @@ public class CategoryController {
     @PostMapping
     public ApiResponse<CategoryResponse> create(@RequestBody CategoryRequest request) {
         return ApiResponse.<CategoryResponse>builder()
-                .result(categoryService.createCategory(request.getName()))
+                .result(categoryService.createCategory(request))
                 .build();
     }
 

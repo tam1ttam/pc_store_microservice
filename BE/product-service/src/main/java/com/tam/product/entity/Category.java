@@ -23,5 +23,7 @@ public class Category {
     ObjectId id;
 
     @Indexed(unique = true)
+    String keyword;
+
     String name;
 }

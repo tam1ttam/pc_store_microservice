@@ -1,6 +1,7 @@
 package com.tam.product.configuration;
 
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -14,15 +15,31 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class CategoryInitConfig {
-    static final List<String> DEFAULT_CATEGORIES =
-            List.of("PC", "Laptop", "Monitor", "Keyboard", "Mouse", "Headphone", "RAM", "SSD", "VGA", "Mainboard");
+    // keyword (lowercase, dùng cho query) -> name (dùng để hiển thị UI)
+    static final Map<String, String> DEFAULT_CATEGORIES = new LinkedHashMap<>() {
+        {
+            put("pc", "PC");
+            put("laptop", "Laptop");
+            put("monitor", "Monitor");
+            put("keyboard", "Keyboard");
+            put("mouse", "Mouse");
+            put("headphone", "Headphone");
+            put("ram", "RAM");
+            put("ssd", "SSD");
+            put("vga", "VGA");
+            put("mainboard", "Mainboard");
+        }
+    };
 
     @Bean
     ApplicationRunner categoryInitRunner(CategoryRepository categoryRepository) {
         return args -> {
-            for (String name : DEFAULT_CATEGORIES) {
-                if (!categoryRepository.existsByNameIgnoreCase(name)) {
-                    categoryRepository.save(Category.builder().name(name).build());
+            for (Map.Entry<String, String> entry : DEFAULT_CATEGORIES.entrySet()) {
+                if (!categoryRepository.existsByKeyword(entry.getKey())) {
+                    categoryRepository.save(Category.builder()
+                            .keyword(entry.getKey())
+                            .name(entry.getValue())
+                            .build());
                 }
             }
         };

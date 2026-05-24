@@ -10,7 +10,10 @@ import com.tam.product.entity.Category;
 
 @Repository
 public interface CategoryRepository extends MongoRepository<Category, ObjectId> {
-    Optional<Category> findByNameIgnoreCase(String name);
+    Optional<Category> findByKeyword(String keyword);
 
-    boolean existsByNameIgnoreCase(String name);
+    boolean existsByKeyword(String keyword);
+
+    // giữ lại để dùng khi cần tìm theo tên hiển thị
+    Optional<Category> findByNameIgnoreCase(String name);
 }

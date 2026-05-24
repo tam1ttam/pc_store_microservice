@@ -51,8 +51,8 @@ export default function Sidebar() {
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-300 z-30 lg:static lg:z-auto border-r border-slate-700
-                    ${isOpen ? "w-64" : "w-0 lg:w-64"} overflow-hidden lg:overflow-visible`}
+                className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-300 z-30 border-r border-slate-700
+                    ${isOpen ? "w-64" : "w-0 lg:w-64"} overflow-hidden`}
             >
                 <div className="pt-24 lg:pt-8 px-4 lg:px-6 py-6 h-full overflow-y-auto">
                     {/* Logo/Header */}

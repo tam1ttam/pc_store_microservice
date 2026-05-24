@@ -406,6 +406,38 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - `product.ts` slice: thêm `fetchProductsByCategories` thunk + reducers.
 - `Product.tsx`: dùng `fetchProductsByCategories` khi `selectedCategories.length > 0` (hỗ trợ multi-select thay cho single).
 
+### [DONE] Import sản phẩm từ Excel / Google Sheets (UI/manager)
+
+**FE — `UI/manager/src/pages/Admin/ImportProductDialog.tsx`**
+- Thứ tự 8 cột cố định đúng theo `Product` entity: Tên · URL ảnh · Giá · Đơn vị · Số lượng · **Danh mục** · Nhà cung cấp · Địa chỉ NCC (cột category được dịch về đúng vị trí trước supplier).
+- Cột thuộc tính linh hoạt từ cột 8 trở đi, mỗi thuộc tính gồm 4 cột (Tên / Giá trị / Đơn vị / Mô tả), tối đa 20 thuộc tính.
+- Upload file `.xlsx/.xls` trực tiếp hoặc nhập URL Google Drive / Google Sheets.
+- Với Google Sheets: thử CSV pub URL trước (không bị CORS với sheet "Published to the web"), fallback sang xlsx export, có hướng dẫn "Publish to the web".
+- Preview table hiển thị đủ 8 cột cố định gồm cả Danh mục (badge màu xanh).
+- Cảnh báo validation trước khi import: highlight dòng thiếu tên, giá = 0, thiếu ảnh.
+- Progress bar real-time, kết quả chi tiết từng dòng (OK / lỗi), nút "Import thêm" để nhập thêm file khác mà không đóng dialog.
+- Nút tải `product_template.xlsx` vẫn giữ nguyên.
+
+### [DONE] Voucher PUBLIC/PRIVATE + giá sản phẩm sau voucher
+
+**BE — `order-service`**
+- `Voucher` entity: đã có `accessType` (PUBLIC/PRIVATE), `userId` (null = public), `maxUsagePerUser`, `VoucherUsage` per-user tracking.
+- `VoucherServiceImpl.applyVoucher`: sau khi apply PRIVATE voucher → set `isActive=false` (soft-delete, biến mất khỏi danh sách available).
+- `VoucherServiceImpl.unapplyVoucher`: khi unapply PRIVATE voucher → set `isActive=true` (khôi phục nếu đơn hàng bị hủy).
+- `VoucherRepository.findAvailableForUser`: query lọc `isActive=true`, chưa hết hạn, chưa hết lượt, và (PUBLIC hoặc PRIVATE với đúng userId).
+
+**FE — `UI/client`**
+- `redux/slices/voucher.ts` (mới): `AvailableVoucher` type, `fetchAvailableVouchers` thunk (gọi `GET /vouchers`), `clearVouchers` action, `computeBestDiscount(price, vouchers)` helper.
+- `redux/store.tsx`: thêm `voucherReducer`.
+- `App.tsx`: `useEffect` load voucher khi `isLogin=true`, clear khi logout.
+- `ProductCard.tsx`: dùng `computeBestDiscount` để tính giá sau voucher tốt nhất; hiển thị giá gốc gạch ngang + giá sau giảm màu đỏ + badge "-X%"/"-Yđ" góc trái trên.
+- `ProductSlider.tsx`: tương tự ProductCard — hiển thị giá sau voucher + badge "Có voucher" khi user đăng nhập và có voucher áp dụng được.
+
+**Kiến trúc quan trọng**
+- Voucher PRIVATE: soft-delete (isActive=false) sau khi dùng, không hard-delete để tránh mất FK của OrderVoucher và có thể khôi phục khi unapply.
+- Giá "sau voucher" trên product card là giá ước tính (giả định mua 1 sản phẩm, áp voucher tốt nhất). Giá thực tế vẫn tính ở Checkout với order total.
+- Chỉ hiển thị giá sau voucher khi user đã đăng nhập (voucher list từ `state.voucher.available`).
+
 ### [DONE] order-service — Cart, Order, Voucher (BE + FE client)
 
 **BE — `order-service`** (migrate MongoDB → MySQL, db `orderservice`)
@@ -437,22 +469,12 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 - Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
 
 ## primary
-1. Chức năng up file để tạo product trong manager, hãy hiện thực nó dựa trên luồng tạo product đơn lẻ, ảnh thay bằng url có sẵn. Các trường cố định (model Product trong product service) thì luôn để đúng thứ tự, còn các trường có thể tùy biến (ProductDetail) thì sẽ tùy chọn ở các cột tiếp theo. Có thể đọc được file excel (upload lên hoặc đọc từ link file excel trên google drive), google sheet. Vẫn giữ nguyên chức năng tải file template mẫu 
-2. voucher hiện tại đang là tính theo lượt sử dụng chứ ko phải tính theo số lượng voucher mà mỗi người dùng có. Hãy cải tiến phần voucher, tách ra thành public voucher và private voucher (dùng type để phân biệt). Gợi ý như sau
-    - Voucher công khai 
-    Có một mã code duy nhất (ví dụ: SUMMER2025)
-    Ai cũng có thể nhập và dùng
-    Mỗi lần dùng → quantity giảm đi 1
-    Có thể giới hạn thêm: mỗi user chỉ được dùng tối đa N lần
-
-    - Voucher cá nhân ()
-    Mỗi user được cấp một mã riêng (ví dụ: USR-TAM-XK92)
-    Chỉ user đó mới dùng được (gắn với sdt hoặc email)
-    Thường có usageLimit, dùng xong là hết, tự xóa khỏi db
-    Phát sinh từ: tặng quà, hoàn tiền, referral, loyalty reward,...
-    - Entity voucher sẽ có thêm 1 field là userId (để phân biệt là public hay private voucher, có thể null được)
-Hãy cập nhật lại dto/service/grpc (nếu có) cho phần voucher này
-3. Shopee khi hiển thị sản phẩm ở trang chính & giá của chúng thì giá sẽ được tính sau khi apply voucher mà người dùng có thể sử dụng để áp dụng
+1. **i18n — Chuyển đổi ngôn ngữ (VI/EN) cho cả 3 UI app**
+   - Dùng `react-i18next` cho `UI/client`, `UI/manager`, `UI/admin`
+   - Mỗi app có `src/i18n/` riêng với file `locales/vi/*.json` và `locales/en/*.json`
+   - Nút chuyển ngôn ngữ đặt ở Header, lưu lựa chọn vào `localStorage`
+   - Toàn bộ label, button, toast, placeholder đều dùng `t('key')` — không hardcode text
+   - BE không thay đổi gì (chỉ là presentation layer)
 
 ### secondary: Notification — trigger thêm sự kiện
 

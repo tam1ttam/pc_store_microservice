@@ -7,7 +7,9 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(xargs grep -l \"PreAuthorize\\\\|hasAuthority\\\\|hasRole\")",
       "Bash(xargs grep -l \"SecurityConfig\\\\|SecurityFilterChain\")",
-      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); console.log\\('MemoryStick:', !!l.MemoryStick, 'Laptop:', !!l.Laptop, 'CircuitBoard:', !!l.CircuitBoard, 'Layers:', !!l.Layers\\)\")"
+      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); console.log\\('MemoryStick:', !!l.MemoryStick, 'Laptop:', !!l.Laptop, 'CircuitBoard:', !!l.CircuitBoard, 'Layers:', !!l.Layers\\)\")",
+      "Bash(mvn clean *)",
+      "Bash(Find \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\product-service\\\\target\\\\generated-sources\" -name \"ProductInfo*.java\")"
     ]
   }
 }

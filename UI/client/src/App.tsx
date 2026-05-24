@@ -6,6 +6,7 @@ import Header from "./components/layout/Header";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "./redux/slices/cart";
+import { clearVouchers, fetchAvailableVouchers } from "./redux/slices/voucher";
 import { RootState } from "./redux/store";
 import { useAppSelector } from "./hooks";
 import SocketClient from "./SocketClient";
@@ -27,6 +28,15 @@ function App() {
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         await cartApi.deleteAllCart(customerId, headers);
     };
+
+    // Tải danh sách voucher khi user đăng nhập / đăng xuất
+    useEffect(() => {
+        if (isLogin) {
+            dispatch(fetchAvailableVouchers() as any);
+        } else {
+            dispatch(clearVouchers());
+        }
+    }, [isLogin]);
 
     useEffect(() => {
         const paymentId = localStorage.getItem("paymentId");

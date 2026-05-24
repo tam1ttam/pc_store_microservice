@@ -17,7 +17,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 type AttributeRow = { name: string; value: string; unit: string; description: string };
 const emptyAttribute = (): AttributeRow => ({ name: "", value: "", unit: "", description: "" });
 
-type Category = { id: string; name: string };
+type Category = { id: string; keyword: string; name: string };
 
 const Product = () => {
     const [activeTab, setActiveTab] = useState<"products" | "categories">("products");
@@ -95,7 +95,7 @@ const Product = () => {
             setCategories(list);
             if (list.length > 0) {
                 try {
-                    const countsRes = await adminApi.getCategoryCounts(list.map(c => c.name));
+                    const countsRes = await adminApi.getCategoryCounts(list.map(c => c.keyword));
                     setCategoryCounts(countsRes.data.result ?? {});
                 } catch { /* counts non-fatal */ }
             }
@@ -367,7 +367,7 @@ const Product = () => {
                                         <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isReadOnly}
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
                                             <option value="">-- Chọn danh mục --</option>
-                                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                            {categories.map(c => <option key={c.id} value={c.keyword}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="grid gap-2">
@@ -470,8 +470,8 @@ const Product = () => {
                                             <label key={cat.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
                                                 <input
                                                     type="checkbox"
-                                                    checked={selectedCategoryFilters.includes(cat.name)}
-                                                    onChange={() => toggleCategoryFilter(cat.name)}
+                                                    checked={selectedCategoryFilters.includes(cat.keyword)}
+                                                    onChange={() => toggleCategoryFilter(cat.keyword)}
                                                     className="rounded"
                                                 />
                                                 {cat.name}
@@ -488,10 +488,10 @@ const Product = () => {
                         )}
                         {/* Active filter chips */}
                         <div className="flex gap-1 flex-wrap">
-                            {selectedCategoryFilters.map(name => (
-                                <span key={name} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200">
-                                    {name}
-                                    <button onClick={() => toggleCategoryFilter(name)} className="hover:text-red-500">
+                            {selectedCategoryFilters.map(kw => (
+                                <span key={kw} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                                    {categories.find(c => c.keyword === kw)?.name ?? kw}
+                                    <button onClick={() => toggleCategoryFilter(kw)} className="hover:text-red-500">
                                         <X className="h-3 w-3" />
                                     </button>
                                 </span>
@@ -520,7 +520,7 @@ const Product = () => {
                                     <TableCell>
                                         {(product as any).category ? (
                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                                                {(product as any).category}
+                                                {categories.find(c => c.keyword === (product as any).category)?.name ?? (product as any).category}
                                             </span>
                                         ) : <span className="text-gray-400 text-xs">—</span>}
                                     </TableCell>
@@ -575,7 +575,7 @@ const Product = () => {
                                     </div>
                                     <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                                         <span className="text-sm text-gray-500">
-                                            {categoryCounts[cat.name] ?? 0} sản phẩm
+                                            {categoryCounts[cat.keyword] ?? 0} sản phẩm
                                         </span>
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500"
                                             disabled={isDeletingCategory === cat.id}

@@ -23,5 +23,6 @@ public class ProductResponse {
     double price;
     String unit;
     int inStock;
+    String category;
     Supplier supplier;
 }

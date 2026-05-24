@@ -168,6 +168,12 @@ public class VoucherServiceImpl implements VoucherService {
             voucherUsageRepository.save(usage);
         }
 
+        // PRIVATE voucher: vô hiệu hóa sau khi dùng (single-use by design)
+        if (voucher.getAccessType() == VoucherAccessType.PRIVATE) {
+            voucher.setIsActive(false);
+            voucherRepository.save(voucher);
+        }
+
         return orderRepository.save(order);
     }
 
@@ -193,6 +199,12 @@ public class VoucherServiceImpl implements VoucherService {
                         usage.setUsageCount(Math.max(0, usage.getUsageCount() - 1));
                         voucherUsageRepository.save(usage);
                     });
+        }
+
+        // PRIVATE voucher: kích hoạt lại khi đơn hàng bị hủy/unapply
+        if (voucher.getAccessType() == VoucherAccessType.PRIVATE) {
+            voucher.setIsActive(true);
+            voucherRepository.save(voucher);
         }
 
         return orderRepository.save(order);
