@@ -1,43 +1,89 @@
 // axios.config.ts
-import { isTokenValid } from "@/utils/token";
 import axios from "axios";
 
+const BASE = import.meta.env.VITE_API_URL;
+const REFRESH_URL = `${BASE}/api-gateway/identity-service/client/auth/refresh`;
+
+// ─── Queue để gom các request bị 401 trong lúc đang refresh ────────────────
+type QueueEntry = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let isRefreshing = false;
+let pendingQueue: QueueEntry[] = [];
+
+const flushQueue = (token: string | null, err: unknown = null) => {
+    pendingQueue.forEach((e) => (token ? e.resolve(token) : e.reject(err)));
+    pendingQueue = [];
+};
+
+// ─── Axios instance ─────────────────────────────────────────────────────────
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-    withCredentials: true, // thử đổi thành true
-    headers: {
-        "ngrok-skip-browser-warning": "true"
-    }
+    baseURL: BASE,
+    withCredentials: true,
+    headers: { "ngrok-skip-browser-warning": "true" },
 });
 
-// Request interceptor
+// Request interceptor — đính token vào header
 instance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
-        if (token && isTokenValid(token)) {
-            config.headers["Authorization"] = `Bearer ${token}`;
-        } else {
-            localStorage.removeItem("token");
-        }
+        if (token) config.headers["Authorization"] = `Bearer ${token}`;
         return config;
     },
-    (error) => {
-        console.error("Request Error:", error);
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor — silent refresh khi 401, redirect nếu refresh thất bại
 instance.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    (error) => {
-        console.error("Response Error:", {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-        });
+    (response) => response,
+    async (error) => {
+        const original = error.config;
+
+        if (error.response?.status === 401 && !original._retry) {
+            const storedToken = localStorage.getItem("token");
+
+            // Không có token → về login ngay
+            if (!storedToken) {
+                window.location.href = "/login";
+                return Promise.reject(error);
+            }
+
+            // Đang refresh rồi → xếp hàng chờ token mới
+            if (isRefreshing) {
+                return new Promise<string>((resolve, reject) => {
+                    pendingQueue.push({ resolve, reject });
+                }).then((newToken) => {
+                    original.headers["Authorization"] = `Bearer ${newToken}`;
+                    return instance(original);
+                });
+            }
+
+            original._retry = true;
+            isRefreshing = true;
+
+            try {
+                // Dùng raw axios (không qua instance) để tránh vòng lặp interceptor
+                const res = await axios.post(
+                    REFRESH_URL,
+                    { token: storedToken },
+                    { headers: { "ngrok-skip-browser-warning": "true" } }
+                );
+                const newToken: string = res.data?.result?.token;
+                if (!newToken) throw new Error("Refresh response missing token");
+
+                localStorage.setItem("token", newToken);
+                flushQueue(newToken);
+                original.headers["Authorization"] = `Bearer ${newToken}`;
+                return instance(original);
+            } catch {
+                flushQueue(null, error);
+                localStorage.removeItem("token");
+                localStorage.removeItem("addressShipping");
+                window.location.href = "/login";
+                return Promise.reject(error);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
         return Promise.reject(error);
     }
 );
