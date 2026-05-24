@@ -1,24 +1,20 @@
-import { BaseState, CheckTokenValidResponse, LoginResponse, LogoutResponse } from "@/types";
+import { BaseState, LoginResponse, LogoutResponse } from "@/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { checkTokenValid, login, logout } from "../thunks/auth";
+import { login, logout } from "../thunks/auth";
 
 interface AuthState extends BaseState {
-    token: string | null;
     isLogin: boolean;
 }
 
 const initialState: AuthState = {
-    token: localStorage.getItem("token"),
     status: "idle",
     isLogin: false,
     error: null
 };
 
 const clearAuthState = (state: AuthState) => {
-    state.token = null;
     state.isLogin = false;
     state.error = null;
-    localStorage.removeItem("token");
     localStorage.removeItem("addressShipping");
 };
 
@@ -26,6 +22,10 @@ const authSlice = createSlice({
     name: "auth",
     initialState,
     reducers: {
+        setLogin: (state, action: PayloadAction<boolean>) => {
+            state.isLogin = action.payload;
+            state.status = "succeeded";
+        },
         clearAuth: clearAuthState
     },
     extraReducers: (builder) => {
@@ -34,27 +34,11 @@ const authSlice = createSlice({
                 state.status = "loading";
                 state.error = null;
             })
-            .addCase(login.fulfilled, (state, action: PayloadAction<LoginResponse>) => {
+            .addCase(login.fulfilled, (state) => {
                 state.status = "succeeded";
-                state.token = action.payload.result.token;
                 state.isLogin = true;
-                localStorage.setItem("token", action.payload.result.token);
             })
             .addCase(login.rejected, (state, action) => {
-                state.status = "failed";
-                state.error = action.payload as string;
-                clearAuthState(state);
-            })
-            .addCase(checkTokenValid.pending, (state) => {
-                state.status = "loading";
-                state.error = null;
-            })
-            .addCase(checkTokenValid.fulfilled, (state, action: PayloadAction<CheckTokenValidResponse>) => {
-                state.status = "succeeded";
-                state.isLogin = action.payload.result.valid;
-                if (!action.payload.result.valid) clearAuthState(state);
-            })
-            .addCase(checkTokenValid.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload as string;
                 clearAuthState(state);
@@ -68,5 +52,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { clearAuth } = authSlice.actions;
+export const { setLogin, clearAuth } = authSlice.actions;
 export default authSlice.reducer;

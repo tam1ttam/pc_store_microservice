@@ -2,23 +2,35 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
-import { checkTokenValid } from "@/redux/thunks/auth";
+import { setLogin } from "@/redux/slices/auth";
+import { authApi } from "@/services/api/authApi";
+import { setAccessToken } from "@/config/axios.config";
 import { Loader2 } from "lucide-react";
 
 const ProtectedRoutes = () => {
-    const { isLogin, token } = useSelector((state: RootState) => state.auth);
+    const { isLogin } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch();
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        const checkAuth = async () => {
-            if (token) {
-                await dispatch(checkTokenValid(token) as any);
+        const restore = async () => {
+            try {
+                // Thử lấy access token mới từ httpOnly refresh cookie
+                const res = await authApi.refreshToken();
+                const token = res.data?.result?.token;
+                if (token) {
+                    setAccessToken(token);
+                    dispatch(setLogin(true));
+                }
+            } catch {
+                // Không có refresh cookie hợp lệ → chưa đăng nhập
+            } finally {
+                setIsChecking(false);
             }
-            setIsChecking(false);
         };
-        checkAuth();
-    }, [dispatch, token]);
+
+        restore();
+    }, [dispatch]);
 
     if (isChecking) {
         return (

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const roleSchema = z.object({
-  name: z.enum(["ADMIN", "USER", "GUEST"]),
+  name: z.enum(["ADMIN", "USER", "MANAGER"]),
   description: z.string().optional(),
 });
 

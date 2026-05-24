@@ -1,26 +1,18 @@
-import {
-    CheckTokenValidResponse,
-    LoginCredentials,
-    LoginResponse,
-    LogoutResponse,
-    RegisterCredentials,
-    RegisterResponse
-} from "@/types";
+import { LoginCredentials, LoginResponse, LogoutResponse, RegisterCredentials } from "@/types";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { z } from "zod";
 import { authApi } from "@/services/api/authApi";
+import { setAccessToken } from "@/config/axios.config";
 
 export const login = createAsyncThunk("auth/login", async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
         const response = await authApi.login(credentials);
-        if (!response.data?.result?.token) {
-            throw new Error("Token không hợp lệ");
-        }
+        const token = response.data?.result?.token;
+        if (!token) throw new Error("Token không hợp lệ");
+        setAccessToken(token);
         return response.data;
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return rejectWithValue(error.errors);
-        }
+        if (error instanceof z.ZodError) return rejectWithValue(error.errors);
         return rejectWithValue((error as Error).message);
     }
 });
@@ -32,39 +24,19 @@ export const register = createAsyncThunk(
             const response = await authApi.register(credentials);
             return response.data;
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                return rejectWithValue(error.errors);
-            }
+            if (error instanceof z.ZodError) return rejectWithValue(error.errors);
             return rejectWithValue((error as Error).message);
         }
     }
 );
 
-export const checkTokenValid = createAsyncThunk("auth/checkTokenValid", async (token: string, { rejectWithValue }) => {
+export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
     try {
-        const response = await authApi.checkTokenValid(token);
-
-        if (!response.data?.result?.valid) {
-            throw new Error("Token không hợp lệ");
-        }
-
+        setAccessToken(null);
+        const response = await authApi.logout();
         return response.data;
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return rejectWithValue(error.errors);
-        }
-        return rejectWithValue((error as Error).message);
-    }
-});
-
-export const logout = createAsyncThunk("auth/logout", async (token: string, { rejectWithValue }) => {
-    try {
-        const response = await authApi.logout(token);
-        return response.data;
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return rejectWithValue(error.errors);
-        }
+        if (error instanceof z.ZodError) return rejectWithValue(error.errors);
         return rejectWithValue((error as Error).message);
     }
 });

@@ -30,101 +30,166 @@ public class PermissionInitConfig {
     // ── identity-service ──────────────────────────────────────────────────────
 
     static final List<Permission> IDENTITY_PERMISSIONS = List.of(
-            p("PERMISSION_LIST", "List all permissions"),
-            p("PERMISSION_CREATE", "Create a permission"),
-            p("PERMISSION_DELETE", "Delete a permission"),
-            p("USER_LIST", "List all users"),
-            p("USER_CREATE", "Create a user"),
-            p("USER_UPDATE", "Update a user"),
-            p("USER_DELETE", "Delete a user"),
-            p("USER_DETAIL", "Get user detail"),
-            p("MY_INFO", "Get my own info"),
-            p("ROLE_LIST", "List all roles"),
-            p("ROLE_CREATE", "Create a role"),
-            p("ROLE_DELETE", "Delete a role"),
-            p("ADMIN_UPDATE_ROLE", "Admin update user role"),
-            p("ADMIN_HISTORY", "Admin view action history"),
-            p("INTERNAL_MANAGER_LIST", "Internal list of managers"),
-            p("INTERNAL_MANAGER_DETAILS", "Internal manager details with username"));
+            p("PERMISSION_LIST", "permission", "GET /identity-service/permissions", "List all permissions"),
+            p("PERMISSION_CREATE", "permission", "POST /identity-service/permissions", "Create a permission"),
+            p(
+                    "PERMISSION_DELETE",
+                    "permission",
+                    "DELETE /identity-service/permissions/{name}",
+                    "Delete a permission by name"),
+            p("USER_LIST", "user", "GET /identity-service/users", "List all users"),
+            p("USER_CREATE", "user", "POST /identity-service/users", "Create a user"),
+            p("USER_UPDATE", "user", "PUT /identity-service/users/{userId}", "Update a user"),
+            p("USER_DELETE", "user", "DELETE /identity-service/users/{userId}", "Delete a user"),
+            p("USER_DETAIL", "user", "GET /identity-service/users/{userId}", "Get user detail"),
+            p("MY_INFO", "user", "GET /identity-service/users/my-info", "Get my own info"),
+            p("ROLE_LIST", "role", "GET /identity-service/roles", "List all roles"),
+            p("ROLE_CREATE", "role", "POST /identity-service/roles", "Create a role"),
+            p("ROLE_DELETE", "role", "DELETE /identity-service/roles/{role}", "Delete a role"),
+            p(
+                    "ADMIN_UPDATE_ROLE",
+                    "admin",
+                    "PUT /identity-service/admin/users/{userId}/role",
+                    "Admin update user role"),
+            p("ADMIN_HISTORY", "admin", "GET /identity-service/api/admin/history", "Admin view action history"),
+            p(
+                    "INTERNAL_MANAGER_LIST",
+                    "internal",
+                    "GET /identity-service/internal/managers",
+                    "Internal list of managers"),
+            p(
+                    "INTERNAL_MANAGER_DETAILS",
+                    "internal",
+                    "GET /identity-service/internal/managers/details",
+                    "Internal manager details with username"));
 
     // ── user-service ──────────────────────────────────────────────────────────
 
     static final List<Permission> USER_PERMISSIONS = List.of(
-            p("CUSTOMER_REGISTER", "Register a new customer profile"),
-            p("CUSTOMER_DETAIL", "Get own customer profile"),
-            p("CUSTOMER_UPDATE", "Update own customer profile"),
-            p("ADMIN_CUSTOMER_LIST", "Admin list all customers"),
-            p("ADMIN_CUSTOMER_COUNT", "Admin count customers"),
-            p("ADMIN_CUSTOMER_DETAIL", "Admin get customer detail"),
-            p("ADMIN_CUSTOMER_UPDATE", "Admin update customer"),
-            p("ADMIN_CUSTOMER_DELETE", "Admin delete customer"));
+            p("CUSTOMER_REGISTER", "customer", "POST /api/customers", "Register a new customer profile"),
+            p("CUSTOMER_DETAIL", "customer", "GET /api/customers/my-profile", "Get own customer profile"),
+            p("CUSTOMER_UPDATE", "customer", "PUT /api/customers/{id}", "Update own customer profile"),
+            p(
+                    "CUSTOMER_COMPLETE_PROFILE",
+                    "customer",
+                    "PUT /api/customers/complete-profile",
+                    "Complete customer profile (activate account)"),
+            p("ADMIN_CUSTOMER_LIST", "customer", "GET /api/admin/customers", "Admin list all customers"),
+            p("ADMIN_CUSTOMER_COUNT", "customer", "GET /api/admin/customers/count", "Admin count customers"),
+            p("ADMIN_CUSTOMER_DETAIL", "customer", "GET /api/admin/customers/{id}", "Admin get customer detail"),
+            p("ADMIN_CUSTOMER_UPDATE", "customer", "PUT /api/admin/customers/{id}", "Admin update customer"),
+            p("ADMIN_CUSTOMER_DELETE", "customer", "DELETE /api/admin/customers/{id}", "Admin delete customer"));
 
     // ── product-service ───────────────────────────────────────────────────────
 
     static final List<Permission> PRODUCT_PERMISSIONS = List.of(
-            p("PRODUCT_LIST", "List products with filter/pagination"),
-            p("PRODUCT_DETAIL", "Get product detail by ID"),
-            p("PRODUCT_CREATE", "Create a product"),
-            p("PRODUCT_UPDATE", "Update a product"),
-            p("PRODUCT_DELETE", "Delete a product"),
-            p("PRODUCT_COUNT", "Count total products"),
-            p("PRODUCT_DETAIL_GET", "Get product detail entity"),
-            p("PRODUCT_DETAIL_UPDATE", "Update product detail entity"),
-            p("CATEGORY_LIST", "List product categories"),
-            p("CATEGORY_CREATE", "Create a product category"),
-            p("CATEGORY_DELETE", "Delete a product category"));
+            p("PRODUCT_LIST", "product", "GET /products", "List products with filter/pagination"),
+            p("PRODUCT_DETAIL", "product", "GET /products/{id}", "Get product detail by ID"),
+            p("PRODUCT_CREATE", "product", "POST /products", "Create a product"),
+            p("PRODUCT_UPDATE", "product", "PUT /products/{id}", "Update a product"),
+            p("PRODUCT_DELETE", "product", "DELETE /products/{id}", "Delete a product"),
+            p("PRODUCT_COUNT", "product", "GET /products/count", "Count total products"),
+            p(
+                    "PRODUCT_BY_CATEGORIES",
+                    "product",
+                    "GET /products/by-categories",
+                    "List products filtered by multiple categories"),
+            p("PRODUCT_CATEGORY_COUNTS", "product", "GET /products/category-counts", "Count products per category"),
+            p("PRODUCT_DETAIL_GET", "product", "GET /product-details/{id}", "Get product detail entity"),
+            p("PRODUCT_DETAIL_UPDATE", "product", "PUT /product-details/{id}", "Update product detail entity"),
+            p("CATEGORY_LIST", "category", "GET /categories", "List product categories"),
+            p("CATEGORY_CREATE", "category", "POST /categories", "Create a product category"),
+            p("CATEGORY_DELETE", "category", "DELETE /categories/{name}", "Delete a product category"));
 
     // ── order-service ─────────────────────────────────────────────────────────
 
     static final List<Permission> ORDER_PERMISSIONS = List.of(
-            p("CART_VIEW", "View own cart"),
-            p("CART_UPDATE", "Add or update cart items"),
-            p("CART_DELETE_ITEM", "Remove a cart item"),
-            p("CART_CLEAR", "Clear own cart"),
-            p("ORDER_CHECKOUT", "Create order from cart"),
-            p("ORDER_CREATE", "Create an order (legacy)"),
-            p("ORDER_LIST", "List own orders"),
-            p("ORDER_DETAIL", "Get order detail"),
-            p("ORDER_CANCEL", "Cancel own order"),
-            p("ORDER_UPDATE_STATUS", "Update order status"),
-            p("ORDER_DELETE", "Delete an order"),
-            p("ORDER_STATS", "Admin order statistics"),
-            p("VOUCHER_LIST", "List vouchers"),
-            p("VOUCHER_CREATE", "Create a voucher"),
-            p("VOUCHER_UPDATE", "Update a voucher"),
-            p("VOUCHER_DELETE", "Delete a voucher"),
-            p("VOUCHER_APPLY", "Apply voucher to order"),
-            p("VOUCHER_UNAPPLY", "Remove voucher from order"),
-            p("PAYMENT_CREATE", "Create a payment"),
-            p("PAYMENT_CALLBACK", "Payment provider callback"),
-            p("PAYMENT_STATUS", "Check payment status"));
+            p("CART_VIEW", "cart", "GET /cart", "View own cart"),
+            p("CART_UPDATE", "cart", "PUT /cart/items", "Add or update cart items"),
+            p("CART_DELETE_ITEM", "cart", "DELETE /cart/items/{id}", "Remove a cart item"),
+            p("CART_CLEAR", "cart", "DELETE /cart/clear", "Clear own cart"),
+            p("ORDER_CHECKOUT", "order", "POST /api/orders/checkout", "Create order from cart"),
+            p("ORDER_CREATE", "order", "POST /api/orders", "Create an order (legacy)"),
+            p("ORDER_LIST", "order", "GET /api/orders", "List own orders"),
+            p("ORDER_DETAIL", "order", "GET /api/orders/{id}", "Get order detail"),
+            p("ORDER_CANCEL", "order", "PATCH /api/orders/{id}/cancel", "Cancel own order"),
+            p("ORDER_UPDATE_STATUS", "order", "PATCH /api/orders/{id}/status", "Update order status (manager)"),
+            p("ORDER_DELETE", "order", "DELETE /manager/orders/{id}", "Delete an order (manager)"),
+            p("ORDER_STATS", "order", "GET /api/orders/stats", "Admin order statistics"),
+            p("VOUCHER_LIST", "voucher", "GET /vouchers", "List available vouchers"),
+            p("VOUCHER_CREATE", "voucher", "POST /manager/vouchers", "Create a voucher"),
+            p("VOUCHER_UPDATE", "voucher", "PUT /manager/vouchers/{id}", "Update a voucher"),
+            p("VOUCHER_DELETE", "voucher", "DELETE /manager/vouchers/{id}", "Delete a voucher"),
+            p("VOUCHER_APPLY", "voucher", "POST /vouchers/apply", "Apply voucher to order"),
+            p("VOUCHER_UNAPPLY", "voucher", "DELETE /vouchers/unapply", "Remove voucher from order"),
+            p("PAYMENT_CREATE", "payment", "POST /payments", "Create a payment"),
+            p("PAYMENT_CALLBACK", "payment", "GET /payments/callback", "Payment provider callback"),
+            p("PAYMENT_STATUS", "payment", "GET /payments/status", "Check payment status"));
 
     // ── chat-service ──────────────────────────────────────────────────────────
 
     static final List<Permission> CHAT_PERMISSIONS = List.of(
-            p("CONVERSATION_CREATE", "Create a conversation"),
-            p("CONVERSATION_LIST", "List own conversations"),
-            p("CONVERSATION_SUPPORT_LIST", "List all support conversations"),
-            p("CONVERSATION_SUPPORT_CREATE", "Create a support conversation"),
-            p("CONVERSATION_CLAIM", "Claim a support conversation"),
-            p("CONVERSATION_TRANSFER", "Transfer a conversation to another manager"),
-            p("CONVERSATION_MANAGER_LIST", "List managers available for transfer"),
-            p("CONVERSATION_ONLINE_USERS", "Get online user IDs"),
-            p("CONVERSATION_USER_ONLINE", "Check if a user is online"),
-            p("MESSAGE_SEND", "Send a chat message"),
-            p("MESSAGE_LIST", "List messages in a conversation"),
-            p("MESSAGE_MARK_READ", "Mark messages as read"),
-            p("AI_CHAT", "Send message to AI assistant"),
-            p("AI_HISTORY", "Get AI chat history"),
-            p("AI_CLEAR", "Clear AI chat history"));
+            p("CONVERSATION_CREATE", "conversation", "POST /conversations", "Create a direct conversation"),
+            p("CONVERSATION_LIST", "conversation", "GET /conversations/my", "List own conversations"),
+            p(
+                    "CONVERSATION_SUPPORT_LIST",
+                    "conversation",
+                    "GET /conversations/support",
+                    "List all support conversations"),
+            p(
+                    "CONVERSATION_SUPPORT_CREATE",
+                    "conversation",
+                    "POST /conversations/support",
+                    "Create a support conversation"),
+            p("CONVERSATION_CLAIM", "conversation", "PATCH /conversations/{id}/claim", "Claim a support conversation"),
+            p(
+                    "CONVERSATION_TRANSFER",
+                    "conversation",
+                    "PATCH /conversations/{id}/transfer",
+                    "Transfer a conversation to another manager"),
+            p(
+                    "CONVERSATION_MANAGER_LIST",
+                    "conversation",
+                    "GET /conversations/managers",
+                    "List managers available for transfer"),
+            p("CONVERSATION_ONLINE_USERS", "conversation", "GET /conversations/online-users", "Get online user IDs"),
+            p(
+                    "CONVERSATION_USER_ONLINE",
+                    "conversation",
+                    "GET /conversations/users/{userId}/online",
+                    "Check if a specific user is online"),
+            p("MESSAGE_SEND", "message", "POST /messages", "Send a chat message"),
+            p("MESSAGE_LIST", "message", "GET /messages", "List messages in a conversation"),
+            p("MESSAGE_MARK_READ", "message", "POST /messages/read", "Mark messages as read"),
+            p("AI_CHAT", "ai", "POST /ai/chat", "Send message to AI assistant"),
+            p("AI_HISTORY", "ai", "GET /ai/history", "Get AI chat history"),
+            p("AI_CLEAR", "ai", "DELETE /ai/history", "Clear AI chat history"));
 
     // ── file-service ──────────────────────────────────────────────────────────
 
-    static final List<Permission> FILE_PERMISSIONS = List.of(p("FILE_UPLOAD", "Upload a file or image to S3"));
+    static final List<Permission> FILE_PERMISSIONS =
+            List.of(p("FILE_UPLOAD", "file", "POST /media/upload", "Upload a file or image to S3"));
 
     // ── notification-service ──────────────────────────────────────────────────
 
-    static final List<Permission> NOTIFICATION_PERMISSIONS = List.of(p("EMAIL_SEND", "Send an email notification"));
+    static final List<Permission> NOTIFICATION_PERMISSIONS = List.of(
+            p("EMAIL_SEND", "notification", "POST /api/notifications/email", "Send an email notification"),
+            p("NOTIFICATION_LIST", "notification", "GET /api/notifications", "List own notifications"),
+            p(
+                    "NOTIFICATION_MARK_READ",
+                    "notification",
+                    "PUT /api/notifications/{id}/read",
+                    "Mark a notification as read"),
+            p(
+                    "NOTIFICATION_MARK_ALL_READ",
+                    "notification",
+                    "PUT /api/notifications/read-all",
+                    "Mark all notifications as read"),
+            p(
+                    "NOTIFICATION_ACTION_DONE",
+                    "notification",
+                    "PUT /api/notifications/{id}/action-done",
+                    "Mark notification action as done"));
 
     // ── role → permission mapping ─────────────────────────────────────────────
 
@@ -132,9 +197,12 @@ public class PermissionInitConfig {
             "MY_INFO",
             "CUSTOMER_DETAIL",
             "CUSTOMER_UPDATE",
+            "CUSTOMER_COMPLETE_PROFILE",
             "PRODUCT_LIST",
             "PRODUCT_DETAIL",
             "PRODUCT_DETAIL_GET",
+            "PRODUCT_BY_CATEGORIES",
+            "PRODUCT_CATEGORY_COUNTS",
             "CART_VIEW",
             "CART_UPDATE",
             "CART_DELETE_ITEM",
@@ -160,25 +228,35 @@ public class PermissionInitConfig {
             "AI_CLEAR",
             "FILE_UPLOAD",
             "CONVERSATION_USER_ONLINE",
-            "CATEGORY_LIST");
+            "CATEGORY_LIST",
+            "NOTIFICATION_LIST",
+            "NOTIFICATION_MARK_READ",
+            "NOTIFICATION_MARK_ALL_READ",
+            "NOTIFICATION_ACTION_DONE");
 
     static final Set<String> MANAGER_ROLE_PERMISSIONS = Set.of(
             "MY_INFO",
             "PRODUCT_LIST",
             "PRODUCT_DETAIL",
             "PRODUCT_DETAIL_GET",
+            "PRODUCT_DETAIL_UPDATE",
             "PRODUCT_CREATE",
             "PRODUCT_UPDATE",
             "PRODUCT_DELETE",
+            "PRODUCT_COUNT",
+            "PRODUCT_BY_CATEGORIES",
+            "PRODUCT_CATEGORY_COUNTS",
             "ORDER_LIST",
             "ORDER_DETAIL",
             "ORDER_UPDATE_STATUS",
             "ORDER_DELETE",
+            "ORDER_STATS",
             "VOUCHER_LIST",
             "VOUCHER_CREATE",
             "VOUCHER_UPDATE",
             "VOUCHER_DELETE",
             "ADMIN_CUSTOMER_LIST",
+            "ADMIN_CUSTOMER_COUNT",
             "CONVERSATION_CREATE",
             "CONVERSATION_LIST",
             "CONVERSATION_SUPPORT_LIST",
@@ -198,9 +276,13 @@ public class PermissionInitConfig {
             "INTERNAL_MANAGER_DETAILS",
             "CATEGORY_LIST",
             "CATEGORY_CREATE",
-            "CATEGORY_DELETE");
+            "CATEGORY_DELETE",
+            "NOTIFICATION_LIST",
+            "NOTIFICATION_MARK_READ",
+            "NOTIFICATION_MARK_ALL_READ",
+            "NOTIFICATION_ACTION_DONE");
 
-    // ADMIN gets everything — built dynamically from all lists
+    // ADMIN gets everything — built dynamically from all permission lists
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -218,8 +300,24 @@ public class PermissionInitConfig {
                     CHAT_PERMISSIONS,
                     FILE_PERMISSIONS,
                     NOTIFICATION_PERMISSIONS);
-            permissionRepository.saveAll(allPermissions);
-            log.info("Saved {} permissions", allPermissions.size());
+
+            // Upsert: create if absent, update url/group/description if present
+            int created = 0, updated = 0;
+            for (Permission perm : allPermissions) {
+                Optional<Permission> existing = permissionRepository.findByName(perm.getName());
+                if (existing.isEmpty()) {
+                    permissionRepository.save(perm);
+                    created++;
+                } else {
+                    Permission e = existing.get();
+                    e.setGroup(perm.getGroup());
+                    e.setUrl(perm.getUrl());
+                    e.setDescription(perm.getDescription());
+                    permissionRepository.save(e);
+                    updated++;
+                }
+            }
+            log.info("Permissions — created: {}, updated: {}", created, updated);
 
             // MANAGER role (USER and ADMIN are created by ApplicationInitConfig)
             if (!roleRepository.existsById(PredefinedRole.MANAGER_ROLE)) {
@@ -231,7 +329,6 @@ public class PermissionInitConfig {
 
             // Assign permissions to each role
             assignPermissions(roleRepository, permissionRepository, PredefinedRole.USER_ROLE, USER_ROLE_PERMISSIONS);
-
             assignPermissions(
                     roleRepository, permissionRepository, PredefinedRole.MANAGER_ROLE, MANAGER_ROLE_PERMISSIONS);
 
@@ -255,7 +352,7 @@ public class PermissionInitConfig {
             return;
         }
         Role role = optRole.get();
-        Set<Permission> perms = new HashSet<>(permissionRepository.findAllById(permissionNames));
+        Set<Permission> perms = new HashSet<>(permissionRepository.findAllByNameIn(permissionNames));
         role.setPermissions(perms);
         roleRepository.save(role);
         log.info("Assigned {} permissions to role '{}'", perms.size(), roleName);
@@ -266,7 +363,12 @@ public class PermissionInitConfig {
         return java.util.Arrays.stream(lists).flatMap(List::stream).toList();
     }
 
-    private static Permission p(String name, String description) {
-        return Permission.builder().name(name).description(description).build();
+    private static Permission p(String name, String group, String url, String description) {
+        return Permission.builder()
+                .name(name)
+                .group(group)
+                .url(url)
+                .description(description)
+                .build();
     }
 }

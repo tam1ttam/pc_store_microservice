@@ -14,11 +14,13 @@ export const authApi = {
         return post(ENDPOINTS.INTROSPECT, { token });
     },
 
-    logout: (token: string) => {
-        return post(ENDPOINTS.LOGOUT, { token });
+    // Cookie tự động gửi — không cần truyền token
+    logout: () => {
+        return post(ENDPOINTS.LOGOUT, {});
     },
 
-    refreshToken: (token: string) => {
-        return post(ENDPOINTS.REFRESH_TOKEN, { token });
+    // Cookie tự động gửi — không cần request body
+    refreshToken: () => {
+        return post(ENDPOINTS.REFRESH_TOKEN, {});
     }
 };

@@ -20,6 +20,8 @@ public enum ErrorCode {
     INVALID_EMAIL(1009, "Invalid email address", HttpStatus.BAD_REQUEST),
     EMAIL_IS_REQUIRED(1009, "Email is required", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED_FOR_PORTAL(1010, "Your account does not have permission to access this portal", HttpStatus.FORBIDDEN),
+    PERMISSION_EXISTED(1012, "Permission already existed", HttpStatus.BAD_REQUEST),
+    PERMISSION_NOT_EXISTED(1013, "Permission not existed", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

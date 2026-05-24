@@ -1,10 +1,10 @@
 import { io, Socket } from "socket.io-client";
+import { getAccessToken } from "@/config/axios.config";
 
 let socket: Socket | null = null;
-export const KEY_TOKEN = "accessToken";
 
 export const connectSocket = (token?: string) => {
-    const realToken = token || getToken();
+    const realToken = token || getAccessToken();
     if (!realToken) return null;
     if (socket && socket.connected) return socket;
     if (socket) {
@@ -19,14 +19,14 @@ export const connectSocket = (token?: string) => {
     });
     // Refresh token before each auto-reconnect attempt
     socket.io.on("reconnect_attempt", () => {
-        (socket!.io.opts as any).query = { token: getToken() };
+        (socket!.io.opts as any).query = { token: getAccessToken() };
     });
     // socket.io-client v4 does NOT auto-reconnect on "io server disconnect"
     // Manually reconnect with fresh token when server kicks the client (e.g. auth failure)
     socket.on("disconnect", (reason) => {
         if (reason === "io server disconnect") {
             setTimeout(() => {
-                const freshToken = getToken();
+                const freshToken = getAccessToken();
                 if (freshToken && socket && !socket.connected) {
                     (socket.io.opts as any).query = { token: freshToken };
                     socket.connect();
@@ -39,9 +39,8 @@ export const connectSocket = (token?: string) => {
 
 export const getSocket = () => socket;
 
-export const getToken = () => {
-    return localStorage.getItem(KEY_TOKEN);
-};
+export const getToken = () => getAccessToken();
+
 export const disconnectSocket = () => {
     if (socket) {
         socket.disconnect();

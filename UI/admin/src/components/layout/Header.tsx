@@ -15,7 +15,7 @@ export default function Header() {
     const userMenuRef = useRef<HTMLDivElement>(null);
     const userModalRef = useRef<HTMLDivElement>(null);
     const { info: user } = useSelector((state: RootState) => state.user);
-    const { isLogin, token } = useSelector((state: RootState) => state.auth);
+    const { isLogin } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.roles?.some((role) => role.name === "ADMIN") ?? false;
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
@@ -86,7 +86,7 @@ export default function Header() {
 
     const handleLogout = async () => {
         try {
-            const result = await dispatch(logout(token as string) as any);
+            const result = await dispatch(logout() as any);
             if (result.payload.code === 1000) {
                 toast({
                     title: "Đăng xuất thành công"

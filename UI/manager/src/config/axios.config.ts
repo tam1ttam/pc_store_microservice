@@ -5,6 +5,13 @@ import { toast } from "@/hooks/use-toast";
 const BASE = import.meta.env.VITE_API_URL;
 const REFRESH_URL = `${BASE}/api-gateway/identity-service/manager/auth/refresh`;
 
+// ─── In-memory access token (không lưu localStorage) ─────────────────────────
+let inMemoryToken: string | null = null;
+export const setAccessToken = (t: string | null) => {
+    inMemoryToken = t;
+};
+export const getAccessToken = () => inMemoryToken;
+
 // ─── Queue để gom các request bị 401 trong lúc đang refresh ────────────────
 type QueueEntry = { resolve: (token: string) => void; reject: (err: unknown) => void };
 let isRefreshing = false;
@@ -18,15 +25,14 @@ const flushQueue = (token: string | null, err: unknown = null) => {
 // ─── Axios instance ─────────────────────────────────────────────────────────
 const instance = axios.create({
     baseURL: BASE,
-    withCredentials: false,
+    withCredentials: true,
     headers: { "ngrok-skip-browser-warning": "true" },
 });
 
-// Request interceptor — đính token vào header
+// Request interceptor — đính token vào header từ bộ nhớ
 instance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("token");
-        if (token) config.headers["Authorization"] = `Bearer ${token}`;
+        if (inMemoryToken) config.headers["Authorization"] = `Bearer ${inMemoryToken}`;
         return config;
     },
     (error) => Promise.reject(error)
@@ -39,14 +45,6 @@ instance.interceptors.response.use(
         const original = error.config;
 
         if (error.response?.status === 401 && !original._retry) {
-            const storedToken = localStorage.getItem("token");
-
-            // Không có token → về login ngay
-            if (!storedToken) {
-                window.location.href = "/login";
-                return Promise.reject(error);
-            }
-
             // Đang refresh rồi → xếp hàng chờ token mới
             if (isRefreshing) {
                 return new Promise<string>((resolve, reject) => {
@@ -61,22 +59,22 @@ instance.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // Dùng raw axios (không qua instance) để tránh vòng lặp interceptor
+                // Dùng raw axios để tránh vòng lặp interceptor
                 const res = await axios.post(
                     REFRESH_URL,
-                    { token: storedToken },
-                    { headers: { "ngrok-skip-browser-warning": "true" } }
+                    {},
+                    { withCredentials: true, headers: { "ngrok-skip-browser-warning": "true" } }
                 );
                 const newToken: string = res.data?.result?.token;
                 if (!newToken) throw new Error("Refresh response missing token");
 
-                localStorage.setItem("token", newToken);
+                inMemoryToken = newToken;
                 flushQueue(newToken);
                 original.headers["Authorization"] = `Bearer ${newToken}`;
                 return instance(original);
             } catch {
                 flushQueue(null, error);
-                localStorage.removeItem("token");
+                inMemoryToken = null;
                 window.location.href = "/login";
                 return Promise.reject(error);
             } finally {

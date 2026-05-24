@@ -1,5 +1,5 @@
 import axios from "axios";
-import { store } from "@/redux/store";
+import { getAccessToken } from "@/config/axios.config";
 
 const api = axios.create({
     baseURL: "http://localhost:6060/api-gateway/identity-service",
@@ -7,8 +7,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const state = store.getState();
-        const token = state.auth.token;
+        const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

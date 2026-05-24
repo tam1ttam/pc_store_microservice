@@ -5,7 +5,7 @@
 Hệ thống e-commerce bán PC/linh kiện, gồm **microservices Spring Boot** ở backend và **3 React app** ở frontend.
 
 ## Quy tắc code
-- Ko được để xuất hiện ký tự BOM (\ueff) ở đầu mỗi file, làm sao để inteliji idea chạy được
+- Không để ký tự BOM ở đầu file (gây lỗi khi chạy trên IntelliJ IDEA)
 - Khi sửa gì và phát hiện có bug gì hay tôi gửi những lỗi gì (chưa fix đc), hãy ghi thêm vào đây, còn bug/lỗi đã fix thì xóa khỏi file này
 - Các task đã done thì ko cần làm nữa, chỉ xem qua thôi
 # FE
@@ -462,11 +462,12 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ---
 
-## TODO (ưu tiên từ trên xuống)
-
 ## Rule for todo: 
 - Nếu trong 1 job trong primary mà có liên quan đến việc hiện thông báo trong secondary, hãy làm sau khi làm xong cái job primary đó
 - Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
+- Trong quá trình thực hiện todo, nếu có chỗ nào cần lấy data từ service khác, tức service-to-service thì luôn dùng grpc
+
+## TODO (ưu tiên từ trên xuống)
 
 ## primary
 1. **i18n — Chuyển đổi ngôn ngữ (VI/EN) cho cả 3 UI app**
@@ -476,11 +477,87 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
    - Toàn bộ label, button, toast, placeholder đều dùng `t('key')` — không hardcode text
    - BE không thay đổi gì (chỉ là presentation layer)
 
+2. Ở client UI:
+  - ở client nếu token hết hạn thì nó gọi api refresh rồi tự reload lại UI liên tục xong cuối cùng rơi vào 429 do bị chặn spam.
+  - khi thêm sản phẩm vào giỏ hàng nó báo phải đăng nhập mới thực hiện được hành động này xong redirect về login. Nếu load lại ngay lúc này thì các api fetch profile hay product lên homepage vẫn 200 mà vẫn ở login
+3. Ở manager UI:
+  - phần modal thêm sản phẩm bằng cách upload file, chỗ thuộc tính thì di chuột vào sẽ hiện popup hiện các thuộc tính thêm đó
+  - nếu thêm product theo cách thủ công hay upload file, nếu như category chưa tồn tại thì hãy tạo category trước rồi mới tạo product link vào category đó.
+4. Manager đang có quyền cấp quyền ngay trong trang quản lý khách hàng, giờ vẫn giữ nguyên phần hiển thị danh sách, thêm nút xem chi tiết, chuyển phần cấp quyền qua cho UI quản lý user của admin, ko hiện vai trò (role) của client, chỉ hiển thị danh sách client chứ ko hiển thị manager/admin khác, ko hiển thị userid, . Các cột bao gồm stt, họ tên, username, gmail, sđt, xem chi tiết
+
+5. Tận dụng socket của chat-service để silent refresh data
+  - Ý tưởng: khi bất kì user của role nào thực hiện việc mà có thay đổi db (client mua
+    hàng/sửa thông tin/đặt hàng, manager nhập hàng/sửa thông tin khách, admin cập nhật
+    quyền/gỡ quyền) thì chat-service emit xuống socket của user đang online để FE tự
+    fetch lại data mà không reload trang.
+  - Hiện thực:
+    * Business service gọi gRPC tới chat-service sau khi commit DB — chat-service cần
+      thêm gRPC server port 8199. Proto:
+        service NotifyService {
+          rpc Notify (NotifyRequest) returns (NotifyResponse);
+        }
+        message NotifyRequest {
+          string targetUserId = 1;  // emit đúng 1 user (ORDER_UPDATED, FORCE_LOGOUT)
+          string dataType     = 2;
+          string action       = 3;
+          string message      = 4;
+          string targetRole   = 5;  // emit tất cả user thuộc role đang online
+                                    // (PRODUCT_UPDATED → CLIENT,
+                                    //  ROLE_CHANGED    → để trống, dùng targetUserId)
+        }
+        message NotifyResponse {
+          bool delivered = 1;
+        }
+    * Chat-service tra WebSocketSessionRepository:
+      — targetUserId có giá trị → emit đúng user đó
+      — targetRole có giá trị → query theo role, emit tất cả đang online
+      Business service chỉ gọi gRPC 1 lần duy nhất, không lặp per-user.
+    * Payload socket: { dataType, action: "SILENT_FETCH" | "FORCE_LOGOUT", message? }
+      — SILENT_FETCH: FE invalidate cache âm thầm khi window focused
+      — FORCE_LOGOUT: FE hiện toast → đếm ngược 10s → logout (dùng cho ROLE_CHANGED)
+    * Tận dụng tối đa code đã có, không thêm infrastructure mới ngoài gRPC port.
+    * Cập nhật bảng port: chat-service 8085 (HTTP) | 8099 (Socket.IO) | 8199 (gRPC mới)
+  - Lưu ý:
+    * Gọi gRPC sau khi DB commit thực sự hoàn tất — nếu dùng @Transactional thì gọi
+      trong TransactionSynchronization.afterCommit(), không gọi trong transaction đang
+      chạy. Tránh FE fetch trước khi data visible.
+    * gRPC call phải là fire-and-forget — wrap try-catch, log warning nếu thất bại,
+      không throw lên caller. Chat-service down không được làm ảnh hưởng flow nghiệp
+      vụ chính.
+    * Phân quyền emit: chat-service chỉ emit tới userId đã xác thực khi connect socket
+      — targetUserId trong gRPC request phải khớp với userId trong WebSocketSession,
+      tránh trigger refresh nhầm user.
+    * Zombie session: WebSocketSession collection phải có TTL index trên field
+      updatedAt (expireAfterSeconds = 90) — MongoDB tự dọn session không được
+      heartbeat refresh. SocketHandler refresh updatedAt mỗi khi nhận ping từ
+      client. Không cần xóa thủ công trong disconnect handler.
+    * Chỉ invalidate cache khi window đang focused (document.visibilityState === "visible").
+    * Multi-tab / multi-session: WebSocketSessionRepository trả List<WebSocketSession>
+      theo userId → emit tất cả socket đang mở. Mỗi tab nhận event độc lập, tự
+      invalidate cache — không cần đồng bộ giữa các tab.
+    * Thao tác nhanh liên tiếp (ví dụ cập nhật đơn 3 lần trong 1 giây): FE debounce
+      listener ~500ms theo dataType — chỉ fetch 1 lần sau khi event cuối cùng đến,
+      bỏ qua các event trước đó cùng loại.
+    * Hai phiên cùng thao tác 1 object (ví dụ manager A và manager B cùng sửa product):
+      BE không cần xử lý thêm — cả hai đều nhận SILENT_FETCH, cả hai fetch lại, data
+      cuối cùng trong DB thắng (last-write-wins). Không cần lock hay conflict resolution
+      ở tầng socket.
+    * Nếu emit thất bại (socket đã đóng đúng lúc): log lại, không retry — event đã
+      stale, FE sẽ tự đồng bộ lần sau khi reconnect.
+    * Polling thưa chỉ khởi động khi socket ở trạng thái degraded (missed heartbeat
+      hoặc reconnecting) — dừng ngay khi socket reconnect thành công. Implement bằng
+      cách track socketHealthy state, bật/tắt polling interval (~60s) theo state đó.
+      Không chạy song song khi socket healthy.
+    * Không để chat-service gọi notification-service trong cùng flow này — hai luồng
+      độc lập hoàn toàn.
+    * Sau khi socket reconnect, FE fetch lại toàn bộ data một lần vì có thể đã miss
+      event trong lúc mất kết nối.
 ### secondary: Notification — trigger thêm sự kiện
 
 1. **`CHAT_ASSIGNED`** — `chat-service/ConversationService.claimConversation()`:
    - Publish tới `clientId` của conversation
    - "Yêu cầu hỗ trợ của bạn đã được {manager} tiếp nhận"
+   - publish notification event riêng, không lồng vào socket flow
 
 2. **`PROFILE_COMPLETED`** — `user-service/CustomerServiceImpl.completeProfile()`:
    - Cần thêm KafkaTemplate vào user-service (hiện chưa có)

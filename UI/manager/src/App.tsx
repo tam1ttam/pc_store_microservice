@@ -22,9 +22,7 @@ function App() {
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
 
     const clearCartApi = async (customerId: string) => {
-        const token = localStorage.getItem("token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-        await cartApi.deleteAllCart(customerId, headers);
+        await cartApi.deleteAllCart(customerId);
     };
 
     useEffect(() => {

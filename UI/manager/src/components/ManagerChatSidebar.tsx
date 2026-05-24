@@ -5,6 +5,7 @@ import { aiApi } from "@/services/api/aiApi";
 import { messageApi, Conversation, ManagerInfo, Attachment } from "@/services/api/messageApi";
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
+import { getAccessToken } from "@/config/axios.config";
 import { setMessages, addMessage, ChatMessage, setConversations, updateConversation, clearUnread, SupportConversation } from "@/redux/slices/chat";
 import { AILogo } from "@/assets/logo";
 import { Send, X, Loader2, User, Shield, ArrowRightLeft, Plus, MessageSquare, Search, Paperclip, FileText, Music, Video } from "lucide-react";
@@ -228,8 +229,7 @@ const CustomerChatWindow = ({
     const prevConvIdRef = useRef<string>("");
     const dispatch = useAppDispatch();
     const messages = useAppSelector((state: RootState) => state.chat.messages[conversation.id] || []);
-    const token = useAppSelector((state: RootState) => state.auth.token);
-    const currentUserId = useMemo(() => getIdentityUserIdFromToken(token), [token]);
+    const currentUserId = useMemo(() => getIdentityUserIdFromToken(getAccessToken()), []);
     const onlineUserIds = useAppSelector((state: RootState) => state.presence.onlineUserIds);
 
     const isDirect = conversation.type !== "SUPPORT";
@@ -585,8 +585,7 @@ const ManagerChatSidebar = () => {
     const [creatingChat, setCreatingChat] = useState(false);
 
     const currentUsername = useAppSelector((state: RootState) => state.user.info?.userName ?? "");
-    const token = useAppSelector((state: RootState) => state.auth.token);
-    const currentManagerId = useMemo(() => getIdentityUserIdFromToken(token), [token]);
+    const currentManagerId = useMemo(() => getIdentityUserIdFromToken(getAccessToken()), []);
     const conversations = useAppSelector((state: RootState) => state.chat.conversations ?? []);
     const unreadIds = useAppSelector((state: RootState) => state.chat.unreadConversationIds ?? []);
     const onlineUserIds = useAppSelector((state: RootState) => state.presence.onlineUserIds);

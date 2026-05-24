@@ -1,17 +1,20 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { connectSocket, disconnectSocket } from "@/utils/socketClient";
 import { addMessage, updateConversation, setConversations, addUnread, SupportConversation } from "@/redux/slices/chat";
 import { setOnlineUsers, setUserOnline, setUserOffline } from "@/redux/slices/presence";
 import { messageApi } from "@/services/api/messageApi";
+import { getAccessToken } from "@/config/axios.config";
 
 const SocketClient = () => {
     const dispatch = useAppDispatch();
     const isLogin = useAppSelector(state => state.auth.isLogin);
-    const token = useAppSelector(state => state.auth.token);
 
     useEffect(() => {
-        if (!isLogin || !token) return;
+        if (!isLogin) return;
+
+        const token = getAccessToken();
+        if (!token) return;
 
         const socket = connectSocket(token);
         if (!socket) return;
@@ -82,7 +85,7 @@ const SocketClient = () => {
             socket.off("user_offline");
             disconnectSocket();
         };
-    }, [isLogin, token, dispatch]);
+    }, [isLogin, dispatch]);
 
     return null;
 };

@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class RoleService {
+
     RoleRepository roleRepository;
     PermissionRepository permissionRepository;
     RoleMapper roleMapper;
@@ -29,7 +30,8 @@ public class RoleService {
         var role = roleMapper.toRole(request);
 
         if (request.getPermissions() != null) {
-            var permissions = permissionRepository.findAllById(request.getPermissions());
+            // Lookup by name (không phải ID số) vì client gửi tên permission
+            var permissions = permissionRepository.findAllByNameIn(request.getPermissions());
             role.setPermissions(new HashSet<>(permissions));
         }
 

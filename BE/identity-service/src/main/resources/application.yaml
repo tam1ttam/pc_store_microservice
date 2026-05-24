@@ -37,8 +37,12 @@ spring:
 
 jwt:
   signerKey: ${JWT_SIGNER_KEY:dev-only-jwt-signer-key-for-local-development-please-change-prod}
-  valid-duration: 3600
+  valid-duration: 900
   refreshable-duration: 36000
+  refresh-token-duration: 604800
+
+cookie:
+  secure: ${COOKIE_SECURE:false}
 
 eureka:
   client:
