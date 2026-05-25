@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
     ShoppingCart, DollarSign, Users, Package,
     CheckCircle, Clock, XCircle, Wifi, Server,
@@ -84,6 +85,7 @@ function StatCard({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const Dashboard: React.FC = () => {
+    const { t } = useTranslation();
     const [orderStats, setOrderStats] = useState<OrderStats | null>(null);
     const [customerCount, setCustomerCount] = useState<number | null>(null);
     const [productCount, setProductCount] = useState<number | null>(null);
@@ -179,26 +181,26 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
                     icon={<ShoppingCart size={18} />}
-                    label="Tổng đơn hàng"
+                    label={t('dashboard.totalOrders')}
                     value={orderStats?.totalOrders ?? "—"}
-                    sub={`${orderStats?.paidOrders ?? 0} đã thanh toán`}
+                    sub={`${orderStats?.paidOrders ?? 0} ${t('dashboard.paidOrdersSub')}`}
                     color="bg-blue-50 text-blue-600"
                 />
                 <StatCard
                     icon={<DollarSign size={18} />}
-                    label="Doanh thu"
+                    label={t('dashboard.totalRevenue')}
                     value={orderStats ? formatCurrency(orderStats.totalRevenue) : "—"}
                     color="bg-green-50 text-green-600"
                 />
                 <StatCard
                     icon={<Users size={18} />}
-                    label="Khách hàng"
+                    label={t('dashboard.totalCustomers')}
                     value={customerCount ?? "—"}
                     color="bg-purple-50 text-purple-600"
                 />
                 <StatCard
                     icon={<Package size={18} />}
-                    label="Sản phẩm"
+                    label={t('dashboard.totalProducts')}
                     value={productCount ?? "—"}
                     color="bg-orange-50 text-orange-600"
                 />
@@ -209,19 +211,19 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-3 gap-4">
                     <StatCard
                         icon={<Clock size={18} />}
-                        label="Đang giao"
+                        label={t('dashboard.pendingOrdersLabel')}
                         value={orderStats.pendingOrders}
                         color="bg-yellow-50 text-yellow-600"
                     />
                     <StatCard
                         icon={<CheckCircle size={18} />}
-                        label="Đã giao"
+                        label={t('dashboard.completedOrdersLabel')}
                         value={orderStats.completedOrders}
                         color="bg-green-50 text-green-600"
                     />
                     <StatCard
                         icon={<XCircle size={18} />}
-                        label="Đã hủy"
+                        label={t('dashboard.cancelledOrdersLabel')}
                         value={orderStats.cancelledOrders}
                         color="bg-red-50 text-red-600"
                     />
@@ -235,11 +237,11 @@ const Dashboard: React.FC = () => {
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
                             <Server size={16} />
-                            Trạng thái dịch vụ
+                            {t('dashboard.serviceStatus')}
                         </CardTitle>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <RefreshCw size={12} className="animate-spin opacity-40" />
-                            tự động
+                            {t('dashboard.autoRefresh')}
                         </span>
                     </CardHeader>
                     <CardContent>
@@ -279,7 +281,7 @@ const Dashboard: React.FC = () => {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
                             <Wifi size={16} />
-                            Người dùng trực tuyến
+                            {t('dashboard.onlineUsers')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -294,7 +296,7 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <div className="bg-sky-50 rounded-lg p-3 text-center">
                                     <div className="font-bold text-sky-700">{onlineStats.clients}</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Khách hàng</div>
+                                    <div className="text-xs text-muted-foreground mt-1">{t('dashboard.totalCustomers')}</div>
                                 </div>
                             </div>
                         )}
@@ -305,7 +307,7 @@ const Dashboard: React.FC = () => {
             {/* ── Row 4: Live audit log ── */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-base font-semibold">Hoạt động gần đây</CardTitle>
+                    <CardTitle className="text-base font-semibold">{t('dashboard.recentActivity')}</CardTitle>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <RefreshCw size={12} className="animate-spin opacity-40" />
                         poll 10s
@@ -313,7 +315,7 @@ const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                     {auditLog.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">Không có dữ liệu</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">{t('dashboard.noData')}</p>
                     ) : (
                         <div className="space-y-2">
                             {auditLog.map((entry) => (

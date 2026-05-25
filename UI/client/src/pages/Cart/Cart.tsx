@@ -4,13 +4,15 @@ import { useToast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { getCart, removeCartItem } from "@/redux/thunks/cart";
 import { cartApi } from "@/services/api/cartApi";
-import { Box, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Box, Loader2, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { CartItem } from "@/types/Cart";
 
 function Cart() {
+    const { t } = useTranslation();
     const { items, status } = useSelector((state: RootState) => state.cart);
     const dispatch = useDispatch<any>();
     const { toast } = useToast();
@@ -66,7 +68,7 @@ function Cart() {
         setQuantities((q) => ({ ...q, [item.id]: next }));
         cartApi.upsertItem(item.productId, item.productName, item.productPrice, next, item.productImage).catch(() => {
             setQuantities((q) => ({ ...q, [item.id]: prev }));
-            toast({ variant: "destructive", title: "Cập nhật số lượng thất bại" });
+            toast({ variant: "destructive", title: t('cart.updateQuantityFailed') });
         });
     };
 
@@ -79,13 +81,13 @@ function Cart() {
                 return next;
             });
         } catch {
-            toast({ variant: "destructive", title: "Xóa sản phẩm thất bại" });
+            toast({ variant: "destructive", title: t('cart.removeFailed') });
         }
     };
 
     const handleCheckout = () => {
         if (selectedIds.size === 0) {
-            toast({ variant: "destructive", title: "Vui lòng chọn ít nhất một sản phẩm" });
+            toast({ variant: "destructive", title: t('cart.selectAtLeastOne') });
             return;
         }
         navigate("/checkout", { state: { selectedItemIds: Array.from(selectedIds) } });
@@ -96,9 +98,9 @@ function Cart() {
     return (
         <div className="container mx-auto px-4 pb-24 relative pt-24">
             <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-                <Link to="/" className="hover:text-orange-500 transition-colors">Trang chủ</Link>
+                <Link to="/" className="hover:text-orange-500 transition-colors">{t('cart.breadcrumbHome')}</Link>
                 <span>/</span>
-                <span className="text-orange-500">Giỏ hàng</span>
+                <span className="text-orange-500">{t('cart.title')}</span>
             </div>
 
             {status === "loading" && items.length === 0 ? (
@@ -108,9 +110,9 @@ function Cart() {
             ) : !items?.length ? (
                 <div className="text-center py-16">
                     <ShoppingCart className="w-20 h-20 mx-auto text-orange-500 mb-4" />
-                    <p className="text-muted-foreground text-lg mb-4">Không có sản phẩm trong giỏ hàng</p>
+                    <p className="text-muted-foreground text-lg mb-4">{t('cart.emptyMsg')}</p>
                     <Button asChild variant="outline" className="hover:text-orange-500 hover:border-orange-500">
-                        <Link to="/products">Tiếp tục mua sắm</Link>
+                        <Link to="/products">{t('cart.continueShopping')}</Link>
                     </Button>
                 </div>
             ) : (
@@ -124,12 +126,12 @@ function Cart() {
                                 onChange={toggleAll}
                                 className="w-4 h-4 accent-orange-500"
                             />
-                            <span>Sản phẩm</span>
+                            <span>{t('cart.product')}</span>
                         </div>
-                        <div className="col-span-2 text-center">Đơn giá</div>
-                        <div className="col-span-2 text-center">Số lượng</div>
-                        <div className="col-span-2 text-center">Thành tiền</div>
-                        <div className="col-span-1 text-center">Xóa</div>
+                        <div className="col-span-2 text-center">{t('cart.unitPrice')}</div>
+                        <div className="col-span-2 text-center">{t('cart.quantity')}</div>
+                        <div className="col-span-2 text-center">{t('cart.amount')}</div>
+                        <div className="col-span-1 text-center">{t('cart.delete')}</div>
                     </div>
 
                     {/* Items */}
@@ -226,14 +228,14 @@ function Cart() {
                                     className="w-4 h-4 accent-orange-500"
                                 />
                                 <span className="text-sm text-gray-600">
-                                    Chọn tất cả ({items.length})
+                                    {t('cart.selectAll')} ({items.length})
                                 </span>
                             </div>
 
                             <Separator orientation="vertical" className="h-8 hidden sm:block" />
 
                             <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">Tổng tiền:</span>
+                                <span className="text-sm text-gray-500">{t('cart.totalPrice')}</span>
                                 <span className="text-lg font-bold text-orange-500">
                                     {totalPrice.toLocaleString("vi-VN")}đ
                                 </span>
@@ -244,7 +246,7 @@ function Cart() {
                                 onClick={handleCheckout}
                                 disabled={selectedIds.size === 0}
                             >
-                                Mua hàng ({selectedCount})
+                                {t('cart.checkoutItems', { count: selectedCount })}
                             </Button>
                         </div>
                     </div>

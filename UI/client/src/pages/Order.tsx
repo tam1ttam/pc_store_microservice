@@ -4,36 +4,38 @@ import { RootState } from "@/redux/store";
 import { Clock, MapPin, Package, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-const STATUS_CONFIG: Record<string, { label: string; icon: any; className: string }> = {
-    DELIVERING: { label: "Đang giao hàng", icon: Truck, className: "bg-orange-100 text-orange-700" },
-    DELIVERED:  { label: "Đã giao hàng",   icon: Package, className: "bg-green-100 text-green-700" },
-    CANCELLED:  { label: "Đã hủy",          icon: XCircle, className: "bg-red-100 text-red-700" },
-    PENDING:    { label: "Chờ xử lý",       icon: Clock, className: "bg-yellow-100 text-yellow-700" },
-};
-
-function Order() {
+export default function Order() {
+    const { t } = useTranslation();
     const { orders, status } = useSelector((state: RootState) => state.order);
+
+    const STATUS_CONFIG: Record<string, { label: string; icon: any; className: string }> = {
+        DELIVERING: { label: t('order.status_DELIVERING'), icon: Truck, className: "bg-orange-100 text-orange-700" },
+        DELIVERED:  { label: t('order.status_DELIVERED_FULL'), icon: Package, className: "bg-green-100 text-green-700" },
+        CANCELLED:  { label: t('order.status_CANCELLED'), icon: XCircle, className: "bg-red-100 text-red-700" },
+        PENDING:    { label: t('order.status_PENDING'), icon: Clock, className: "bg-yellow-100 text-yellow-700" },
+    };
 
     return (
         <div className="container mx-auto p-6 pt-24">
             <div className="flex items-center gap-2 mb-6 text-gray-600">
                 <Link to="/" className="hover:text-orange-500">
-                    Trang chủ
+                    {t('order.breadcrumbHome')}
                 </Link>
                 <span>/</span>
-                <span className="text-orange-500">Đơn hàng</span>
+                <span className="text-orange-500">{t('order.breadcrumbOrder')}</span>
             </div>
-            <h1 className="text-3xl font-semibold text-gray-800 mb-6">Đơn hàng của bạn</h1>
+            <h1 className="text-3xl font-semibold text-gray-800 mb-6">{t('order.heading')}</h1>
 
             {status === "loading" && orders.length === 0 && (
-                <div className="text-center py-12 text-gray-400">Đang tải đơn hàng...</div>
+                <div className="text-center py-12 text-gray-400">{t('order.loading')}</div>
             )}
 
             {status !== "loading" && orders.length === 0 && (
                 <div className="text-center py-16">
                     <ShoppingBag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <p className="text-gray-400">Bạn chưa có đơn hàng nào</p>
+                    <p className="text-gray-400">{t('order.noOrders')}</p>
                 </div>
             )}
 
@@ -48,7 +50,7 @@ function Order() {
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-4">
                                             <CardTitle className="text-xl font-medium text-gray-800">
-                                                Đơn hàng #{order.id}
+                                                {t('order.orderNumber', { id: order.id })}
                                             </CardTitle>
                                             <Badge className={cfg.className}>
                                                 <StatusIcon className="h-3 w-3 mr-1" />
@@ -78,7 +80,7 @@ function Order() {
                                 <CardContent className="pt-4">
                                     <div className="flex items-center gap-2">
                                         <Package className="h-4 w-4 text-gray-500" />
-                                        <span className="text-sm text-gray-600">{order.items?.length ?? 0} sản phẩm</span>
+                                        <span className="text-sm text-gray-600">{t('order.itemCount', { count: order.items?.length ?? 0 })}</span>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -89,5 +91,3 @@ function Order() {
         </div>
     );
 }
-
-export default Order;

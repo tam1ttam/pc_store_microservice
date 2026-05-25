@@ -17,8 +17,8 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { adminApi } from "@/services/api/adminApi";
 
 interface Customer {
@@ -32,6 +32,7 @@ interface Customer {
 }
 
 const UserManagement: React.FC = () => {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -66,11 +67,11 @@ const UserManagement: React.FC = () => {
             setTotalPages(page?.totalPages ?? 0);
             setTotalElements(page?.totalElements ?? 0);
         } catch {
-            toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải danh sách người dùng." });
+            toast({ variant: "destructive", title: t('userManagement.errorTitle'), description: t('userManagement.loadError') });
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, debouncedSearch, toast]);
+    }, [currentPage, debouncedSearch, toast, t]);
 
     useEffect(() => {
         fetchCustomers();
@@ -80,9 +81,9 @@ const UserManagement: React.FC = () => {
         setUpdatingRole(userName);
         try {
             await adminApi.updateUserRole(userName);
-            toast({ title: "Thành công", description: `Đã gán quyền ADMIN cho ${userName}.` });
+            toast({ title: t('userManagement.successTitle'), description: t('userManagement.assignSuccess', { username: userName }) });
         } catch {
-            toast({ variant: "destructive", title: "Lỗi", description: "Không thể cập nhật quyền." });
+            toast({ variant: "destructive", title: t('userManagement.errorTitle'), description: t('userManagement.assignError') });
         } finally {
             setUpdatingRole(null);
         }
@@ -92,15 +93,15 @@ const UserManagement: React.FC = () => {
         <div className="container mx-auto p-4">
             <div className="flex justify-between items-center mb-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
+                    <h1 className="text-2xl font-bold">{t('userManagement.title')}</h1>
                     {!isLoading && (
                         <p className="text-sm text-muted-foreground mt-1">
-                            Tổng cộng {totalElements} người dùng
+                            {t('userManagement.totalUsers', { count: totalElements })}
                         </p>
                     )}
                 </div>
                 <Input
-                    placeholder="Tìm kiếm theo tên..."
+                    placeholder={t('userManagement.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="max-w-sm"
@@ -111,12 +112,12 @@ const UserManagement: React.FC = () => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Tên đăng nhập</TableHead>
-                            <TableHead>Họ và tên</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>SĐT</TableHead>
-                            <TableHead>Thành phố</TableHead>
-                            <TableHead className="text-right">Hành động</TableHead>
+                            <TableHead>{t('userManagement.username')}</TableHead>
+                            <TableHead>{t('userManagement.fullName')}</TableHead>
+                            <TableHead>{t('userManagement.email')}</TableHead>
+                            <TableHead>{t('userManagement.phone')}</TableHead>
+                            <TableHead>{t('userManagement.city')}</TableHead>
+                            <TableHead className="text-right">{t('userManagement.action')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -133,7 +134,7 @@ const UserManagement: React.FC = () => {
                         ) : customers.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                    Không có dữ liệu
+                                    {t('userManagement.noData')}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -151,7 +152,7 @@ const UserManagement: React.FC = () => {
                                             disabled={updatingRole === customer.userName}
                                             onClick={() => handleAssignAdmin(customer.userName)}
                                         >
-                                            {updatingRole === customer.userName ? "Đang cập nhật..." : "Gán ADMIN"}
+                                            {updatingRole === customer.userName ? t('userManagement.updating') : t('userManagement.assignAdmin')}
                                         </Button>
                                     </TableCell>
                                 </TableRow>

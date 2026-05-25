@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { fetchProducts, fetchProductsByCategories } from "@/redux/thunks/product";
 import { AppDispatch, RootState } from "@/redux/store";
 import ProductCard from "./components/ProductCard";
@@ -11,13 +12,12 @@ import { CATEGORY_KEYWORDS } from "@/data/categories";
 import { removeAccents } from "@/utils/stringUtils";
 
 const ProductsPage = () => {
+    const { t } = useTranslation();
     const dispatch = useDispatch<AppDispatch>();
     const [searchParams] = useSearchParams();
 
-    // Lấy state từ Redux (products này là 1 trang 10 items từ server)
     const { products, loading, error, pagination } = useSelector((state: RootState) => state.product);
 
-    // Filter states — pre-select category from URL ?category=X
     const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
         const cat = searchParams.get("category");
         return cat ? [cat] : [];
@@ -26,7 +26,6 @@ const ProductsPage = () => {
     const [showFilters, setShowFilters] = useState(false);
     const [sortBy, setSortBy] = useState("newest");
 
-    // Fetch khi category thay đổi (bao gồm lần đầu load từ URL param)
     useEffect(() => {
         if (selectedCategories.length > 0) {
             dispatch(fetchProductsByCategories({ categories: selectedCategories, page: 0 }));
@@ -35,11 +34,9 @@ const ProductsPage = () => {
         }
     }, [selectedCategories, dispatch]);
 
-    // --- LOGIC LỌC TRÊN TRANG HIỆN TẠI ---
     const displayedProducts = useMemo(() => {
         if (!products) return [];
 
-        // Khi có category được chọn: backend đã filter → chỉ cần search + sort client-side
         const backendFiltered = selectedCategories.length > 0;
 
         let filtered = products.filter((product) => {
@@ -56,8 +53,6 @@ const ProductsPage = () => {
             return matchesSearch && matchesCategory;
         });
 
-        // 2. Sắp xếp (Client-side sorting on current page)
-        // Lưu ý: Nếu muốn sort toàn bộ database thì phải gọi API, còn đây là sort 10 item đang thấy
         return filtered.sort((a, b) => {
             switch (sortBy) {
                 case "price-asc":
@@ -71,7 +66,7 @@ const ProductsPage = () => {
     }, [products, searchQuery, selectedCategories, sortBy]);
 
     if (error) {
-        return <div className="text-center py-20 text-red-500">Lỗi: {error}</div>;
+        return <div className="text-center py-20 text-red-500">{t('common.error')}: {error}</div>;
     }
 
     const handlePageChange = (newPage: number) => {
@@ -88,9 +83,9 @@ const ProductsPage = () => {
             {/* Banner */}
             <div className="bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700 text-white">
                 <div className="container mx-auto px-4 py-16 pl-4">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4 pt-8">Build Your Dream PC</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4 pt-8">{t('product.heroTitle')}</h1>
                     <p className="text-orange-100 max-w-2xl text-lg">
-                        High-performance custom PCs built with premium components.
+                        {t('product.heroDesc')}
                     </p>
                 </div>
             </div>
@@ -110,28 +105,26 @@ const ProductsPage = () => {
                                 onClick={() => setShowFilters(!showFilters)}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-3 border rounded-lg bg-white"
                             >
-                                <SlidersHorizontal className="w-4 h-4" /> Bộ lọc
+                                <SlidersHorizontal className="w-4 h-4" /> {t('product.filterTitle')}
                             </button>
                         </div>
 
-                        {/* Header hiển thị số lượng */}
                         <div className="flex items-center justify-between mb-6 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200">
                             <p className="text-gray-600 dark:text-gray-400">
-                                Hiển thị <span className="font-semibold text-gray-900">{displayedProducts.length}</span>{" "}
-                                kết quả (trên trang {pagination.currentPage + 1})
+                                {t('product.showing')} <span className="font-semibold text-gray-900">{displayedProducts.length}</span>{" "}
+                                {t('product.results')} ({t('product.page')} {pagination.currentPage + 1})
                             </p>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
                                 className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-700"
                             >
-                                <option value="newest">Mới nhất</option>
-                                <option value="price-asc">Giá thấp đến cao</option>
-                                <option value="price-desc">Giá cao đến thấp</option>
+                                <option value="newest">{t('product.newest')}</option>
+                                <option value="price-asc">{t('product.priceAsc')}</option>
+                                <option value="price-desc">{t('product.priceDesc')}</option>
                             </select>
                         </div>
 
-                        {/* Danh sách sản phẩm */}
                         {loading ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {Array.from({ length: 8 }).map((_, i) => (
@@ -142,8 +135,8 @@ const ProductsPage = () => {
                             <div className="text-center py-16 bg-white rounded-xl border">
                                 <p className="text-gray-500">
                                     {products.length === 0
-                                        ? "Không có sản phẩm nào ở trang này"
-                                        : "Không tìm thấy sản phẩm phù hợp với bộ lọc trên trang này"}
+                                        ? t('product.noProductsPage')
+                                        : t('product.noProductsFilter')}
                                 </p>
                             </div>
                         ) : (
@@ -154,7 +147,6 @@ const ProductsPage = () => {
                             </div>
                         )}
 
-                        {/* Pagination  */}
                         {pagination.totalPages > 1 && (
                             <div className="flex justify-center mt-8 gap-2">
                                 <button
@@ -162,7 +154,7 @@ const ProductsPage = () => {
                                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                                     className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 bg-white"
                                 >
-                                    Trước
+                                    {t('product.prev')}
                                 </button>
                                 <span className="px-4 py-2 bg-orange-600 text-white rounded-lg">
                                     {pagination.currentPage + 1} / {pagination.totalPages}
@@ -172,7 +164,7 @@ const ProductsPage = () => {
                                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                                     className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 bg-white"
                                 >
-                                    Tiếp
+                                    {t('product.next')}
                                 </button>
                             </div>
                         )}

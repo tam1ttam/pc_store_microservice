@@ -10,9 +10,11 @@ import { Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 function Login() {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [credentials, setCredentials] = useState<Auth.Credentials>({
         userName: "",
@@ -31,17 +33,16 @@ function Login() {
             const result = await dispatch(login(credentials));
 
             if (login.fulfilled.match(result)) {
-                // The role check is now implicitly handled by the backend endpoint
                 toast({
-                    title: "Đăng nhập thành công",
-                    description: "Chào mừng quản trị viên!",
+                    title: t('auth.loginSuccess'),
+                    description: t('auth.loginSuccess_admin'),
                     variant: "default",
                 });
                 navigate("/");
             } else {
                 toast({
-                    title: "Đăng nhập thất bại",
-                    description: result.payload?.message || "Tên đăng nhập hoặc mật khẩu không chính xác.",
+                    title: t('auth.loginFailed'),
+                    description: result.payload?.message || t('auth.loginFailed_desc'),
                     variant: "destructive",
                 });
             }
@@ -55,7 +56,7 @@ function Login() {
             } else {
                 toast({
                     variant: "destructive",
-                    description: "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
+                    description: t('auth.unknownError'),
                 });
             }
         } finally {
@@ -73,17 +74,17 @@ function Login() {
                     </div>
 
                     <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-semibold tracking-tight">Đăng nhập</h2>
-                        <p className="text-sm text-gray-400">Truy cập vào bảng điều khiển quản trị</p>
+                        <h2 className="text-2xl font-semibold tracking-tight">{t('auth.login')}</h2>
+                        <p className="text-sm text-gray-400">{t('auth.adminSubtitle')}</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="w-full space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="username">Tên đăng nhập</Label>
+                            <Label htmlFor="username">{t('auth.username')}</Label>
                             <Input
                                 id="username"
                                 type="text"
-                                placeholder="Nhập tên đăng nhập"
+                                placeholder={t('auth.usernamePlaceholder')}
                                 value={credentials.userName}
                                 onChange={(e) => setCredentials({ ...credentials, userName: e.target.value })}
                                 className="bg-gray-700 border-gray-600 text-white"
@@ -91,11 +92,11 @@ function Login() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="password">Mật khẩu</Label>
+                            <Label htmlFor="password">{t('auth.password')}</Label>
                             <Input
                                 id="password"
                                 type="password"
-                                placeholder="Nhập mật khẩu"
+                                placeholder={t('auth.passwordPlaceholder')}
                                 value={credentials.password}
                                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                                 className="bg-gray-700 border-gray-600 text-white"
@@ -106,10 +107,10 @@ function Login() {
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang xử lý...
+                                    {t('auth.processing')}
                                 </>
                             ) : (
-                                "Đăng nhập"
+                                t('auth.login')
                             )}
                         </Button>
                     </form>

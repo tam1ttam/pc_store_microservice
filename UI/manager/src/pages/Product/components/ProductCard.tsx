@@ -1,5 +1,6 @@
 import { ShoppingCart, Heart, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface Supplier {
     id?: string;
@@ -23,6 +24,8 @@ const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 export default function ProductCard({ product }: Props) {
+    const { t } = useTranslation();
+
     return (
         <Link to={`/products/${product.id}`} className="block">
             <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-blue-500/50">
@@ -41,7 +44,7 @@ export default function ProductCard({ product }: Props) {
                 <div className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                            {product.supplier?.name ?? 'Nhà cung cấp'}
+                            {product.supplier?.name ?? t('clientProduct.supplier')}
                         </span>
                         <div className="flex items-center gap-0.5">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -66,7 +69,7 @@ export default function ProductCard({ product }: Props) {
 
                     <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
                         <ShoppingCart className="w-4 h-4" />
-                        Thêm vào giỏ
+                        {t('clientProduct.addToCart')}
                     </button>
                 </div>
             </div>

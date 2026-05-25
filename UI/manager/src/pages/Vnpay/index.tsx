@@ -10,8 +10,10 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const PaymentResult = () => {
+    const { t } = useTranslation();
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
     const responseCode = searchParams.get("vnp_ResponseCode");
@@ -60,7 +62,7 @@ const PaymentResult = () => {
                             );
 
                             toast({
-                                title: "Thanh toán thành công"
+                                title: t("vnpay.paymentSuccess")
                             });
                         }
                     }
@@ -69,8 +71,8 @@ const PaymentResult = () => {
                 console.error("Error creating order:", error);
                 toast({
                     variant: "destructive",
-                    title: "Lỗi",
-                    description: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+                    title: t("vnpay.error"),
+                    description: t("vnpay.errorDesc")
                 });
                 navigate("/cart");
             } finally {
@@ -79,14 +81,14 @@ const PaymentResult = () => {
         };
 
         createOrder();
-    }, [isSuccess, token, dispatch, navigate]);
+    }, [isSuccess, token, dispatch, navigate, t]);
 
     if (isProcessing) {
         return (
             <div className="container mx-auto px-4 py-8">
                 <Card className="max-w-md mx-auto">
                     <CardContent className="flex flex-col items-center gap-4 py-6">
-                        <p className="text-lg">Đang xử lý đơn hàng...</p>
+                        <p className="text-lg">{t("vnpay.processing")}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -97,7 +99,7 @@ const PaymentResult = () => {
         <div className="container mx-auto px-4 py-8">
             <Card className="max-w-md mx-auto">
                 <CardHeader>
-                    <CardTitle className="text-center text-2xl">Kết quả thanh toán</CardTitle>
+                    <CardTitle className="text-center text-2xl">{t("vnpay.resultTitle")}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
                     {isSuccess ? (
@@ -106,12 +108,12 @@ const PaymentResult = () => {
                         <XCircle className="w-16 h-16 text-red-500" />
                     )}
                     <p className="text-lg text-center">
-                        {isSuccess ? "Thanh toán thành công!" : "Thanh toán thất bại. Vui lòng thử lại!"}
+                        {isSuccess ? t("vnpay.successMsg") : t("vnpay.failedMsg")}
                     </p>
                 </CardContent>
                 <CardFooter className="flex justify-center">
                     <Button asChild className="bg-orange-500 hover:bg-orange-600">
-                        <Link to="/order">Xem danh sách đơn hàng</Link>
+                        <Link to="/order">{t("vnpay.viewOrders")}</Link>
                     </Button>
                 </CardFooter>
             </Card>

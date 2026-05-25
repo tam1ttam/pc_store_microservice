@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle, Plus, Trash2 } from "lucide-react";
 import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks";
 import { setProfileActive } from "@/redux/slices/user";
 import { userApi, type AddressRequest } from "@/services/api/userApi";
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export default function ProfileCompletionModal({ onClose }: Props) {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const [step, setStep] = useState<"profile" | "otp">("profile");
     const [loading, setLoading] = useState(false);
@@ -80,18 +82,18 @@ export default function ProfileCompletionModal({ onClose }: Props) {
 
     const validate = () => {
         const errs: Record<string, string> = {};
-        if (!form.firstName.trim()) errs.firstName = "Họ không được để trống";
-        if (!form.lastName.trim()) errs.lastName = "Tên không được để trống";
-        if (!form.email.trim()) errs.email = "Email không được để trống";
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Email không hợp lệ";
-        if (!form.phoneNumber.trim()) errs.phoneNumber = "Số điện thoại không được để trống";
-        else if (!/^0[0-9]{9}$/.test(form.phoneNumber)) errs.phoneNumber = "Số điện thoại phải bắt đầu bằng 0 và có 10 chữ số";
+        if (!form.firstName.trim()) errs.firstName = t('profile.firstNameRequired');
+        if (!form.lastName.trim()) errs.lastName = t('profile.lastNameRequired');
+        if (!form.email.trim()) errs.email = t('profile.emailRequired');
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = t('profile.emailInvalid');
+        if (!form.phoneNumber.trim()) errs.phoneNumber = t('profile.phoneRequired');
+        else if (!/^0[0-9]{9}$/.test(form.phoneNumber)) errs.phoneNumber = t('profile.phoneInvalid');
 
         addresses.forEach((addr, i) => {
-            if (!addr.province.trim()) errs[`addr_${i}_province`] = "Tỉnh/Thành không được để trống";
-            if (!addr.city.trim()) errs[`addr_${i}_city`] = "Quận/Huyện không được để trống";
-            if (!addr.ward.trim()) errs[`addr_${i}_ward`] = "Phường/Xã không được để trống";
-            if (!addr.street.trim()) errs[`addr_${i}_street`] = "Địa chỉ cụ thể không được để trống";
+            if (!addr.province.trim()) errs[`addr_${i}_province`] = t('profile.provinceRequired');
+            if (!addr.city.trim()) errs[`addr_${i}_city`] = t('profile.districtRequired');
+            if (!addr.ward.trim()) errs[`addr_${i}_ward`] = t('profile.wardRequired');
+            if (!addr.street.trim()) errs[`addr_${i}_street`] = t('profile.streetRequired');
         });
 
         setErrors(errs);
@@ -108,7 +110,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
             });
             setStep("otp");
         } catch {
-            toast({ title: "Hoàn thiện hồ sơ thất bại, vui lòng thử lại" });
+            toast({ title: t('profile.completeFailed2') });
         } finally {
             setLoading(false);
         }
@@ -116,11 +118,11 @@ export default function ProfileCompletionModal({ onClose }: Props) {
 
     const handleVerifyOtp = () => {
         if (!otpCode.trim()) {
-            setOtpError("Vui lòng nhập mã xác minh");
+            setOtpError(t('profile.otpRequired'));
             return;
         }
         dispatch(setProfileActive());
-        toast({ title: "Xác minh thành công! Chào mừng bạn." });
+        toast({ title: t('profile.verifySuccess') });
         onClose?.();
     };
 
@@ -131,13 +133,13 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CheckCircle className="w-8 h-8 text-green-500" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Xác minh email</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('profile.otpVerifyTitle')}</h2>
                     <p className="text-gray-500 text-sm mb-6">
-                        Mã xác minh đã được gửi đến email của bạn. Nhập mã để hoàn tất.
+                        {t('profile.otpSentDesc')}
                     </p>
                     <input
                         type="text"
-                        placeholder="Nhập mã xác minh"
+                        placeholder={t('profile.otpPlaceholder')}
                         value={otpCode}
                         onChange={e => { setOtpCode(e.target.value); setOtpError(""); }}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 text-center text-lg tracking-widest mb-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -148,7 +150,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                         onClick={handleVerifyOtp}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors mt-2"
                     >
-                        Xác minh
+                        {t('profile.verify')}
                     </button>
                 </div>
             </div>
@@ -160,9 +162,9 @@ export default function ProfileCompletionModal({ onClose }: Props) {
             <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-800">Hoàn thiện hồ sơ</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{t('profile.complete')}</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        Vui lòng điền đầy đủ thông tin trước khi tiếp tục sử dụng.
+                        {t('profile.subtitle')}
                     </p>
                 </div>
 
@@ -171,10 +173,10 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                     {/* Personal info */}
                     <section>
                         <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                            Thông tin cá nhân
+                            {t('profile.personalInfo')}
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label="Họ *" error={errors.firstName}>
+                            <Field label={`${t('auth.firstName')} *`} error={errors.firstName}>
                                 <input
                                     type="text"
                                     value={form.firstName}
@@ -183,7 +185,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                     className={inputCls(errors.firstName)}
                                 />
                             </Field>
-                            <Field label="Tên *" error={errors.lastName}>
+                            <Field label={`${t('auth.lastName')} *`} error={errors.lastName}>
                                 <input
                                     type="text"
                                     value={form.lastName}
@@ -194,7 +196,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                             </Field>
                         </div>
                         <div className="grid grid-cols-1 gap-3 mt-3">
-                            <Field label="Email *" error={errors.email}>
+                            <Field label={`${t('auth.emailLabel')} *`} error={errors.email}>
                                 <input
                                     type="email"
                                     value={form.email}
@@ -203,7 +205,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                     className={inputCls(errors.email)}
                                 />
                             </Field>
-                            <Field label="Số điện thoại *" error={errors.phoneNumber}>
+                            <Field label={`${t('auth.phoneLabel')} *`} error={errors.phoneNumber}>
                                 <input
                                     type="tel"
                                     value={form.phoneNumber}
@@ -214,7 +216,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                             </Field>
                         </div>
                         <div className="grid grid-cols-3 gap-3 mt-3">
-                            <Field label="Ngày sinh">
+                            <Field label={t('profile.dob')}>
                                 <input
                                     type="date"
                                     value={form.dob}
@@ -222,19 +224,19 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                     className={inputCls()}
                                 />
                             </Field>
-                            <Field label="Giới tính">
+                            <Field label={t('profile.gender')}>
                                 <select
                                     value={form.gender}
                                     onChange={e => setField("gender", e.target.value)}
                                     className={inputCls()}
                                 >
-                                    <option value="">-- Chọn --</option>
-                                    <option value="Nam">Nam</option>
-                                    <option value="Nữ">Nữ</option>
+                                    <option value="">-- {t('common.filter')} --</option>
+                                    <option value="Nam">{t('profile.male')}</option>
+                                    <option value="Nữ">{t('profile.female')}</option>
                                     <option value="Khác">Khác</option>
                                 </select>
                             </Field>
-                            <Field label="Tỉnh/Thành phố">
+                            <Field label={t('profile.province')}>
                                 <input
                                     type="text"
                                     value={form.city}
@@ -250,21 +252,21 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                     <section>
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                                Địa chỉ giao hàng *
+                                {t('profile.shippingAddresses')}
                             </h3>
                             <button
                                 type="button"
                                 onClick={addAddress}
                                 className="flex items-center gap-1 text-sm text-orange-500 hover:text-orange-600 font-medium"
                             >
-                                <Plus className="w-4 h-4" /> Thêm địa chỉ
+                                <Plus className="w-4 h-4" /> {t('profile.addAddress')}
                             </button>
                         </div>
 
                         {addresses.map((addr, idx) => (
                             <div key={idx} className="border border-gray-200 rounded-xl p-4 mb-3 relative">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm font-medium text-gray-700">Địa chỉ {idx + 1}</span>
+                                    <span className="text-sm font-medium text-gray-700">{t('profile.addressLabel', { num: idx + 1 })}</span>
                                     <div className="flex items-center gap-3">
                                         <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
                                             <input
@@ -273,7 +275,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                                 onChange={() => setDefaultAddress(idx)}
                                                 className="accent-orange-500"
                                             />
-                                            Mặc định
+                                            {t('profile.defaultAddress')}
                                         </label>
                                         {addresses.length > 1 && (
                                             <button
@@ -288,7 +290,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-2">
-                                    <Field label="Tỉnh/Thành *" error={errors[`addr_${idx}_province`]}>
+                                    <Field label={`${t('profile.province')} *`} error={errors[`addr_${idx}_province`]}>
                                         <input
                                             type="text"
                                             value={addr.province}
@@ -297,7 +299,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                             className={inputCls(errors[`addr_${idx}_province`])}
                                         />
                                     </Field>
-                                    <Field label="Quận/Huyện *" error={errors[`addr_${idx}_city`]}>
+                                    <Field label={`${t('profile.district')} *`} error={errors[`addr_${idx}_city`]}>
                                         <input
                                             type="text"
                                             value={addr.city}
@@ -306,7 +308,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                             className={inputCls(errors[`addr_${idx}_city`])}
                                         />
                                     </Field>
-                                    <Field label="Phường/Xã *" error={errors[`addr_${idx}_ward`]}>
+                                    <Field label={`${t('profile.ward')} *`} error={errors[`addr_${idx}_ward`]}>
                                         <input
                                             type="text"
                                             value={addr.ward}
@@ -315,7 +317,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                             className={inputCls(errors[`addr_${idx}_ward`])}
                                         />
                                     </Field>
-                                    <Field label="Quốc gia">
+                                    <Field label={t('profile.country')}>
                                         <input
                                             type="text"
                                             value={addr.country}
@@ -325,7 +327,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                                     </Field>
                                 </div>
                                 <div className="mt-2">
-                                    <Field label="Số nhà, tên đường *" error={errors[`addr_${idx}_street`]}>
+                                    <Field label={`${t('profile.street')} *`} error={errors[`addr_${idx}_street`]}>
                                         <input
                                             type="text"
                                             value={addr.street}
@@ -350,7 +352,7 @@ export default function ProfileCompletionModal({ onClose }: Props) {
                         {loading ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
-                            "Hoàn thiện hồ sơ"
+                            t('profile.complete')
                         )}
                     </button>
                 </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { RootState } from "@/redux/store";
 import {
     markAllRead,
@@ -45,6 +46,7 @@ function typeIcon(type: string) {
 }
 
 export default function NotificationBell() {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const { items, unreadCount, status } = useSelector((state: RootState) => state.notification);
     const { isLogin } = useSelector((state: RootState) => state.auth);
@@ -54,7 +56,6 @@ export default function NotificationBell() {
     const [selected, setSelected] = useState<NotificationItem | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // Close panel on outside click
     useEffect(() => {
         if (!open) return;
         const handler = (e: MouseEvent) => {
@@ -66,7 +67,6 @@ export default function NotificationBell() {
         return () => document.removeEventListener("mousedown", handler);
     }, [open]);
 
-    // Load notifications when panel opens for the first time
     const [loaded, setLoaded] = useState(false);
     const handleOpen = async () => {
         setOpen((v) => !v);
@@ -139,31 +139,31 @@ export default function NotificationBell() {
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                        <span className="font-semibold text-gray-800 text-sm">Thông báo</span>
+                        <span className="font-semibold text-gray-800 text-sm">{t('notification.title')}</span>
                         {unreadCount > 0 && (
                             <button
                                 onClick={handleMarkAllRead}
                                 className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 font-medium"
                             >
                                 <CheckCheck className="w-3 h-3" />
-                                Đánh dấu tất cả đã đọc
+                                {t('notification.markAllRead')}
                             </button>
                         )}
                     </div>
 
                     {/* Tabs */}
                     <div className="flex border-b border-gray-100">
-                        {(["all", "unread"] as const).map((t) => (
+                        {(["all", "unread"] as const).map((tabKey) => (
                             <button
-                                key={t}
-                                onClick={() => setTab(t)}
+                                key={tabKey}
+                                onClick={() => setTab(tabKey)}
                                 className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                                    tab === t
+                                    tab === tabKey
                                         ? "text-orange-500 border-b-2 border-orange-500"
                                         : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
-                                {t === "all" ? "Tất cả" : `Chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+                                {tabKey === "all" ? t('notification.all') : `${t('notification.unread')}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
                             </button>
                         ))}
                     </div>
@@ -176,7 +176,7 @@ export default function NotificationBell() {
                             </div>
                         )}
                         {status !== "loading" && displayed.length === 0 && (
-                            <div className="text-center text-gray-400 text-sm py-10">Không có thông báo</div>
+                            <div className="text-center text-gray-400 text-sm py-10">{t('notification.noNotifications')}</div>
                         )}
                         {displayed.map((item) => (
                             <button
@@ -186,7 +186,6 @@ export default function NotificationBell() {
                                     !item.isRead ? "bg-orange-50/60" : ""
                                 }`}
                             >
-                                {/* System badge / icon */}
                                 <div
                                     className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg ${
                                         item.isSystem ? "bg-blue-100" : "bg-orange-100"
@@ -198,7 +197,7 @@ export default function NotificationBell() {
                                     <div className="flex items-center gap-1.5">
                                         {item.isSystem && (
                                             <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-wide bg-blue-50 px-1.5 py-0.5 rounded">
-                                                Hệ thống
+                                                {t('notification.system')}
                                             </span>
                                         )}
                                         {!item.isRead && (
@@ -237,7 +236,7 @@ export default function NotificationBell() {
                             <div>
                                 {selected.isSystem && (
                                     <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-wide bg-blue-50 px-1.5 py-0.5 rounded">
-                                        Hệ thống
+                                        {t('notification.system')}
                                     </span>
                                 )}
                                 <h3 className="font-semibold text-gray-800 text-sm mt-0.5">{selected.title}</h3>
@@ -258,13 +257,13 @@ export default function NotificationBell() {
                                 onClick={() => handleActionDone(selected)}
                                 className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
                             >
-                                Hoàn thành
+                                {t('notification.complete')}
                             </button>
                         )}
                         {selected.actionRequired && selected.actionDone && (
                             <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium justify-center">
                                 <CheckCheck className="w-4 h-4" />
-                                Đã hoàn thành
+                                {t('notification.done')}
                             </div>
                         )}
                     </div>

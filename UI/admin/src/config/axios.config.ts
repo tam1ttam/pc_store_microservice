@@ -44,7 +44,10 @@ instance.interceptors.response.use(
     async (error) => {
         const original = error.config;
 
-        if (error.response?.status === 401 && !original._retry) {
+        // Không retry nếu chính refresh endpoint bị lỗi — tránh vòng lặp vô hạn
+        const isRefreshRequest = original?.url?.includes('/auth/refresh');
+
+        if (error.response?.status === 401 && !original._retry && !isRefreshRequest) {
             // Đang refresh rồi → xếp hàng chờ token mới
             if (isRefreshing) {
                 return new Promise<string>((resolve, reject) => {

@@ -7,19 +7,23 @@ import { orderApi } from "@/services/api/orderApi";
 import { Clock, Package2, Phone, Truck, User, XCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
 function OrderDetail() {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const { id } = useParams<{ id: string }>();
     const { orders } = useSelector((state: RootState) => state.order);
     const { info: user } = useSelector((state: RootState) => state.user);
     const order = orders.find((order) => order.id === id);
     const { toast } = useToast();
+
     const handleAcceptOrder = async () => {
         try {
             const result = await orderApi.updateOrderStatus(id as string, "DELIVERED");
             if (result.data.code === 1000) {
                 toast({
-                    title: "Cập nhật thành công"
+                    title: t("clientOrder.updateSuccess")
                 });
                 dispatch(
                     viewOrder({
@@ -28,30 +32,32 @@ function OrderDetail() {
                 );
             } else {
                 toast({
-                    title: "Cập nhật thất bại",
+                    title: t("clientOrder.updateFailed"),
                     variant: "destructive"
                 });
             }
         } catch (error) {
             toast({
-                title: "Hết phiên đăng nhập vui lòng đăng nhập lại",
+                title: t("clientOrder.sessionExpired"),
                 variant: "destructive"
             });
         }
     };
+
     if (!order) return null;
+
     return (
         <div className="container mx-auto p-6 pt-24">
             <div className="flex items-center gap-2 mb-6 text-gray-600">
                 <Link to="/" className="hover:text-green-500">
-                    Trang chủ
+                    {t("clientOrder.breadcrumbHome")}
                 </Link>
                 <span>/</span>
                 <Link to="/order" className="hover:text-green-500">
-                    Đơn hàng
+                    {t("clientOrder.breadcrumbOrders")}
                 </Link>
                 <span>/</span>
-                <span className="text-orange-500">Chi tiết đơn hàng</span>
+                <span className="text-orange-500">{t("clientOrder.breadcrumbDetail")}</span>
             </div>
 
             <div className="grid gap-6">
@@ -60,7 +66,7 @@ function OrderDetail() {
                         <div className="flex justify-between items-center">
                             <CardTitle className="text-xl font-medium text-gray-800 flex items-center gap-2">
                                 <Package2 className="h-5 w-5 text-orange-500" />
-                                Thông tin đơn hàng
+                                {t("clientOrder.orderInfo")}
                             </CardTitle>
                             <div className="text-lg font-semibold text-orange-500">
                                 {new Intl.NumberFormat("vi-VN", {
@@ -74,7 +80,7 @@ function OrderDetail() {
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <User className="h-5 w-5 text-blue-500" />
                                 <div>
-                                    <div className="text-sm font-medium">Khách hàng</div>
+                                    <div className="text-sm font-medium">{t("clientOrder.customer")}</div>
                                     <div className="text-sm">
                                         {order.customer.firstName} {order.customer.lastName}
                                     </div>
@@ -96,9 +102,9 @@ function OrderDetail() {
                                           ${order.orderStatus === "CANCELLED" && "bg-red-100 text-red-700"}
                                         `}
                                     >
-                                        {order.orderStatus === "DELIVERING" && "Đang giao hàng"}
-                                        {order.orderStatus === "DELIVERED" && "Đã giao hàng"}
-                                        {order.orderStatus === "CANCELLED" && "Đã hủy"}
+                                        {order.orderStatus === "DELIVERING" && t("clientOrder.statusDelivering")}
+                                        {order.orderStatus === "DELIVERED" && t("clientOrder.statusDelivered")}
+                                        {order.orderStatus === "CANCELLED" && t("clientOrder.statusCancelled")}
                                     </div>
                                 </div>
                             </div>
@@ -106,7 +112,7 @@ function OrderDetail() {
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <Phone className="h-5 w-5 text-green-500" />
                                 <div>
-                                    <div className="text-sm font-medium">Số điện thoại</div>
+                                    <div className="text-sm font-medium">{t("clientOrder.phone")}</div>
                                     <div className="text-sm">{order.customer.phoneNumber}</div>
                                 </div>
                             </div>
@@ -114,14 +120,14 @@ function OrderDetail() {
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <Truck className="h-5 w-5 text-purple-500" />
                                 <div>
-                                    <div className="text-sm font-medium">Địa chỉ giao hàng</div>
+                                    <div className="text-sm font-medium">{t("clientOrder.shipAddress")}</div>
                                     <div className="text-sm">{order.shipAddress}</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <Clock className="h-5 w-5 text-orange-500" />
                                 <div>
-                                    <div className="text-sm font-medium">Ngày đặt hàng</div>
+                                    <div className="text-sm font-medium">{t("clientOrder.orderDate")}</div>
                                     <div className="text-sm">{order.orderDate.toString()}</div>
                                 </div>
                             </div>
@@ -133,7 +139,7 @@ function OrderDetail() {
                                     onClick={handleAcceptOrder}
                                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors w-full"
                                 >
-                                    Đã nhận hàng
+                                    {t("clientOrder.received")}
                                 </button>
                             )}
                         </div>
@@ -157,13 +163,14 @@ function OrderDetail() {
                                                 {item.product.name}
                                             </h3>
                                             <div className="mt-2 text-sm text-gray-500">
-                                                Nhà cung cấp: {item.product.supplier.name} -{" "}
+                                                {t("clientOrder.supplier")}: {item.product.supplier.name} -{" "}
                                                 {item.product.supplier.address}
                                             </div>
                                             <div className="mt-3 flex items-center justify-between">
                                                 <div className="flex items-center gap-6">
                                                     <div className="text-sm text-gray-600">
-                                                        Số lượng: <span className="font-medium">{item.quantity}</span>
+                                                        {t("clientOrder.qty")}:{" "}
+                                                        <span className="font-medium">{item.quantity}</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -182,7 +189,7 @@ function OrderDetail() {
 
                         <div className="mt-8 flex justify-end border-t pt-6">
                             <div className="text-lg">
-                                Tổng tiền:{" "}
+                                {t("clientOrder.totalPrice")}:{" "}
                                 <span className="font-bold text-orange-500 text-xl">
                                     {new Intl.NumberFormat("vi-VN", {
                                         style: "currency",

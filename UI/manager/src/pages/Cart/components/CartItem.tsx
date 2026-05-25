@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { CartItemWithProduct } from "@/types/Cart";
+import { useTranslation } from "react-i18next";
 
 interface CartItemProps {
     item: CartItemWithProduct;
@@ -12,6 +13,7 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, selected, onToggle, onIncrease, onDecrease, onRemove }: CartItemProps) {
+    const { t } = useTranslation();
     const [loadingInc, setLoadingInc] = useState(false);
     const [loadingDec, setLoadingDec] = useState(false);
     const [loadingRemove, setLoadingRemove] = useState(false);
@@ -38,7 +40,7 @@ export default function CartItem({ item, selected, onToggle, onIncrease, onDecre
     };
 
     const handleRemove = async () => {
-        if (!confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+        if (!confirm(t("cartItem.removeConfirm"))) return;
         try {
             setLoadingRemove(true);
             await onRemove?.();
@@ -59,7 +61,7 @@ export default function CartItem({ item, selected, onToggle, onIncrease, onDecre
                     checked={!!selected}
                     onChange={() => onToggle(item.productId)}
                     className="w-5 h-5"
-                    aria-label="Chọn"
+                    aria-label={t("cartItem.select")}
                 />
             </div>
 

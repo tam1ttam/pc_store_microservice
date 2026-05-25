@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Camera, LogIn, Monitor, ShoppingCart, User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { RootState } from "@/redux/store";
 import { toast } from "@/hooks";
 import { logout } from "@/redux/thunks/auth";
@@ -11,8 +12,10 @@ import { messageApi } from "@/services/api/messageApi";
 import { userApi } from "@/services/api/userApi";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
 import NotificationBell from "@/components/NotificationBell";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Header() {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const userMenuRef = useRef<HTMLDivElement>(null);
@@ -78,20 +81,21 @@ export default function Header() {
             const result = await dispatch(logout() as any);
             if (result.payload.code === 1000) {
                 toast({
-                    title: "Đăng xuất thành công"
+                    title: t('auth.logoutSuccess')
                 });
                 navigate("/");
             } else {
                 toast({
-                    title: "Đăng xuất thất bại"
+                    title: t('auth.logoutFailed')
                 });
             }
         } catch (error) {
             toast({
-                title: "Đăng xuất thất bại"
+                title: t('auth.logoutFailed')
             });
         }
     };
+
     const handleOrderList = () => {
         setShowUserMenu(false);
         navigate("/order");
@@ -101,11 +105,11 @@ export default function Header() {
         const file = e.target.files?.[0];
         if (!file) return;
         if (!file.type.startsWith("image/")) {
-            toast({ title: "Chỉ chấp nhận file ảnh" });
+            toast({ title: t('user.avatarOnlyImage') });
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast({ title: "Ảnh không được vượt quá 5MB" });
+            toast({ title: t('user.avatarTooLarge') });
             return;
         }
         setUploadingAvatar(true);
@@ -113,9 +117,9 @@ export default function Header() {
             const { url } = await messageApi.uploadFile(file);
             await userApi.updateAvatar(url);
             dispatch(updateUserAvatar(url));
-            toast({ title: "Cập nhật ảnh đại diện thành công" });
+            toast({ title: t('user.avatarSuccess') });
         } catch {
-            toast({ title: "Cập nhật ảnh đại diện thất bại" });
+            toast({ title: t('user.avatarFailed') });
         } finally {
             setUploadingAvatar(false);
             if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -131,13 +135,13 @@ export default function Header() {
                             <User className="w-4 h-4 text-orange-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800">Hoàn thiện hồ sơ</p>
-                            <p className="text-xs text-gray-500 mt-0.5">Bổ sung thông tin để có trải nghiệm mua sắm tốt hơn.</p>
+                            <p className="text-sm font-semibold text-gray-800">{t('header.completeProfile')}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{t('header.completeProfileDesc')}</p>
                             <button
                                 onClick={() => { setShowProfileModal(true); setShowProfileBanner(false); }}
                                 className="mt-2 text-xs text-orange-500 font-medium hover:text-orange-600"
                             >
-                                Hoàn thiện ngay →
+                                {t('header.completeNow')}
                             </button>
                         </div>
                         <button onClick={() => setShowProfileBanner(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
@@ -190,34 +194,35 @@ export default function Header() {
                                 className="text-sm lg:text-base font-medium hover:text-[#f76808] transition-all hover:scale-110"
                                 to="/"
                             >
-                                Home
+                                {t('header.home')}
                             </Link>
                             <Link
                                 className="text-sm lg:text-base font-medium hover:text-[#f76808] transition-all hover:scale-110"
                                 to="/about"
                             >
-                                About
+                                {t('header.about')}
                             </Link>
                             <Link
                                 className="text-sm lg:text-base font-medium hover:text-[#f76808] transition-all hover:scale-110"
                                 to="/products"
                             >
-                                Products
+                                {t('header.products')}
                             </Link>
                         </div>
 
                         {/* Mobile Menu */}
                         <div className="md:hidden flex items-center space-x-4">
                             <Link className="text-sm font-medium hover:text-[#f76808] transition-all" to="/">
-                                Home
+                                {t('header.home')}
                             </Link>
                             <Link className="text-sm font-medium hover:text-[#f76808] transition-all" to="/product">
-                                Products
+                                {t('header.products')}
                             </Link>
                         </div>
 
                         {isLogin ? (
                             <div className="flex items-center gap-2 sm:gap-4">
+                                <LanguageSwitcher />
                                 <NotificationBell />
                                 <div className="relative">
                                     <Link
@@ -254,12 +259,12 @@ export default function Header() {
                                                     setShowUserModal(true);
                                                     setShowUserMenu(false);
                                                     if (!user && userStatus !== "loading") {
-                                                        dispatch(getUserInfo({ token: token as string }) as any);
+                                                        dispatch(getUserInfo({} as any) as any);
                                                     }
                                                 }}
                                                 className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-orange-100 transition-colors duration-200"
                                             >
-                                                Thông tin cá nhân
+                                                {t('header.profile')}
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -267,39 +272,42 @@ export default function Header() {
                                                 }}
                                                 className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-orange-100 transition-colors duration-200"
                                             >
-                                                Lịch sử mua hàng
+                                                {t('header.orderHistory')}
                                             </button>
                                             <button
                                                 onClick={handleLogout}
                                                 className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-orange-100 transition-colors duration-200"
                                             >
-                                                Đăng xuất
+                                                {t('auth.logout')}
                                             </button>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         ) : (
-                            <Link
-                                to="/login"
-                                className={`${isScrolled
-                                        ? "px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base gap-1.5 sm:gap-2"
-                                        : "p-2.5 sm:p-3"
-                                    } text-white rounded-md flex items-center group relative`}
-                            >
-                                <LogIn
-                                    className={`${isScrolled ? "w-4 h-4 sm:w-5 sm:h-5" : "w-5 h-5 sm:w-6 sm:h-6"}`}
-                                />
-                                {isScrolled ? (
-                                    <span>Đăng nhập</span>
-                                ) : (
-                                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-8">
-                                        <span className="bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
-                                            Đăng nhập
-                                        </span>
-                                    </div>
-                                )}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                                <LanguageSwitcher />
+                                <Link
+                                    to="/login"
+                                    className={`${isScrolled
+                                            ? "px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base gap-1.5 sm:gap-2"
+                                            : "p-2.5 sm:p-3"
+                                        } text-white rounded-md flex items-center group relative`}
+                                >
+                                    <LogIn
+                                        className={`${isScrolled ? "w-4 h-4 sm:w-5 sm:h-5" : "w-5 h-5 sm:w-6 sm:h-6"}`}
+                                    />
+                                    {isScrolled ? (
+                                        <span>{t('auth.login')}</span>
+                                    ) : (
+                                        <div className="absolute left-1/2 -translate-x-1/2 -bottom-8">
+                                            <span className="bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
+                                                {t('auth.login')}
+                                            </span>
+                                        </div>
+                                    )}
+                                </Link>
+                            </div>
                         )}
                     </nav>
                 </div>
@@ -346,7 +354,7 @@ export default function Header() {
                                     onChange={handleAvatarChange}
                                 />
                             </div>
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Thông tin người dùng</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t('user.info')}</h2>
                         </div>
 
                         {userStatus === "loading" && !user ? (
@@ -356,26 +364,26 @@ export default function Header() {
                         ) : (
                         <div className="space-y-3 sm:space-y-4 bg-orange-50/50 p-4 sm:p-6 rounded-lg">
                             <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-                                <span className="font-medium text-gray-600 text-sm sm:text-base">Họ tên:</span>
+                                <span className="font-medium text-gray-600 text-sm sm:text-base">{t('user.fullName')}:</span>
                                 <span className="text-gray-800 break-words text-sm sm:text-base">
                                     {user?.firstName} {user?.lastName}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-                                <span className="font-medium text-gray-600 text-sm sm:text-base">Email:</span>
+                                <span className="font-medium text-gray-600 text-sm sm:text-base">{t('user.email')}:</span>
                                 <span className="text-gray-800 break-all text-sm sm:text-base">{user?.email}</span>
                             </div>
 
                             <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-                                <span className="font-medium text-gray-600 text-sm sm:text-base">Số điện thoại:</span>
+                                <span className="font-medium text-gray-600 text-sm sm:text-base">{t('user.phone')}:</span>
                                 <span className="text-gray-800 break-words text-sm sm:text-base">
                                     {user?.phoneNumber}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-                                <span className="font-medium text-gray-600 text-sm sm:text-base">Tên đăng nhập:</span>
+                                <span className="font-medium text-gray-600 text-sm sm:text-base">{t('user.username')}:</span>
                                 <span className="text-gray-800 break-words text-sm sm:text-base">{user?.userName}</span>
                             </div>
                         </div>

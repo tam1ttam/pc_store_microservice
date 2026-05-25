@@ -5,7 +5,10 @@ import { getCustomer, setIsAdmin } from "@/redux/thunks/admin";
 import { Role } from "@/types";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
+
 const Customer = () => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const { token } = useSelector((state: RootState) => state.auth);
     const { customers } = useSelector((state: RootState) => state.admin);
@@ -18,15 +21,15 @@ const Customer = () => {
             if (result.payload.code === 1000) {
                 dispatch(getCustomer() as any);
                 toast({
-                    title: "Thành công",
-                    description: "Cấp quyền Admin cho người dùng",
+                    title: t('adminCustomer.grantSuccess'),
+                    description: t('adminCustomer.grantSuccessDesc'),
                     variant: "default"
                 });
             } else throw new Error("Failed to set admin");
         } catch (error) {
             toast({
-                title: "Thất bại",
-                description: "Cấp quyền Admin cho người dùng",
+                title: t('adminCustomer.grantFailed'),
+                description: t('adminCustomer.grantFailedDesc'),
                 variant: "destructive"
             });
             console.error(error);
@@ -54,31 +57,31 @@ const Customer = () => {
                 </div>
             ) : (
                 <>
-                    <h1 className="text-2xl font-bold mb-4">Danh Sách Người Dùng</h1>
+                    <h1 className="text-2xl font-bold mb-4">{t('adminCustomer.title')}</h1>
                     <div className="bg-white shadow rounded-lg overflow-hidden">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        ID
+                                        {t('adminCustomer.colId')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        User name
+                                        {t('adminCustomer.colUsername')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Tên
+                                        {t('adminCustomer.colName')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Email
+                                        {t('adminCustomer.colEmail')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Số Điện Thoại
+                                        {t('adminCustomer.colPhone')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Vai Trò
+                                        {t('adminCustomer.colRole')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Chỉnh sửa
+                                        {t('adminCustomer.colAction')}
                                     </th>
                                 </tr>
                             </thead>
@@ -107,7 +110,7 @@ const Customer = () => {
                                                             : "bg-gradient-to-r from-orange-400 to-red-500 text-white hover:from-orange-500 hover:to-red-600"
                                                     } transition-all duration-300`}
                                                 >
-                                                    {checkIsAdmin(customer.roles) ? "Đã là Admin" : "Cấp quyền Admin"}
+                                                    {checkIsAdmin(customer.roles) ? t('adminCustomer.alreadyAdmin') : t('adminCustomer.grantAdmin')}
                                                 </Button>
                                             </td>
                                         </tr>

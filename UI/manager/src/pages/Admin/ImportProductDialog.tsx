@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/api/adminApi";
 import { AlertTriangle, CheckCircle, Download, FileSpreadsheet, Link, Loader2, RefreshCw, Upload, XCircle } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -76,7 +77,6 @@ function buildTemplateHeaders(): string[] {
 
 function downloadTemplate() {
     const headers = buildTemplateHeaders();
-    // Thứ tự: name, img, price, unit, inStock, category, supplier.name, supplier.address, attrs...
     const example = [
         "Intel Core i9-14900K",
         "https://images.unsplash.com/photo-1555617981-dac3880eac6e?w=400",
@@ -94,10 +94,8 @@ function downloadTemplate() {
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
 
-    // column widths
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 16) }));
 
-    // bold header row style
     headers.forEach((_, ci) => {
         const ref = XLSX.utils.encode_cell({ r: 0, c: ci });
         if (ws[ref]) ws[ref].s = { font: { bold: true } };
@@ -108,11 +106,6 @@ function downloadTemplate() {
     XLSX.writeFile(wb, "product_template.xlsx");
 }
 
-/**
- * Parse 1 dòng Excel thành ParsedProduct.
- * Thứ tự cố định theo Product entity: name(0), img(1), price(2), unit(3),
- * inStock(4), category(5), supplier.name(6), supplier.address(7), attrs(8+)
- */
 function parseRow(row: any[]): ParsedProduct | null {
     const name = String(row[0] ?? "").trim();
     if (!name) return null;
@@ -151,39 +144,18 @@ function parseWorkbook(wb: XLSX.WorkBook): ParsedProduct[] {
     return (rows.slice(1) as any[][]).map(parseRow).filter(Boolean) as ParsedProduct[];
 }
 
-function validateProducts(products: ParsedProduct[]): ValidationWarning[] {
-    return products
-        .map((p, i) => {
-            const issues: string[] = [];
-            if (!p.name) issues.push("Thiếu tên sản phẩm");
-            if (p.price <= 0) issues.push("Giá phải > 0");
-            if (p.inStock < 0) issues.push("Số lượng không hợp lệ");
-            if (!p.img) issues.push("Thiếu URL ảnh");
-            return issues.length > 0 ? { row: i + 1, name: p.name || `Dòng ${i + 2}`, issues } : null;
-        })
-        .filter(Boolean) as ValidationWarning[];
-}
-
-/**
- * Chuyển đổi URL Google Drive / Google Sheets sang URL có thể tải về.
- * Trả về { xlsxUrl, csvUrl } — csvUrl ưu tiên hơn vì không bị CORS với sheet public.
- */
 function extractGoogleUrls(input: string): { xlsxUrl: string | null; csvUrl: string | null } {
-    // Google Sheets
     const sheetsMatch = input.match(/\/spreadsheets\/d\/([^/?#]+)/);
     if (sheetsMatch) {
         const id = sheetsMatch[1];
         const gidMatch = input.match(/[#?&]gid=(\d+)/);
         const gid = gidMatch ? gidMatch[1] : "0";
         return {
-            // CSV pub URL: hoạt động với sheet "Published to the web", không bị CORS
             csvUrl: `https://docs.google.com/spreadsheets/d/${id}/pub?gid=${gid}&single=true&output=csv`,
-            // xlsx export: thường bị CORS khi fetch từ browser
             xlsxUrl: `https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`,
         };
     }
 
-    // Google Drive file
     const fileMatch = input.match(/\/file\/d\/([^/?#]+)/);
     if (fileMatch) {
         return {
@@ -197,7 +169,14 @@ function extractGoogleUrls(input: string): { xlsxUrl: string | null; csvUrl: str
 
 // ─── component ───────────────────────────────────────────────────────────────
 
+type AttrTooltip = {
+    attrs: { name: string; value: string; unit: string; description: string }[];
+    x: number;
+    y: number;
+};
+
 export default function ImportProductDialog({ open, onOpenChange, onImported }: Props) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState<"file" | "url">("file");
     const [parsed, setParsed] = useState<ParsedProduct[]>([]);
     const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
@@ -207,6 +186,34 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
     const [progress, setProgress] = useState(0);
     const [results, setResults] = useState<ImportResult[]>([]);
     const fileRef = useRef<HTMLInputElement>(null);
+    // Tooltip for attribute preview on hover
+    const [attrTooltip, setAttrTooltip] = useState<AttrTooltip | null>(null);
+    // Known category keywords fetched on open — used to detect new categories
+    const [knownCategoryKeywords, setKnownCategoryKeywords] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        if (open) {
+            adminApi.listCategories()
+                .then((res: any) => {
+                    const cats: { keyword: string }[] = res.data?.result ?? [];
+                    setKnownCategoryKeywords(new Set(cats.map(c => c.keyword)));
+                })
+                .catch(() => { /* non-fatal */ });
+        }
+    }, [open]);
+
+    const validateProducts = (products: ParsedProduct[]): ValidationWarning[] => {
+        return products
+            .map((p, i) => {
+                const issues: string[] = [];
+                if (!p.name) issues.push(t("import.missingName"));
+                if (p.price <= 0) issues.push(t("import.invalidPrice"));
+                if (p.inStock < 0) issues.push(t("import.invalidStock"));
+                if (!p.img) issues.push(t("import.missingImg"));
+                return issues.length > 0 ? { row: i + 1, name: p.name || `Dòng ${i + 2}`, issues } : null;
+            })
+            .filter(Boolean) as ValidationWarning[];
+    };
 
     const reset = () => {
         setParsed([]);
@@ -225,7 +232,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
 
     const applyParsed = (products: ParsedProduct[]) => {
         if (products.length === 0) {
-            toast({ title: "File trống hoặc không đúng định dạng", variant: "destructive" });
+            toast({ title: t("import.emptyOrInvalid"), variant: "destructive" });
             return;
         }
         const w = validateProducts(products);
@@ -245,7 +252,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 const wb = XLSX.read(ev.target!.result, { type: "array" });
                 applyParsed(parseWorkbook(wb));
             } catch {
-                toast({ title: "Không thể đọc file Excel", variant: "destructive" });
+                toast({ title: t("import.readError"), variant: "destructive" });
             }
         };
         reader.readAsArrayBuffer(file);
@@ -261,13 +268,11 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
 
         const { xlsxUrl, csvUrl } = extractGoogleUrls(trimmed);
 
-        // Thử CSV trước (Google Sheets published — không bị CORS)
         if (csvUrl) {
             try {
                 const res = await fetch(csvUrl);
                 if (res.ok) {
                     const text = await res.text();
-                    // XLSX đọc được cả CSV
                     const wb = XLSX.read(text, { type: "string" });
                     const products = parseWorkbook(wb);
                     applyParsed(products);
@@ -275,11 +280,10 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                     return;
                 }
             } catch {
-                // không phải published sheet → thử xlsx
+                // fall through
             }
         }
 
-        // Thử xlsx URL
         const finalUrl = xlsxUrl ?? trimmed;
         try {
             const res = await fetch(finalUrl);
@@ -293,9 +297,9 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 err.message?.includes("Failed to fetch") ||
                 err.message?.includes("NetworkError");
             toast({
-                title: "Không thể tải file",
+                title: t("import.fetchError"),
                 description: isCors
-                    ? "File bị giới hạn CORS. Với Google Sheets, hãy chọn File → Chia sẻ → Publish to the web → CSV rồi dán link vào đây. Hoặc tải file về máy rồi upload trực tiếp."
+                    ? t("import.urlNoteDesc")
                     : `Lỗi: ${err.message}`,
                 variant: "destructive",
             });
@@ -312,17 +316,35 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
         setProgress(0);
         setResults([]);
 
+        // Local mutable set — avoid stale closure on state
+        const knownCats = new Set(knownCategoryKeywords);
+
         const resultList: ImportResult[] = [];
         for (let i = 0; i < parsed.length; i++) {
             const p = parsed[i];
             try {
+                // Auto-create category if not in known list
+                let effectiveCategory: string | undefined = p.category || undefined;
+                if (p.category && !knownCats.has(p.category)) {
+                    try {
+                        const createRes: any = await adminApi.createCategory(p.category);
+                        const created = createRes.data?.result;
+                        const newKeyword: string = created?.keyword ?? p.category;
+                        knownCats.add(p.category);
+                        knownCats.add(newKeyword);
+                        effectiveCategory = newKeyword;
+                    } catch {
+                        // Creation failed (may already exist with different casing) — proceed with typed value
+                    }
+                }
+
                 await adminApi.addProduct({
                     name: p.name,
                     img: p.img,
                     price: p.price,
                     unit: p.unit,
                     inStock: p.inStock,
-                    category: p.category || undefined,
+                    category: effectiveCategory,
                     supplier: p.supplier,
                     productDetailCreationRequest: {
                         attributes: p.attributes.filter((a) => a.name),
@@ -343,9 +365,12 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
             setResults([...resultList]);
         }
 
+        // Sync updated known keywords back to state
+        setKnownCategoryKeywords(new Set(knownCats));
+
         setImporting(false);
         const successCount = resultList.filter((r) => r.status === "success").length;
-        toast({ title: `Import xong: ${successCount}/${parsed.length} sản phẩm thành công` });
+        toast({ title: t("import.importDone", { success: successCount, total: parsed.length }) });
         if (successCount > 0) onImported();
     };
 
@@ -359,19 +384,19 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                        Import sản phẩm từ Excel / Google Sheets
+                        {t("import.title")}
                     </DialogTitle>
                 </DialogHeader>
 
                 {/* ── template download ── */}
                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div>
-                        <p className="text-sm font-medium text-green-800">Tải file mẫu</p>
+                        <p className="text-sm font-medium text-green-800">{t("import.downloadTemplate")}</p>
                         <p className="text-xs text-green-600">
-                            8 cột cố định (theo thứ tự Product model) + tối đa {MAX_ATTR_COUNT} thuộc tính tùy chọn
+                            {t("import.templateDesc", { max: MAX_ATTR_COUNT })}
                         </p>
                         <p className="text-xs text-green-500 mt-0.5">
-                            Tên · URL ảnh · Giá · Đơn vị · Số lượng · <strong>Danh mục</strong> · Nhà CC · Địa chỉ NCC · Thuộc tính…
+                            {t("import.templateColumns")}
                         </p>
                     </div>
                     <Button
@@ -393,14 +418,14 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                             onClick={() => setTab("file")}
                         >
                             <Upload className="inline h-4 w-4 mr-1" />
-                            Upload file
+                            {t("import.tabFile")}
                         </button>
                         <button
                             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "url" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setTab("url")}
                         >
                             <Link className="inline h-4 w-4 mr-1" />
-                            Google Drive / Sheets URL
+                            {t("import.tabUrl")}
                         </button>
                     </div>
                 )}
@@ -408,11 +433,13 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 {/* ── file upload ── */}
                 {tab === "file" && !doneImporting && (
                     <div className="space-y-3">
-                        <Label>Chọn file Excel (.xlsx / .xls)</Label>
+                        <Label>{t("import.chooseFile")}</Label>
                         <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileChange} />
                         <Button variant="outline" className="w-full gap-2" onClick={() => fileRef.current?.click()}>
                             <Upload className="h-4 w-4" />
-                            {parsed.length > 0 ? `Đã chọn — ${parsed.length} sản phẩm` : "Chọn file..."}
+                            {parsed.length > 0
+                                ? t("import.fileSelected", { count: parsed.length })
+                                : t("import.chooseFileBtn")}
                         </Button>
                     </div>
                 )}
@@ -420,28 +447,28 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 {/* ── url input ── */}
                 {tab === "url" && !doneImporting && (
                     <div className="space-y-3">
-                        <Label>Link Google Drive hoặc Google Sheets</Label>
+                        <Label>{t("import.urlLabel")}</Label>
                         <div className="p-2.5 bg-blue-50 rounded-md border border-blue-100 text-xs text-blue-700 space-y-1">
-                            <p className="font-medium">Lưu ý với Google Sheets:</p>
-                            <p>Để tránh lỗi CORS, chọn <strong>File → Chia sẻ → Xuất bản lên web</strong> (Publish to the web) → chọn trang tính → CSV → Xuất bản, rồi dán link vào đây.</p>
-                            <p>Hoặc xuất file .xlsx về máy rồi dùng tab "Upload file".</p>
+                            <p className="font-medium">{t("import.urlNote")}</p>
+                            <p>{t("import.urlNoteDesc")}</p>
+                            <p>{t("import.urlNoteFallback")}</p>
                         </div>
                         <div className="flex gap-2">
                             <Input
                                 value={urlInput}
                                 onChange={(e) => setUrlInput(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleFetchUrl()}
-                                placeholder="https://drive.google.com/file/d/... hoặc https://docs.google.com/spreadsheets/d/..."
+                                placeholder={t("import.urlPlaceholder")}
                                 className="flex-1"
                             />
                             <Button onClick={handleFetchUrl} disabled={!urlInput.trim() || fetchingUrl}>
-                                {fetchingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tải"}
+                                {fetchingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : t("import.fetch")}
                             </Button>
                         </div>
                         {parsed.length > 0 && (
                             <p className="text-sm text-green-600 flex items-center gap-1">
                                 <CheckCircle className="h-4 w-4" />
-                                Đọc thành công — {parsed.length} sản phẩm
+                                {t("import.fetchSuccess", { count: parsed.length })}
                             </p>
                         )}
                     </div>
@@ -452,7 +479,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                     <div className="border border-yellow-200 rounded-lg bg-yellow-50 p-3 space-y-2">
                         <p className="text-sm font-medium text-yellow-800 flex items-center gap-1">
                             <AlertTriangle className="h-4 w-4" />
-                            {warnings.length} dòng có vấn đề — vẫn có thể import nhưng nên kiểm tra lại
+                            {t("import.warningsTitle", { count: warnings.length })}
                         </p>
                         <div className="max-h-24 overflow-y-auto space-y-1">
                             {warnings.map((w) => (
@@ -468,19 +495,19 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 {/* ── preview table ── */}
                 {parsed.length > 0 && !doneImporting && (
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Xem trước ({parsed.length} dòng)</p>
+                        <p className="text-sm font-medium">{t("import.previewTitle", { count: parsed.length })}</p>
                         <div className="border rounded-lg overflow-auto max-h-64">
                             <table className="w-full text-xs">
                                 <thead className="bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th className="px-2 py-2 text-left">#</th>
-                                        <th className="px-2 py-2 text-left">Tên</th>
-                                        <th className="px-2 py-2 text-left">Giá</th>
-                                        <th className="px-2 py-2 text-left">Đơn vị</th>
-                                        <th className="px-2 py-2 text-left">Kho</th>
-                                        <th className="px-2 py-2 text-left">Danh mục</th>
-                                        <th className="px-2 py-2 text-left">Nhà CC</th>
-                                        <th className="px-2 py-2 text-left">Thuộc tính</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colNo")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colName")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colPrice")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colUnit")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colStock")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colCategory")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colSupplier")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colAttributes")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -508,7 +535,9 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                                                     ) : "—"}
                                                 </td>
                                                 <td className="px-2 py-1 max-w-[100px] truncate">{p.supplier.name || "—"}</td>
-                                                <td className="px-2 py-1 text-gray-500">{p.attributes.length} thuộc tính</td>
+                                                <td className="px-2 py-1 text-gray-500">
+                                                    {t("import.attributeCount", { count: p.attributes.length })}
+                                                </td>
                                             </tr>
                                         );
                                     })}
@@ -523,7 +552,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                     <div className="space-y-2">
                         <p className="text-sm text-gray-600 flex items-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Đang nhập... ({progress}/{parsed.length})
+                            {t("import.importingProgress", { current: progress, total: parsed.length })}
                         </p>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
@@ -540,12 +569,12 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                             <span className="flex items-center gap-1 text-sm font-medium text-green-600">
                                 <CheckCircle className="h-5 w-5" />
-                                {successCount} thành công
+                                {t("import.successCount", { count: successCount })}
                             </span>
                             {errorCount > 0 && (
                                 <span className="flex items-center gap-1 text-sm font-medium text-red-600">
                                     <XCircle className="h-5 w-5" />
-                                    {errorCount} lỗi
+                                    {t("import.errorCount", { count: errorCount })}
                                 </span>
                             )}
                         </div>
@@ -553,9 +582,9 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                             <table className="w-full text-xs">
                                 <thead className="bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th className="px-2 py-2 text-left">#</th>
-                                        <th className="px-2 py-2 text-left">Tên</th>
-                                        <th className="px-2 py-2 text-left">Kết quả</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colNo")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colName")}</th>
+                                        <th className="px-2 py-2 text-left">{t("import.colResult")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -583,9 +612,9 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                         <div className="flex gap-2">
                             <Button variant="outline" className="gap-2" onClick={reset}>
                                 <RefreshCw className="h-4 w-4" />
-                                Import thêm
+                                {t("import.importMore")}
                             </Button>
-                            <Button className="flex-1" onClick={() => handleClose(false)}>Đóng</Button>
+                            <Button className="flex-1" onClick={() => handleClose(false)}>{t("import.close")}</Button>
                         </div>
                     </div>
                 )}
@@ -594,7 +623,7 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                 {!doneImporting && (
                     <div className="flex justify-end gap-2 border-t pt-4">
                         <Button variant="outline" onClick={() => handleClose(false)} disabled={importing}>
-                            Hủy
+                            {t("import.cancel")}
                         </Button>
                         <Button
                             onClick={handleImport}
@@ -604,10 +633,12 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                             {importing ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Đang nhập...
+                                    {t("import.importing")}
                                 </>
                             ) : (
-                                `Import${parsed.length > 0 ? ` (${parsed.length})` : ""}`
+                                parsed.length > 0
+                                    ? t("import.importWithCount", { count: parsed.length })
+                                    : t("import.import")
                             )}
                         </Button>
                     </div>

@@ -3,20 +3,22 @@ import { RootState } from "@/redux/store";
 import { MapPin, Package, Truck, User, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function Order() {
+    const { t } = useTranslation();
     const { orders } = useSelector((state: RootState) => state.order);
 
     return (
         <div className="container mx-auto p-6 pt-24">
             <div className="flex items-center gap-2 mb-6 text-gray-600">
                 <Link to="/" className="hover:text-orange-500">
-                    Trang chủ
+                    {t("clientOrder.breadcrumbHome")}
                 </Link>
                 <span>/</span>
-                <span className="text-orange-500">Đơn hàng</span>
+                <span className="text-orange-500">{t("clientOrder.breadcrumbOrders")}</span>
             </div>
-            <h1 className="text-3xl font-semibold text-gray-800 mb-6">Đơn hàng của bạn</h1>
+            <h1 className="text-3xl font-semibold text-gray-800 mb-6">{t("clientOrder.myOrders")}</h1>
 
             <div className="grid gap-6">
                 {orders.map((order: any) => (
@@ -26,7 +28,7 @@ function Order() {
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-4">
                                         <CardTitle className="text-xl font-medium text-gray-800">
-                                            Đơn hàng #{order.id}
+                                            {t("clientOrder.orderNo", { id: order.id })}
                                         </CardTitle>
                                         <div className="flex items-center gap-2">
                                             {order.orderStatus === "DELIVERING" && (
@@ -46,9 +48,9 @@ function Order() {
             ${order.orderStatus === "CANCELLED" && "bg-red-100 text-red-700"}
               `}
                                             >
-                                                {order.orderStatus === "DELIVERING" && "Đang giao hàng"}
-                                                {order.orderStatus === "DELIVERED" && "Đã giao hàng"}
-                                                {order.orderStatus === "CANCELLED" && "Đã hủy"}
+                                                {order.orderStatus === "DELIVERING" && t("clientOrder.statusDelivering")}
+                                                {order.orderStatus === "DELIVERED" && t("clientOrder.statusDelivered")}
+                                                {order.orderStatus === "CANCELLED" && t("clientOrder.statusCancelled")}
                                             </span>
                                         </div>
                                     </div>
@@ -83,7 +85,9 @@ function Order() {
                             <CardContent className="pt-4">
                                 <div className="flex items-center gap-2">
                                     <Package className="h-4 w-4 text-gray-500" />
-                                    <span className="text-sm text-gray-600">{order.items?.length} sản phẩm</span>
+                                    <span className="text-sm text-gray-600">
+                                        {t("clientOrder.itemCount", { count: order.items?.length })}
+                                    </span>
                                 </div>
                             </CardContent>
                         </Card>

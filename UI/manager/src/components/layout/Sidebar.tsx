@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
     Package,
     Users,
@@ -11,27 +12,28 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const { pathname } = useLocation();
 
     const menuItems = [
         {
-            label: "Quản lý sản phẩm",
+            label: t("sidebar.manageProducts"),
             href: "/admin/products",
             icon: Package,
         },
         {
-            label: "Quản lý khách hàng",
+            label: t("sidebar.manageCustomers"),
             href: "/admin/customers",
             icon: Users,
         },
         {
-            label: "Quản lý đơn hàng",
+            label: t("sidebar.manageOrders"),
             href: "/admin/orders",
             icon: ShoppingCart,
         },
         {
-            label: "Quản lý Voucher",
+            label: t("sidebar.manageVouchers"),
             href: "/admin/vouchers",
             icon: Ticket,
         },
@@ -95,7 +97,7 @@ export default function Sidebar() {
 
                     {/* Footer */}
                     <div className="absolute bottom-6 left-4 right-4 pt-4 border-t border-slate-700">
-                        <p className="text-xs text-slate-500 text-center">PC Store Admin v1.0</p>
+                        <p className="text-xs text-slate-500 text-center">{t("sidebar.footer")}</p>
                     </div>
                 </div>
             </aside>

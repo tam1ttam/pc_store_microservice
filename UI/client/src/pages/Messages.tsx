@@ -1,10 +1,12 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { messageApi } from "@/services/api/messageApi";
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { setMessages, addMessage, ChatMessage } from "@/redux/slices/chat";
+import { useTranslation } from "react-i18next";
 
 const MessagesPage = () => {
+    const { t } = useTranslation();
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [input, setInput] = useState("");
@@ -87,18 +89,18 @@ const MessagesPage = () => {
                     PC
                 </div>
                 <div>
-                    <p className="font-semibold text-gray-800">Cửa hàng PC Store</p>
-                    <p className="text-xs text-green-500">Hỗ trợ trực tuyến</p>
+                    <p className="font-semibold text-gray-800">{t('chat.storeName')}</p>
+                    <p className="text-xs text-green-500">{t('chat.onlineSupport')}</p>
                 </div>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
                 {loading ? (
-                    <div className="flex justify-center pt-12 text-gray-400 text-sm">Đang kết nối...</div>
+                    <div className="flex justify-center pt-12 text-gray-400 text-sm">{t('chat.connecting')}</div>
                 ) : messages.length === 0 ? (
                     <div className="flex justify-center pt-12 text-gray-400 text-sm">
-                        Hãy gửi tin nhắn để bắt đầu cuộc trò chuyện với cửa hàng.
+                        {t('chat.sendStart')}
                     </div>
                 ) : (
                     messages.map((msg) => {
@@ -134,7 +136,7 @@ const MessagesPage = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                    placeholder="Nhắn tin cho cửa hàng..."
+                    placeholder={t('chat.messagePlaceholder')}
                     disabled={loading || !conversationId}
                     className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-blue-400 transition-colors disabled:bg-gray-50"
                 />

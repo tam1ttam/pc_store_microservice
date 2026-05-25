@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const EUREKA_URL = `${import.meta.env.VITE_API_URL}/api-gateway/eureka/apps`;
 
@@ -43,6 +44,7 @@ async function fetchEurekaStatuses(): Promise<ServiceStatus[]> {
 }
 
 const ServiceHealth: React.FC = () => {
+    const { t } = useTranslation();
     const [services, setServices] = useState<ServiceStatus[]>(
         KNOWN_SERVICES.map((name) => ({ name, status: "DOWN" }))
     );
@@ -58,11 +60,11 @@ const ServiceHealth: React.FC = () => {
             setServices(statuses);
             setLastUpdated(new Date());
         } catch (e: any) {
-            setError("Không thể kết nối tới Discovery Service");
+            setError(t('serviceHealth.connectError'));
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         refresh();
@@ -77,19 +79,19 @@ const ServiceHealth: React.FC = () => {
         <div className="container mx-auto p-4">
             <div className="flex justify-between items-center mb-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Trạng thái dịch vụ</h1>
+                    <h1 className="text-2xl font-bold">{t('serviceHealth.title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         {upCount} UP &nbsp;·&nbsp; {downCount} DOWN
                         {lastUpdated && (
                             <span className="ml-2">
-                                · cập nhật lúc {lastUpdated.toLocaleTimeString("vi-VN")}
+                                · {t('serviceHealth.lastChecked')} {lastUpdated.toLocaleTimeString("vi-VN")}
                             </span>
                         )}
                     </p>
                 </div>
                 <Button onClick={refresh} disabled={isLoading} size="sm">
                     <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-                    Làm mới
+                    {t('serviceHealth.refresh')}
                 </Button>
             </div>
 
@@ -112,7 +114,7 @@ const ServiceHealth: React.FC = () => {
                         </CardHeader>
                         <CardContent className="px-4 pb-3">
                             <p className="text-xs text-muted-foreground">
-                                {service.status === "UP" ? "Đang hoạt động" : "Không phản hồi"}
+                                {service.status === "UP" ? t('serviceHealth.healthy') : t('serviceHealth.unhealthy')}
                             </p>
                         </CardContent>
                     </Card>

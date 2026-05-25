@@ -10,6 +10,7 @@ import { Product as ProductType } from "@/types";
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, FileSpreadsheet, Layers, Pencil, Plus, Tag, Trash, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import ImportProductDialog from "./ImportProductDialog";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -20,6 +21,7 @@ const emptyAttribute = (): AttributeRow => ({ name: "", value: "", unit: "", des
 type Category = { id: string; keyword: string; name: string };
 
 const Product = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<"products" | "categories">("products");
     const [products, setProducts] = useState<ProductType[]>([]);
     const [page, setPage] = useState(0);
@@ -84,7 +86,7 @@ const Product = () => {
             setProducts(response.data.result.content);
             setTotalPages(response.data.result.totalPages);
         } catch {
-            toast({ title: "Error", description: "Failed to fetch products", variant: "destructive" });
+            toast({ title: t("common.error"), description: t("product.deleteFailed"), variant: "destructive" });
         }
     };
 
@@ -118,23 +120,23 @@ const Product = () => {
             await adminApi.createCategory(name);
             setNewCategoryName("");
             await fetchCategories();
-            toast({ title: "Thành công", description: `Đã thêm danh mục "${name}"` });
+            toast({ title: t("product.categoryAddSuccess"), description: t("product.categoryAddSuccessDesc", { name }) });
         } catch (err: any) {
-            toast({ title: "Lỗi", description: err.response?.data?.message || "Không thể thêm danh mục", variant: "destructive" });
+            toast({ title: t("product.categoryError"), description: err.response?.data?.message || t("product.categoryAddError"), variant: "destructive" });
         } finally {
             setIsSavingCategory(false);
         }
     };
 
     const handleDeleteCategory = async (id: string, name: string) => {
-        if (!window.confirm(`Xóa danh mục "${name}"?`)) return;
+        if (!window.confirm(t("product.deleteCategoryConfirm", { name }))) return;
         setIsDeletingCategory(id);
         try {
             await adminApi.deleteCategory(id);
             await fetchCategories();
-            toast({ title: "Đã xóa", description: `Danh mục "${name}" đã được xóa` });
+            toast({ title: t("product.categoryDeleted"), description: t("product.categoryDeletedDesc", { name }) });
         } catch (err: any) {
-            toast({ title: "Lỗi", description: err.response?.data?.message || "Không thể xóa danh mục", variant: "destructive" });
+            toast({ title: t("product.categoryError"), description: err.response?.data?.message || t("product.categoryDeleteError"), variant: "destructive" });
         } finally {
             setIsDeletingCategory(null);
         }
@@ -162,7 +164,7 @@ const Product = () => {
 
     const validateFileSize = (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
-            toast({ title: "File quá lớn", description: `${file.name} vượt quá 5MB`, variant: "destructive" });
+            toast({ title: t("common.error"), description: `${file.name} > 5MB`, variant: "destructive" });
             return false;
         }
         return true;
@@ -197,16 +199,16 @@ const Product = () => {
             const detailRequest = { attributes: attributes.filter(a => a.name.trim() !== ""), images: formData.images, imagesUpload: formData.imagesUpload ?? [] };
             if (editingProduct) {
                 await adminApi.updateProduct(editingProduct.id, { ...productData, productDetailCreationRequest: detailRequest });
-                toast({ title: "Success", description: "Product updated successfully" });
+                toast({ title: t("common.success"), description: t("product.updateSuccess") });
             } else {
                 await adminApi.addProduct({ ...productData, productDetailCreationRequest: detailRequest });
-                toast({ title: "Success", description: "Product created successfully" });
+                toast({ title: t("common.success"), description: t("product.addSuccess") });
             }
             setIsOpen(false);
             loadProducts(page, selectedCategoryFilters);
             resetForm();
         } catch (error: any) {
-            toast({ title: "Thất bại", description: error.response?.data?.message || "Có lỗi xảy ra", variant: "destructive" });
+            toast({ title: t("common.error"), description: error.response?.data?.message || t("common.error"), variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -235,14 +237,14 @@ const Product = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm("Bạn có chắc là muốn xóa sản phẩm này?")) return;
+        if (!window.confirm(t("product.deleteConfirm"))) return;
         try {
             setIsDeleting(id);
             await adminApi.deleteProduct(id, token as string);
-            toast({ title: "Success", description: "Product deleted successfully" });
+            toast({ title: t("common.success"), description: t("product.deleteSuccess") });
             loadProducts(page, selectedCategoryFilters);
         } catch {
-            toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
+            toast({ title: t("common.error"), description: t("product.deleteFailed"), variant: "destructive" });
         } finally {
             setIsDeleting(null);
         }
@@ -255,11 +257,11 @@ const Product = () => {
     return (
         <div className="container mx-auto py-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Product Management</h1>
+                <h1 className="text-2xl font-bold">{t("product.managementTitle")}</h1>
                 {activeTab === "categories" && (
                     <div className="flex gap-2">
                         <Input
-                            placeholder="Tên danh mục mới..."
+                            placeholder={t("product.newCategoryPlaceholder")}
                             value={newCategoryName}
                             onChange={e => setNewCategoryName(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && handleCreateCategory()}
@@ -267,7 +269,7 @@ const Product = () => {
                         />
                         <Button onClick={handleCreateCategory} disabled={isSavingCategory || !newCategoryName.trim()}>
                             <Plus className="h-4 w-4 mr-1" />
-                            {isSavingCategory ? "Đang lưu..." : "Thêm"}
+                            {isSavingCategory ? t("product.saving") : t("product.addBtn")}
                         </Button>
                     </div>
                 )}
@@ -275,29 +277,33 @@ const Product = () => {
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => setIsImportOpen(true)} className="gap-2">
                             <FileSpreadsheet className="h-4 w-4 text-green-600" />
-                            Import Excel
+                            {t("product.importExcel")}
                         </Button>
                         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
                             <DialogTrigger asChild>
-                                <Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
+                                <Button onClick={() => setIsOpen(true)}>
+                                    <Plus className="mr-2 h-4 w-4" /> {t("product.addProductBtn")}
+                                </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                    <DialogTitle>{isReadOnly ? "Product Details" : editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+                                    <DialogTitle>
+                                        {isReadOnly ? t("product.detailsTitle") : editingProduct ? t("product.editTitle") : t("product.addTitle")}
+                                    </DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid gap-2">
-                                        <Label>Name</Label>
-                                        <Input value={formData.name} onChange={e => handleInputChange(e, "name")} placeholder="Product name" readOnly={isReadOnly} />
+                                        <Label>{t("product.productName")}</Label>
+                                        <Input value={formData.name} onChange={e => handleInputChange(e, "name")} placeholder={t("product.productName")} readOnly={isReadOnly} />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>Thumbnail Image</Label>
+                                        <Label>{t("product.thumbnailImage")}</Label>
                                         <div className="space-y-2">
                                             {!isReadOnly && (
                                                 <>
                                                     <input type="file" accept="image/*" className="hidden" id="product-image-upload" onChange={handleProductImageUpload} />
                                                     <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById("product-image-upload")?.click()}>
-                                                        <Plus className="h-4 w-4 mr-2" /> Choose Thumbnail
+                                                        <Plus className="h-4 w-4 mr-2" /> {t("product.chooseThumbnail")}
                                                     </Button>
                                                 </>
                                             )}
@@ -314,13 +320,13 @@ const Product = () => {
                                         </div>
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>Additional Images / Videos (max 5MB)</Label>
+                                        <Label>{t("product.additionalMedia")}</Label>
                                         <div className="space-y-2">
                                             {!isReadOnly && (
                                                 <>
                                                     <input type="file" accept="image/*,video/*" multiple className="hidden" id="product-media-upload" onChange={handleProductMediaUpload} />
                                                     <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById("product-media-upload")?.click()}>
-                                                        <Plus className="h-4 w-4 mr-2" /> Add Images / Videos
+                                                        <Plus className="h-4 w-4 mr-2" /> {t("product.addMedia")}
                                                     </Button>
                                                 </>
                                             )}
@@ -350,63 +356,63 @@ const Product = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label>Giá (VND)</Label>
+                                            <Label>{t("product.priceVND")}</Label>
                                             <Input type="number" min="0" value={formData.price} onChange={e => handleInputChange(e, "price")} readOnly={isReadOnly} />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label>Đơn vị tính</Label>
-                                            <Input value={formData.unit} onChange={e => handleInputChange(e, "unit")} placeholder="VD: cái, chiếc, bộ" readOnly={isReadOnly} />
+                                            <Label>{t("product.productUnit")}</Label>
+                                            <Input value={formData.unit} onChange={e => handleInputChange(e, "unit")} placeholder={t("product.unitPlaceholder")} readOnly={isReadOnly} />
                                         </div>
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>Stock Quantity</Label>
+                                        <Label>{t("product.stockQty")}</Label>
                                         <Input type="number" min="0" value={formData.inStock} onChange={e => handleInputChange(e, "inStock")} readOnly={isReadOnly} />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>Danh mục</Label>
+                                        <Label>{t("product.productCategory")}</Label>
                                         <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isReadOnly}
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                                            <option value="">-- Chọn danh mục --</option>
+                                            <option value="">{t("product.selectCategory")}</option>
                                             {categories.map(c => <option key={c.id} value={c.keyword}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>Supplier Information</Label>
-                                        <Input placeholder="Supplier name" value={formData.supplier.name} onChange={e => handleInputChange(e, "supplierName")} readOnly={isReadOnly} />
-                                        <Input placeholder="Supplier address" value={formData.supplier.address} onChange={e => handleInputChange(e, "supplierAddress")} readOnly={isReadOnly} />
+                                        <Label>{t("product.supplierInfo")}</Label>
+                                        <Input placeholder={t("product.supplierNamePlaceholder")} value={formData.supplier.name} onChange={e => handleInputChange(e, "supplierName")} readOnly={isReadOnly} />
+                                        <Input placeholder={t("product.supplierAddressPlaceholder")} value={formData.supplier.address} onChange={e => handleInputChange(e, "supplierAddress")} readOnly={isReadOnly} />
                                     </div>
                                     <div className="border-t pt-4">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-base font-semibold">Thông số kỹ thuật</h3>
+                                            <h3 className="text-base font-semibold">{t("product.attributes")}</h3>
                                             {!isReadOnly && (
                                                 <Button type="button" variant="outline" size="sm" onClick={addAttribute}>
-                                                    <Plus className="h-3 w-3 mr-1" /> Thêm thuộc tính
+                                                    <Plus className="h-3 w-3 mr-1" /> {t("product.attrName")} +
                                                 </Button>
                                             )}
                                         </div>
                                         {attributes.length === 0 && (
                                             <p className="text-sm text-gray-400 text-center py-4">
-                                                {isReadOnly ? "Chưa có thông số" : "Bấm \"Thêm thuộc tính\" để thêm thông số sản phẩm"}
+                                                {isReadOnly ? t("product.noAttributes") : t("product.addAttributeHint")}
                                             </p>
                                         )}
                                         <div className="space-y-2">
                                             {attributes.map((attr, index) => (
                                                 <div key={index} className="grid grid-cols-12 gap-2 items-start p-3 bg-gray-50 rounded-lg border border-gray-200">
                                                     <div className="col-span-3">
-                                                        <Label className="text-xs text-gray-500 mb-1 block">Tên</Label>
-                                                        <Input value={attr.name} onChange={e => updateAttribute(index, "name", e.target.value)} placeholder="VD: RAM" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                        <Label className="text-xs text-gray-500 mb-1 block">{t("product.attrName")}</Label>
+                                                        <Input value={attr.name} onChange={e => updateAttribute(index, "name", e.target.value)} placeholder={t("product.attrNamePlaceholder")} className="h-8 text-sm" readOnly={isReadOnly} />
                                                     </div>
                                                     <div className="col-span-4">
-                                                        <Label className="text-xs text-gray-500 mb-1 block">Giá trị</Label>
-                                                        <Input value={attr.value} onChange={e => updateAttribute(index, "value", e.target.value)} placeholder="VD: 16" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                        <Label className="text-xs text-gray-500 mb-1 block">{t("product.attrValue")}</Label>
+                                                        <Input value={attr.value} onChange={e => updateAttribute(index, "value", e.target.value)} placeholder={t("product.attrValuePlaceholder")} className="h-8 text-sm" readOnly={isReadOnly} />
                                                     </div>
                                                     <div className="col-span-2">
-                                                        <Label className="text-xs text-gray-500 mb-1 block">Đơn vị</Label>
-                                                        <Input value={attr.unit} onChange={e => updateAttribute(index, "unit", e.target.value)} placeholder="VD: GB" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                        <Label className="text-xs text-gray-500 mb-1 block">{t("product.attrUnit")}</Label>
+                                                        <Input value={attr.unit} onChange={e => updateAttribute(index, "unit", e.target.value)} placeholder={t("product.attrUnitPlaceholder")} className="h-8 text-sm" readOnly={isReadOnly} />
                                                     </div>
                                                     <div className="col-span-2">
-                                                        <Label className="text-xs text-gray-500 mb-1 block">Mô tả</Label>
-                                                        <Input value={attr.description} onChange={e => updateAttribute(index, "description", e.target.value)} placeholder="Tùy chọn" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                        <Label className="text-xs text-gray-500 mb-1 block">{t("product.attrDesc")}</Label>
+                                                        <Input value={attr.description} onChange={e => updateAttribute(index, "description", e.target.value)} placeholder={t("product.attrDescPlaceholder")} className="h-8 text-sm" readOnly={isReadOnly} />
                                                     </div>
                                                     {!isReadOnly && (
                                                         <div className="col-span-1 flex items-end pb-1">
@@ -421,7 +427,10 @@ const Product = () => {
                                     </div>
                                     {!isReadOnly && (
                                         <Button onClick={handleSubmit} disabled={isLoading}>
-                                            {isLoading ? "Loading..." : editingProduct ? "Update Product" : "Add Product"}
+                                            {isLoading
+                                                ? (editingProduct ? t("product.updating") : t("product.adding"))
+                                                : (editingProduct ? t("product.update") : t("product.add"))
+                                            }
                                         </Button>
                                     )}
                                 </div>
@@ -435,36 +444,38 @@ const Product = () => {
             <div className="flex gap-1 mb-6 border-b">
                 <button onClick={() => setActiveTab("products")}
                     className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${activeTab === "products" ? "bg-white border border-b-white -mb-px text-primary" : "text-gray-500 hover:text-gray-700"}`}>
-                    <Layers className="h-4 w-4 inline mr-1" />Sản phẩm
+                    <Layers className="h-4 w-4 inline mr-1" />{t("product.tab_products")}
                 </button>
                 <button onClick={() => setActiveTab("categories")}
                     className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${activeTab === "categories" ? "bg-white border border-b-white -mb-px text-primary" : "text-gray-500 hover:text-gray-700"}`}>
-                    <Tag className="h-4 w-4 inline mr-1" />Danh mục
+                    <Tag className="h-4 w-4 inline mr-1" />{t("product.tab_categories")}
                 </button>
             </div>
 
-            {/* ── Products tab ── */}
+            {/* Products tab */}
             {activeTab === "products" && (
                 <>
                     <ImportProductDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImported={() => loadProducts(page, selectedCategoryFilters)} />
 
                     {/* Multi-select category filter */}
                     <div className="flex items-center gap-3 mb-4">
-                        <Label className="whitespace-nowrap text-sm">Lọc theo danh mục:</Label>
+                        <Label className="whitespace-nowrap text-sm">{t("product.filterByCategory")}:</Label>
                         <div className="relative" ref={filterDropdownRef}>
                             <button
                                 onClick={() => setFilterDropdownOpen(o => !o)}
                                 className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-gray-50 min-w-[180px] justify-between"
                             >
                                 <span className={selectedCategoryFilters.length === 0 ? "text-gray-400" : ""}>
-                                    {selectedCategoryFilters.length === 0 ? "Tất cả danh mục" : `${selectedCategoryFilters.length} danh mục đã chọn`}
+                                    {selectedCategoryFilters.length === 0
+                                        ? t("product.allCategories")
+                                        : t("product.selectedCategories", { count: selectedCategoryFilters.length })}
                                 </span>
                                 <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
                             </button>
                             {filterDropdownOpen && (
                                 <div className="absolute top-full left-0 z-50 mt-1 bg-white border rounded-md shadow-lg min-w-[200px] max-h-64 overflow-y-auto">
                                     {categories.length === 0 ? (
-                                        <p className="px-3 py-2 text-sm text-gray-400">Chưa có danh mục</p>
+                                        <p className="px-3 py-2 text-sm text-gray-400">{t("product.noCategoriesYet")}</p>
                                     ) : (
                                         categories.map(cat => (
                                             <label key={cat.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
@@ -483,7 +494,7 @@ const Product = () => {
                         </div>
                         {selectedCategoryFilters.length > 0 && (
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedCategoryFilters([]); if (page !== 0) setPage(0); }} className="h-9 px-2 text-gray-400 hover:text-gray-700">
-                                <X className="h-4 w-4 mr-1" /> Bỏ lọc
+                                <X className="h-4 w-4 mr-1" /> {t("product.clearFilter")}
                             </Button>
                         )}
                         {/* Active filter chips */}
@@ -502,14 +513,14 @@ const Product = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Image</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Danh mục</TableHead>
-                                <TableHead>Giá</TableHead>
-                                <TableHead>Đơn vị</TableHead>
-                                <TableHead>Stock</TableHead>
-                                <TableHead>Supplier</TableHead>
-                                <TableHead>Actions</TableHead>
+                                <TableHead>{t("product.imageLabel")}</TableHead>
+                                <TableHead>{t("product.nameLabel")}</TableHead>
+                                <TableHead>{t("product.productCategory")}</TableHead>
+                                <TableHead>{t("product.productPrice")}</TableHead>
+                                <TableHead>{t("product.unitLabel")}</TableHead>
+                                <TableHead>{t("product.stockLabel")}</TableHead>
+                                <TableHead>{t("product.supplierLabel")}</TableHead>
+                                <TableHead>{t("product.actionsLabel")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -543,18 +554,22 @@ const Product = () => {
                     </Table>
 
                     <div className="flex justify-center gap-2 mt-4">
-                        <Button variant="outline" onClick={handlePrevPage} disabled={page === 0}><ChevronLeft className="h-4 w-4" /> Previous</Button>
-                        <Button variant="outline" onClick={handleNextPage} disabled={page === totalPages - 1}>Next <ChevronRight className="h-4 w-4" /></Button>
+                        <Button variant="outline" onClick={handlePrevPage} disabled={page === 0}>
+                            <ChevronLeft className="h-4 w-4" /> {t("product.previous")}
+                        </Button>
+                        <Button variant="outline" onClick={handleNextPage} disabled={page === totalPages - 1}>
+                            {t("product.next")} <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
                 </>
             )}
 
-            {/* ── Categories tab ── */}
+            {/* Categories tab */}
             {activeTab === "categories" && (
                 <div className="max-w-3xl">
                     {/* Search filter */}
                     <Input
-                        placeholder="Tìm danh mục..."
+                        placeholder={t("product.searchCategories")}
                         value={categorySearch}
                         onChange={e => setCategorySearch(e.target.value)}
                         className="mb-3"
@@ -564,7 +579,7 @@ const Product = () => {
                     <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1 space-y-2">
                         {filteredCategoriesList.length === 0 ? (
                             <p className="text-sm text-gray-400 text-center py-8">
-                                {categorySearch ? "Không tìm thấy danh mục phù hợp" : "Chưa có danh mục nào"}
+                                {categorySearch ? t("product.noMatchingCategories") : t("product.noCategoriesInList")}
                             </p>
                         ) : (
                             filteredCategoriesList.map(cat => (
@@ -575,7 +590,7 @@ const Product = () => {
                                     </div>
                                     <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                                         <span className="text-sm text-gray-500">
-                                            {categoryCounts[cat.keyword] ?? 0} sản phẩm
+                                            {t("product.categoryProductCount", { count: categoryCounts[cat.keyword] ?? 0 })}
                                         </span>
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500"
                                             disabled={isDeletingCategory === cat.id}
@@ -588,7 +603,9 @@ const Product = () => {
                         )}
                     </div>
 
-                    <p className="text-xs text-gray-400 mt-2">{filteredCategoriesList.length} / {categories.length} danh mục</p>
+                    <p className="text-xs text-gray-400 mt-2">
+                        {t("product.categoriesCount", { x: filteredCategoriesList.length, y: categories.length })}
+                    </p>
                 </div>
             )}
         </div>

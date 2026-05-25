@@ -9,15 +9,10 @@ import { Box, Clock, MapPin, Package2, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
-
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-    DELIVERING: { label: "Đang giao hàng", className: "bg-orange-100 text-orange-700" },
-    DELIVERED:  { label: "Đã giao hàng",   className: "bg-green-100 text-green-700" },
-    CANCELLED:  { label: "Đã hủy",          className: "bg-red-100 text-red-700" },
-    PENDING:    { label: "Chờ xử lý",       className: "bg-yellow-100 text-yellow-700" },
-};
+import { useTranslation } from "react-i18next";
 
 function OrderDetail() {
+    const { t } = useTranslation();
     const dispatch = useDispatch<any>();
     const { id } = useParams<{ id: string }>();
     const { orders } = useSelector((state: RootState) => state.order);
@@ -25,18 +20,25 @@ function OrderDetail() {
     const { toast } = useToast();
     const [cancelling, setCancelling] = useState(false);
 
+    const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+        DELIVERING: { label: t('order.status_DELIVERING'), className: "bg-orange-100 text-orange-700" },
+        DELIVERED:  { label: t('order.status_DELIVERED_FULL'), className: "bg-green-100 text-green-700" },
+        CANCELLED:  { label: t('order.status_CANCELLED'), className: "bg-red-100 text-red-700" },
+        PENDING:    { label: t('order.status_PENDING'), className: "bg-yellow-100 text-yellow-700" },
+    };
+
     const handleCancelOrder = async () => {
         if (!id) return;
         setCancelling(true);
         try {
             await orderApi.cancelOrder(Number(id));
-            toast({ title: "Đã hủy đơn hàng" });
+            toast({ title: t('order.cancelledToast') });
             dispatch(viewOrder());
         } catch (error: any) {
             toast({
                 variant: "destructive",
-                title: "Hủy đơn hàng thất bại",
-                description: error?.response?.data?.message || "Đã xảy ra lỗi",
+                title: t('order.cancelFailed'),
+                description: error?.response?.data?.message || t('order.cancelFailed_desc'),
             });
         } finally {
             setCancelling(false);
@@ -50,11 +52,11 @@ function OrderDetail() {
     return (
         <div className="container mx-auto p-6 pt-24">
             <div className="flex items-center gap-2 mb-6 text-gray-600">
-                <Link to="/" className="hover:text-orange-500">Trang chủ</Link>
+                <Link to="/" className="hover:text-orange-500">{t('order.home')}</Link>
                 <span>/</span>
-                <Link to="/order" className="hover:text-orange-500">Đơn hàng</Link>
+                <Link to="/order" className="hover:text-orange-500">{t('order.breadcrumbOrder')}</Link>
                 <span>/</span>
-                <span className="text-orange-500">Chi tiết đơn hàng</span>
+                <span className="text-orange-500">{t('order.orderDetail')}</span>
             </div>
 
             <div className="grid gap-6">
@@ -63,7 +65,7 @@ function OrderDetail() {
                         <div className="flex justify-between items-center">
                             <CardTitle className="text-xl font-medium text-gray-800 flex items-center gap-2">
                                 <Package2 className="h-5 w-5 text-orange-500" />
-                                Đơn hàng #{order.id}
+                                {t('order.orderNumber', { id: order.id })}
                             </CardTitle>
                             <div className="text-lg font-semibold text-orange-500">
                                 {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
@@ -91,7 +93,7 @@ function OrderDetail() {
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <MapPin className="h-5 w-5 text-purple-500 shrink-0" />
                                 <div>
-                                    <div className="text-sm font-medium">Địa chỉ giao hàng</div>
+                                    <div className="text-sm font-medium">{t('order.shippingAddress')}</div>
                                     <div className="text-sm">{order.shipAddress}</div>
                                 </div>
                             </div>
@@ -99,7 +101,7 @@ function OrderDetail() {
                             <div className="flex items-center gap-3 bg-white p-3 rounded-lg">
                                 <Clock className="h-5 w-5 text-orange-500 shrink-0" />
                                 <div>
-                                    <div className="text-sm font-medium">Ngày đặt hàng</div>
+                                    <div className="text-sm font-medium">{t('order.orderDate')}</div>
                                     <div className="text-sm">{order.orderDate}</div>
                                 </div>
                             </div>
@@ -113,7 +115,7 @@ function OrderDetail() {
                                     disabled={cancelling}
                                     onClick={handleCancelOrder}
                                 >
-                                    {cancelling ? "Đang hủy..." : "Hủy đơn hàng"}
+                                    {cancelling ? t('order.cancelling') : t('order.cancelOrder')}
                                 </Button>
                             </div>
                         )}
@@ -133,11 +135,11 @@ function OrderDetail() {
                                         <h3 className="font-medium text-gray-900">{item.productName}</h3>
                                         <div className="mt-3 flex items-center justify-between">
                                             <div className="text-sm text-gray-600">
-                                                Số lượng: <span className="font-medium">{item.quantity}</span>
+                                                {t('order.quantityLabel')} <span className="font-medium">{item.quantity}</span>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-sm text-gray-500">
-                                                    Đơn giá:{" "}
+                                                    {t('order.unitPrice')}{" "}
                                                     {new Intl.NumberFormat("vi-VN", {
                                                         style: "currency",
                                                         currency: "VND",
@@ -158,7 +160,7 @@ function OrderDetail() {
 
                         <div className="mt-8 flex justify-end border-t pt-6">
                             <div className="text-lg">
-                                Tổng tiền:{" "}
+                                {t('order.grandTotal')}{" "}
                                 <span className="font-bold text-orange-500 text-xl">
                                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
                                         order.totalPrice

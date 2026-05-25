@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ interface HistoryAction {
 }
 
 export default function AuditTrail() {
+    const { t } = useTranslation();
     const [history, setHistory] = useState<HistoryAction[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -57,25 +59,25 @@ export default function AuditTrail() {
         <div className="container mx-auto p-4">
             <Card>
                 <CardHeader>
-                    <CardTitle>Lịch sử thao tác</CardTitle>
+                    <CardTitle>{t('auditTrail.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Thời gian</TableHead>
-                                <TableHead>Người thực hiện</TableHead>
-                                <TableHead>Hành động</TableHead>
-                                <TableHead>Mô tả</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                                <TableHead>Ghi chú</TableHead>
+                                <TableHead>{t('auditTrail.timestamp')}</TableHead>
+                                <TableHead>{t('auditTrail.user')}</TableHead>
+                                <TableHead>{t('auditTrail.action')}</TableHead>
+                                <TableHead>{t('auditTrail.detail')}</TableHead>
+                                <TableHead>{t('auditTrail.status')}</TableHead>
+                                <TableHead>{t('auditTrail.note')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center">
-                                        Đang tải...
+                                        {t('auditTrail.loading')}
                                     </TableCell>
                                 </TableRow>
                             ) : history.length > 0 ? (
@@ -98,7 +100,7 @@ export default function AuditTrail() {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center">
-                                        Không có dữ liệu lịch sử.
+                                        {t('auditTrail.noHistory')}
                                     </TableCell>
                                 </TableRow>
                             )}

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { MessageCircle, X, Send, User, Loader2, Paperclip, FileText, Music, Video } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { messageApi, Attachment } from "@/services/api/messageApi";
 import { setMessages, addMessage } from "@/redux/slices/chat";
 import { Seller } from "../assets/logo";
@@ -59,6 +60,7 @@ interface SellerChatModalProps {
 }
 
 const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalProps) => {
+    const { t } = useTranslation();
     const [conversation, setConversation] = useState<any | null>(null);
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -124,7 +126,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
             const fileType = detectFileType(result.originalFileName || file.name);
             setPendingAttachment({ url: result.url, originalFileName: result.originalFileName || file.name, fileType });
         } catch {
-            alert("Tải file lên thất bại.");
+            alert(t('chat.uploadFailed'));
         } finally {
             setUploadingFile(false);
             if (fileInputRef.current) fileInputRef.current.value = "";
@@ -193,9 +195,9 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                                 )}
                             </div>
                             <div>
-                                <h3 className="font-semibold">Người bán</h3>
+                                <h3 className="font-semibold">{t('chat.sellerTitle')}</h3>
                                 <p className="text-xs text-white/80">
-                                    {hasOnlineManager ? "Đang hoạt động" : "Hỗ trợ khách hàng"}
+                                    {hasOnlineManager ? t('chat.online') : t('chat.customerSupport')}
                                 </p>
                             </div>
                         </div>
@@ -207,7 +209,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                         {messagesFromRedux.length === 0 && (
-                            <div className="text-center text-gray-400 text-sm pt-4">Hãy trò chuyện để bắt đầu.</div>
+                            <div className="text-center text-gray-400 text-sm pt-4">{t('chat.startConversation')}</div>
                         )}
                         {messagesFromRedux.map((msg) => {
                             const isMe = msg.me ?? false;
@@ -261,9 +263,9 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                     {/* Suggested questions */}
                     {messagesFromRedux.length <= 1 && (
                         <div className="px-4 py-2 bg-white border-t">
-                            <p className="text-xs text-gray-500 mb-2">Câu hỏi gợi ý:</p>
+                            <p className="text-xs text-gray-500 mb-2">{t('chat.suggestedQuestions')}</p>
                             <div className="flex flex-wrap gap-1">
-                                {["Sản phẩm này còn hàng không?", "Thời gian giao hàng?", "Có bảo hành không?"].map((q, i) => (
+                                {[t('chat.suggestedQ1'), t('chat.suggestedQ2'), t('chat.suggestedQ3')].map((q, i) => (
                                     <button key={i} onClick={() => setInputValue(q)}
                                         className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700 transition-colors">
                                         {q}
@@ -294,14 +296,14 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                                 accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" />
                             <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFile || isLoading}
                                 className="w-9 h-9 rounded-full border border-gray-300 hover:bg-gray-100 flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-50"
-                                title="Đính kèm file">
+                                title={t('chat.attachFile')}>
                                 {uploadingFile
                                     ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                                     : <Paperclip className="w-4 h-4 text-gray-500" />}
                             </button>
                             <Input value={inputValue} onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Nhập tin nhắn cho người bán..."
+                                placeholder={t('chat.inputPlaceholder')}
                                 className="flex-1 rounded-full border-gray-300 focus:border-orange-500"
                                 disabled={isLoading} />
                             <Button onClick={handleSendMessage}

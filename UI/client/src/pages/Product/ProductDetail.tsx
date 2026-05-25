@@ -13,6 +13,7 @@ import {
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { fetchProductDetail } from "@/redux/thunks/product";
 import { clearCurrentProduct } from "@/redux/slices/product";
 import { optimisticAddToCart, optimisticRollbackAdd } from "@/redux/slices/cart";
@@ -38,6 +39,7 @@ const SpecRow = ({ label, value, unit }: { label: string; value?: string; unit?:
 
 export default function ProductDetail() {
     const { id } = useParams();
+    const { t } = useTranslation();
     const dispatch = useDispatch<AppDispatch>();
     const { toast } = useToast();
 
@@ -98,14 +100,14 @@ export default function ProductDetail() {
                 product.img as string | undefined
             );
             dispatch(getCart() as any);
-            toast({ title: "Thành công!", description: `Đã thêm ${quantity} sản phẩm vào giỏ hàng` });
+            toast({ title: t('common.success'), description: `${t('product.addedToCart')} (${quantity})` });
             setQuantity(1);
         } catch (error: any) {
             dispatch(optimisticRollbackAdd({ quantity }));
             toast({
                 variant: "destructive",
-                title: "Lỗi",
-                description: error?.response?.data?.message ?? "Không thể thêm sản phẩm vào giỏ hàng"
+                title: t('common.error'),
+                description: error?.response?.data?.message ?? t('product.addToCartFailed')
             });
         } finally {
             setIsAddingToCart(false);
@@ -123,14 +125,14 @@ export default function ProductDetail() {
                         onClick={() => id && dispatch(fetchProductDetail(id))}
                         className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                     >
-                        Thử lại
+                        {t('product.retry')}
                     </button>
                 </div>
             </div>
         );
     }
 
-    if (!product) return <div>Không tìm thấy sản phẩm</div>;
+    if (!product) return <div>{t('product.notFound')}</div>;
 
     const attributes: { name: string; value: string; unit?: string }[] = product.attributes ?? [];
 
@@ -189,7 +191,7 @@ export default function ProductDetail() {
                                             key={idx}
                                             onClick={() => setCurrentImageIndex(idx)}
                                             className={`
-                                                relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 
+                                                relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2
                                                 ${
                                                     currentImageIndex === idx
                                                         ? "border-orange-600 ring-2 ring-orange-100"
@@ -245,7 +247,7 @@ export default function ProductDetail() {
 
                             <div className="space-y-6 pt-4">
                                 <div className="flex items-center gap-6">
-                                    <span className="font-medium text-gray-700">Số lượng:</span>
+                                    <span className="font-medium text-gray-700">{t('product.quantity')}</span>
                                     <div className="flex items-center border border-gray-300 rounded-lg bg-white">
                                         <button
                                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -270,7 +272,7 @@ export default function ProductDetail() {
                                         className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
                                     >
                                         <ShoppingCart className="w-6 h-6" />
-                                        {isAddingToCart ? "Đang xử lý..." : "Thêm vào giỏ hàng"}
+                                        {isAddingToCart ? t('product.processing') : t('product.addToCart')}
                                     </button>
                                     <button className="p-4 border-2 border-gray-200 rounded-xl hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all">
                                         <Heart className="w-6 h-6" />
@@ -282,15 +284,15 @@ export default function ProductDetail() {
                                 <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                                     <Truck className="w-5 h-5 text-orange-600 mt-0.5" />
                                     <div className="text-sm">
-                                        <p className="font-semibold text-gray-900">Giao hàng miễn phí</p>
-                                        <p className="text-gray-500">Cho đơn hàng trên 5tr</p>
+                                        <p className="font-semibold text-gray-900">{t('product.freeShipping')}</p>
+                                        <p className="text-gray-500">{t('product.freeShippingDesc')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                                     <Shield className="w-5 h-5 text-orange-600 mt-0.5" />
                                     <div className="text-sm">
-                                        <p className="font-semibold text-gray-900">Bảo hành 24 tháng</p>
-                                        <p className="text-gray-500">Chính hãng 100%</p>
+                                        <p className="font-semibold text-gray-900">{t('product.warrantyLabel')}</p>
+                                        <p className="text-gray-500">{t('product.warrantyDesc')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -304,7 +306,7 @@ export default function ProductDetail() {
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-4">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                                 <CircuitBoard className="w-6 h-6 text-orange-600" />
-                                Thông số kỹ thuật
+                                {t('product.specs')}
                             </h3>
                             <div className="flex flex-col">
                                 {attributes.length > 0 ? (
@@ -312,7 +314,7 @@ export default function ProductDetail() {
                                         <SpecRow key={index} label={attr.name} value={attr.value} unit={attr.unit} />
                                     ))
                                 ) : (
-                                    <p className="text-sm text-gray-400 py-4 text-center">Chưa có thông số kỹ thuật</p>
+                                    <p className="text-sm text-gray-400 py-4 text-center">{t('product.noSpecs')}</p>
                                 )}
                             </div>
                         </div>
@@ -320,15 +322,14 @@ export default function ProductDetail() {
 
                     <div className="lg:col-span-2 order-1 lg:order-2">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Đánh giá & Mô tả chi tiết</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('product.reviewAndDescription')}</h2>
                             <div className="prose prose-orange max-w-none text-gray-600">
                                 <p className="leading-relaxed mb-4">
-                                    Sản phẩm <strong>{product.name}</strong> từ nhà cung cấp {product.supplier?.name} với
-                                    chất lượng chính hãng, bảo hành 24 tháng.
+                                    {t('product.description')} <strong>{product.name}</strong> {t('product.fromSupplier')} {product.supplier?.name} {t('product.warranty')}
                                 </p>
                                 {attributes.length > 0 && (
                                     <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 my-6">
-                                        <h4 className="font-bold text-orange-800 mb-2">Thông số nổi bật:</h4>
+                                        <h4 className="font-bold text-orange-800 mb-2">{t('product.highlight')}</h4>
                                         <ul className="list-disc list-inside space-y-1 text-orange-900">
                                             {attributes.slice(0, 5).map((attr, i) => (
                                                 <li key={i}>{attr.name}: {attr.value}{attr.unit ? ` ${attr.unit}` : ""}</li>

@@ -10,6 +10,7 @@ import { ProductDetail, ProductResponse, Product as ProductType } from "@/types"
 import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Trash, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -23,6 +24,7 @@ type AttributeRow = {
 const emptyAttribute = (): AttributeRow => ({ name: "", value: "", unit: "", description: "" });
 
 const Product = () => {
+    const { t } = useTranslation();
     const [products, setProducts] = useState<ProductType[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -57,7 +59,7 @@ const Product = () => {
             setProducts(response.data.result.content);
             setTotalPages(response.data.result.totalPages);
         } catch (error) {
-            toast({ title: "Error", description: "Failed to fetch products", variant: "destructive" });
+            toast({ title: t('common.error'), description: t('product.fetchError'), variant: "destructive" });
         }
     };
 
@@ -98,7 +100,7 @@ const Product = () => {
 
     const validateFileSize = (file: File): boolean => {
         if (file.size > MAX_FILE_SIZE) {
-            toast({ title: "File quá lớn", description: `${file.name} vượt quá 5MB`, variant: "destructive" });
+            toast({ title: t('product.fileTooLarge'), description: `${file.name} ${t('product.fileTooLargeDesc')}`, variant: "destructive" });
             return false;
         }
         return true;
@@ -152,19 +154,19 @@ const Product = () => {
                     ...productData,
                     productDetailCreationRequest: detailRequest
                 });
-                toast({ title: "Success", description: "Product updated successfully" });
+                toast({ title: t('common.success'), description: t('product.updateSuccess') });
             } else {
                 await adminApi.addProduct({
                     ...productData,
                     productDetailCreationRequest: detailRequest
                 });
-                toast({ title: "Success", description: "Product created successfully" });
+                toast({ title: t('common.success'), description: t('product.createSuccess') });
             }
             setIsOpen(false);
             fetchProducts();
             resetForm();
         } catch (error: any) {
-            toast({ title: "Thất bại", description: error.response?.data?.message || "Có lỗi xảy ra", variant: "destructive" });
+            toast({ title: t('product.failedTitle'), description: error.response?.data?.message || t('common.error'), variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -213,14 +215,14 @@ const Product = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm("Bạn có chắc là muốn xóa sản phẩm này?")) {
+        if (window.confirm(t('product.confirmDelete'))) {
             try {
                 setIsDeleting(id);
                 await adminApi.deleteProduct(id, token as string);
-                toast({ title: "Success", description: "Product deleted successfully" });
+                toast({ title: t('common.success'), description: t('product.deleteSuccessDesc') });
                 fetchProducts();
             } catch (error) {
-                toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
+                toast({ title: t('common.error'), description: t('product.deleteErrorDesc'), variant: "destructive" });
             } finally {
                 setIsDeleting(null);
             }
@@ -237,36 +239,36 @@ const Product = () => {
     return (
         <div className="container mx-auto py-6 pt-24">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Product Management</h1>
+                <h1 className="text-2xl font-bold">{t('product.management')}</h1>
 
                 <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
                     <DialogTrigger asChild>
                         <Button onClick={() => setIsOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Product
+                            <Plus className="mr-2 h-4 w-4" /> {t('product.addBtn')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>
-                                {isReadOnly ? "Product Details" : editingProduct ? "Edit Product" : "Add New Product"}
+                                {isReadOnly ? t('product.detailsTitle') : editingProduct ? t('product.editTitle') : t('product.addTitle')}
                             </DialogTitle>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             {/* Name */}
                             <div className="grid gap-2">
-                                <Label>Name</Label>
-                                <Input value={formData.name} onChange={(e) => handleInputChange(e, "name")} placeholder="Product name" readOnly={isReadOnly} />
+                                <Label>{t('product.name')}</Label>
+                                <Input value={formData.name} onChange={(e) => handleInputChange(e, "name")} placeholder={t('product.productName')} readOnly={isReadOnly} />
                             </div>
 
                             {/* Thumbnail */}
                             <div className="grid gap-2">
-                                <Label>Thumbnail Image</Label>
+                                <Label>{t('product.thumbnail')}</Label>
                                 <div className="space-y-2">
                                     {!isReadOnly && (
                                         <>
                                             <input type="file" accept="image/*" className="hidden" id="product-image-upload" onChange={handleProductImageUpload} />
                                             <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById("product-image-upload")?.click()}>
-                                                <Plus className="h-4 w-4 mr-2" /> Choose Thumbnail
+                                                <Plus className="h-4 w-4 mr-2" /> {t('product.chooseThumbnail')}
                                             </Button>
                                         </>
                                     )}
@@ -285,13 +287,13 @@ const Product = () => {
 
                             {/* Additional images */}
                             <div className="grid gap-2">
-                                <Label>Additional Images / Videos (max 5MB)</Label>
+                                <Label>{t('product.additionalMedia')}</Label>
                                 <div className="space-y-2">
                                     {!isReadOnly && (
                                         <>
                                             <input type="file" accept="image/*,video/*" multiple className="hidden" id="product-media-upload" onChange={handleProductMediaUpload} />
                                             <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById("product-media-upload")?.click()}>
-                                                <Plus className="h-4 w-4 mr-2" /> Add Images / Videos
+                                                <Plus className="h-4 w-4 mr-2" /> {t('product.addMedia')}
                                             </Button>
                                         </>
                                     )}
@@ -327,42 +329,42 @@ const Product = () => {
                             {/* Price & Unit */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
-                                    <Label>Giá (VND)</Label>
+                                    <Label>{t('product.price')}</Label>
                                     <Input type="number" min="0" value={formData.price} onChange={(e) => handleInputChange(e, "price")} readOnly={isReadOnly} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Đơn vị tính</Label>
-                                    <Input value={formData.unit} onChange={(e) => handleInputChange(e, "unit")} placeholder="VD: cái, chiếc, bộ" readOnly={isReadOnly} />
+                                    <Label>{t('product.unit')}</Label>
+                                    <Input value={formData.unit} onChange={(e) => handleInputChange(e, "unit")} placeholder={t('product.unitPlaceholder')} readOnly={isReadOnly} />
                                 </div>
                             </div>
 
                             {/* Stock */}
                             <div className="grid gap-2">
-                                <Label>Stock Quantity</Label>
+                                <Label>{t('product.stock')}</Label>
                                 <Input type="number" min="0" value={formData.inStock} onChange={(e) => handleInputChange(e, "inStock")} readOnly={isReadOnly} />
                             </div>
 
                             {/* Supplier */}
                             <div className="grid gap-2">
-                                <Label>Supplier Information</Label>
-                                <Input placeholder="Supplier name" value={formData.supplier.name} onChange={(e) => handleInputChange(e, "supplierName")} readOnly={isReadOnly} />
-                                <Input placeholder="Supplier address" value={formData.supplier.address} onChange={(e) => handleInputChange(e, "supplierAddress")} readOnly={isReadOnly} />
+                                <Label>{t('product.supplier')}</Label>
+                                <Input placeholder={t('product.supplierName')} value={formData.supplier.name} onChange={(e) => handleInputChange(e, "supplierName")} readOnly={isReadOnly} />
+                                <Input placeholder={t('product.supplierAddress')} value={formData.supplier.address} onChange={(e) => handleInputChange(e, "supplierAddress")} readOnly={isReadOnly} />
                             </div>
 
                             {/* Dynamic Attributes */}
                             <div className="border-t pt-4">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-base font-semibold">Thông số kỹ thuật</h3>
+                                    <h3 className="text-base font-semibold">{t('product.specs')}</h3>
                                     {!isReadOnly && (
                                         <Button type="button" variant="outline" size="sm" onClick={addAttribute}>
-                                            <Plus className="h-3 w-3 mr-1" /> Thêm thuộc tính
+                                            <Plus className="h-3 w-3 mr-1" /> {t('product.addAttribute')}
                                         </Button>
                                     )}
                                 </div>
 
                                 {attributes.length === 0 && (
                                     <p className="text-sm text-gray-400 text-center py-4">
-                                        {isReadOnly ? "Chưa có thông số" : "Bấm \"Thêm thuộc tính\" để thêm thông số sản phẩm"}
+                                        {isReadOnly ? t('product.noSpecs') : t('product.addSpecsHint')}
                                     </p>
                                 )}
 
@@ -370,20 +372,20 @@ const Product = () => {
                                     {attributes.map((attr, index) => (
                                         <div key={index} className="grid grid-cols-12 gap-2 items-start p-3 bg-gray-50 rounded-lg border border-gray-200">
                                             <div className="col-span-3">
-                                                <Label className="text-xs text-gray-500 mb-1 block">Tên</Label>
-                                                <Input value={attr.name} onChange={(e) => updateAttribute(index, "name", e.target.value)} placeholder="VD: RAM" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                <Label className="text-xs text-gray-500 mb-1 block">{t('product.attrName')}</Label>
+                                                <Input value={attr.name} onChange={(e) => updateAttribute(index, "name", e.target.value)} placeholder={t('product.attrNamePlaceholder')} className="h-8 text-sm" readOnly={isReadOnly} />
                                             </div>
                                             <div className="col-span-4">
-                                                <Label className="text-xs text-gray-500 mb-1 block">Giá trị</Label>
-                                                <Input value={attr.value} onChange={(e) => updateAttribute(index, "value", e.target.value)} placeholder="VD: 16" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                <Label className="text-xs text-gray-500 mb-1 block">{t('product.attrValue')}</Label>
+                                                <Input value={attr.value} onChange={(e) => updateAttribute(index, "value", e.target.value)} placeholder={t('product.attrValuePlaceholder')} className="h-8 text-sm" readOnly={isReadOnly} />
                                             </div>
                                             <div className="col-span-2">
-                                                <Label className="text-xs text-gray-500 mb-1 block">Đơn vị</Label>
-                                                <Input value={attr.unit} onChange={(e) => updateAttribute(index, "unit", e.target.value)} placeholder="VD: GB" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                <Label className="text-xs text-gray-500 mb-1 block">{t('product.attrUnit')}</Label>
+                                                <Input value={attr.unit} onChange={(e) => updateAttribute(index, "unit", e.target.value)} placeholder={t('product.attrUnitPlaceholder')} className="h-8 text-sm" readOnly={isReadOnly} />
                                             </div>
                                             <div className="col-span-2">
-                                                <Label className="text-xs text-gray-500 mb-1 block">Mô tả</Label>
-                                                <Input value={attr.description} onChange={(e) => updateAttribute(index, "description", e.target.value)} placeholder="Tùy chọn" className="h-8 text-sm" readOnly={isReadOnly} />
+                                                <Label className="text-xs text-gray-500 mb-1 block">{t('product.attrDesc')}</Label>
+                                                <Input value={attr.description} onChange={(e) => updateAttribute(index, "description", e.target.value)} placeholder={t('product.attrDescPlaceholder')} className="h-8 text-sm" readOnly={isReadOnly} />
                                             </div>
                                             {!isReadOnly && (
                                                 <div className="col-span-1 flex items-end pb-1">
@@ -399,7 +401,7 @@ const Product = () => {
 
                             {!isReadOnly && (
                                 <Button onClick={handleSubmit} disabled={isLoading}>
-                                    {isLoading ? "Loading..." : editingProduct ? "Update Product" : "Add Product"}
+                                    {isLoading ? t('product.updating') : editingProduct ? t('product.updateProduct') : t('product.createProduct')}
                                 </Button>
                             )}
                         </div>
@@ -410,13 +412,13 @@ const Product = () => {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Image</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Giá</TableHead>
-                        <TableHead>Đơn vị</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('product.image')}</TableHead>
+                        <TableHead>{t('product.name')}</TableHead>
+                        <TableHead>{t('product.price')}</TableHead>
+                        <TableHead>{t('product.unit')}</TableHead>
+                        <TableHead>{t('product.stockLabel')}</TableHead>
+                        <TableHead>{t('product.supplier')}</TableHead>
+                        <TableHead>{t('product.actions')}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -452,10 +454,10 @@ const Product = () => {
 
             <div className="flex justify-center gap-2 mt-4">
                 <Button variant="outline" onClick={handlePrevPage} disabled={page === 0}>
-                    <ChevronLeft className="h-4 w-4" /> Previous
+                    <ChevronLeft className="h-4 w-4" /> {t('product.previous')}
                 </Button>
                 <Button variant="outline" onClick={handleNextPage} disabled={page === totalPages - 1}>
-                    Next <ChevronRight className="h-4 w-4" />
+                    {t('product.next')} <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
         </div>

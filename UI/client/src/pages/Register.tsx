@@ -9,9 +9,11 @@ import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 export default function Register() {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [registerCredentials, setRegisterCredentials] = useState<RegisterCredentials>({
         userName: "",
@@ -32,14 +34,14 @@ export default function Register() {
             const result = await dispatch(register(registerCredentials) as RegisterResponse | any);
             if (register.fulfilled.match(result)) {
                 toast({
-                    title: "Đăng ký thành công",
-                    description: "Chào mừng bạn đã đăng ký tài khoản!"
+                    title: t('auth.registerSuccess'),
+                    description: t('auth.registerWelcome')
                 });
                 navigate("/login");
             } else {
                 toast({
-                    title: "Đăng ký thất bại",
-                    description: "Thông tin đăng ký không hợp lệ",
+                    title: t('auth.registerFailed'),
+                    description: t('auth.registerInvalid'),
                     variant: "destructive"
                 });
             }
@@ -53,7 +55,7 @@ export default function Register() {
             } else {
                 toast({
                     variant: "destructive",
-                    description: "Đã xảy ra lỗi không xác định"
+                    description: t('auth.unknownError')
                 });
             }
         }
@@ -72,20 +74,20 @@ export default function Register() {
                 <div className="flex flex-col items-center gap-4">
                     <div className="text-center space-y-1">
                         <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-600 bg-clip-text text-transparent">
-                            Đăng ký ngay
+                            {t('auth.register')}
                         </h1>
-                        <p className="text-sm text-gray-600">Nhập thông tin đăng ký của bạn để tạo tài khoản</p>
+                        <p className="text-sm text-gray-600">{t('auth.registerSubtitle')}</p>
                     </div>
 
                     <form onSubmit={handleRegister} className="w-full space-y-4">
                         <div className="space-y-1">
                             <Label htmlFor="username" className="text-gray-700 text-sm">
-                                Tên đăng nhập
+                                {t('auth.username')}
                             </Label>
                             <Input
                                 id="username"
                                 type="text"
-                                placeholder="Nhập tên đăng nhập"
+                                placeholder={t('auth.usernamePlaceholder')}
                                 value={registerCredentials.userName}
                                 onChange={(e) =>
                                     setRegisterCredentials({
@@ -99,12 +101,12 @@ export default function Register() {
 
                         <div className="space-y-1">
                             <Label htmlFor="password" className="text-gray-700 text-sm">
-                                Mật khẩu
+                                {t('auth.password')}
                             </Label>
                             <Input
                                 id="password"
                                 type="password"
-                                placeholder="Nhập mật khẩu"
+                                placeholder={t('auth.passwordPlaceholder')}
                                 value={registerCredentials.password}
                                 onChange={(e) =>
                                     setRegisterCredentials({
@@ -119,12 +121,12 @@ export default function Register() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <Label htmlFor="firstName" className="text-gray-700 text-sm">
-                                    Họ
+                                    {t('auth.firstName')}
                                 </Label>
                                 <Input
                                     id="firstName"
                                     type="text"
-                                    placeholder="Nhập họ"
+                                    placeholder={t('auth.firstNamePlaceholder')}
                                     value={registerCredentials.firstName}
                                     onChange={(e) =>
                                         setRegisterCredentials({
@@ -138,12 +140,12 @@ export default function Register() {
 
                             <div className="space-y-1">
                                 <Label htmlFor="lastName" className="text-gray-700 text-sm">
-                                    Tên
+                                    {t('auth.lastName')}
                                 </Label>
                                 <Input
                                     id="lastName"
                                     type="text"
-                                    placeholder="Nhập tên"
+                                    placeholder={t('auth.lastNamePlaceholder')}
                                     value={registerCredentials.lastName}
                                     onChange={(e) =>
                                         setRegisterCredentials({
@@ -158,12 +160,12 @@ export default function Register() {
 
                         <div className="space-y-1">
                             <Label htmlFor="email" className="text-gray-700 text-sm">
-                                Email
+                                {t('auth.emailLabel')}
                             </Label>
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="Nhập email"
+                                placeholder={t('auth.emailPlaceholder')}
                                 value={registerCredentials.email}
                                 onChange={(e) =>
                                     setRegisterCredentials({
@@ -177,12 +179,12 @@ export default function Register() {
 
                         <div className="space-y-1">
                             <Label htmlFor="phoneNumber" className="text-gray-700 text-sm">
-                                Số điện thoại
+                                {t('auth.phoneLabel')}
                             </Label>
                             <Input
                                 id="phoneNumber"
                                 type="tel"
-                                placeholder="Nhập số điện thoại"
+                                placeholder={t('auth.phonePlaceholder')}
                                 value={registerCredentials.phoneNumber}
                                 onChange={(e) =>
                                     setRegisterCredentials({
@@ -202,20 +204,20 @@ export default function Register() {
                             {status === "loading" ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang đăng ký...
+                                    {t('auth.registering')}
                                 </>
                             ) : (
-                                "Đăng ký"
+                                t('auth.registerTitle')
                             )}
                         </Button>
 
                         <p className="text-center text-sm text-gray-600">
-                            Đã có tài khoản?{" "}
+                            {t('auth.haveAccount')}{" "}
                             <Link
                                 to="/login"
                                 className="font-medium text-orange-500 hover:text-orange-600 transition-colors"
                             >
-                                Đăng nhập ngay
+                                {t('auth.loginNow')}
                             </Link>
                         </p>
                     </form>

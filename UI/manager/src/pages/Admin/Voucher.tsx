@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/api/adminApi";
 import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Ticket, Trash, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type AccessType = "PUBLIC" | "PRIVATE";
 
@@ -59,6 +60,7 @@ const formatVND = (n: number) =>
 const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("vi-VN") : "—");
 
 export default function Voucher() {
+    const { t } = useTranslation();
     const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
     const [page, setPage] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
@@ -83,7 +85,7 @@ export default function Voucher() {
             const res = await adminApi.listVouchers();
             setVouchers(res.data.result ?? []);
         } catch {
-            toast({ title: "Không thể tải danh sách voucher", variant: "destructive" });
+            toast({ title: t("voucher.loadError"), variant: "destructive" });
         }
     };
 
@@ -160,15 +162,15 @@ export default function Voucher() {
 
     const handleSubmit = async () => {
         if (!form.code.trim()) {
-            toast({ title: "Vui lòng nhập mã voucher", variant: "destructive" });
+            toast({ title: t("voucher.codeRequired"), variant: "destructive" });
             return;
         }
         if (form.accessType === "PRIVATE" && !form.userId.trim()) {
-            toast({ title: "Vui lòng nhập User ID cho voucher cá nhân", variant: "destructive" });
+            toast({ title: t("voucher.userRequired"), variant: "destructive" });
             return;
         }
         if (!form.discountAmount && !form.discountPercent) {
-            toast({ title: "Vui lòng nhập giá trị giảm (số tiền hoặc phần trăm)", variant: "destructive" });
+            toast({ title: t("voucher.discountRequired"), variant: "destructive" });
             return;
         }
         setIsLoading(true);
@@ -187,18 +189,18 @@ export default function Voucher() {
             };
             if (editingId != null) {
                 await adminApi.updateVoucher(editingId, payload);
-                toast({ title: "Cập nhật voucher thành công" });
+                toast({ title: t("voucher.updateSuccessTitle") });
             } else {
                 await adminApi.createVoucher(payload);
-                toast({ title: "Tạo voucher thành công" });
+                toast({ title: t("voucher.createSuccess") });
             }
             setIsOpen(false);
             reset();
             fetchVouchers();
         } catch (err: any) {
             toast({
-                title: "Thất bại",
-                description: err?.response?.data?.message ?? "Có lỗi xảy ra",
+                title: t("voucher.failedTitle"),
+                description: err?.response?.data?.message ?? t("common.error"),
                 variant: "destructive",
             });
         } finally {
@@ -207,14 +209,14 @@ export default function Voucher() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("Xóa voucher này?")) return;
+        if (!confirm(t("voucher.deleteVoucherConfirm"))) return;
         setIsDeleting(id);
         try {
             await adminApi.deleteVoucher(id);
-            toast({ title: "Đã xóa voucher" });
+            toast({ title: t("voucher.deletedTitle") });
             fetchVouchers();
         } catch {
-            toast({ title: "Xóa thất bại", variant: "destructive" });
+            toast({ title: t("voucher.deleteFailedTitle"), variant: "destructive" });
         } finally {
             setIsDeleting(null);
         }
@@ -225,52 +227,50 @@ export default function Voucher() {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                     <Ticket className="h-6 w-6 text-orange-500" />
-                    Quản lý Voucher
+                    {t("voucher.title")}
                 </h1>
 
                 <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) reset(); }}>
                     <DialogTrigger asChild>
                         <Button onClick={() => handleOpen()}>
-                            <Plus className="mr-2 h-4 w-4" /> Tạo Voucher
+                            <Plus className="mr-2 h-4 w-4" /> {t("voucher.createBtn")}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>{editingId != null ? "Cập nhật Voucher" : "Tạo Voucher mới"}</DialogTitle>
+                            <DialogTitle>{editingId != null ? t("voucher.updateTitle") : t("voucher.createTitle")}</DialogTitle>
                         </DialogHeader>
 
                         <div className="grid gap-4 py-2">
                             {/* Access type toggle */}
                             <div className="grid gap-2">
-                                <Label>Loại voucher</Label>
+                                <Label>{t("voucher.voucherTypeLabel")}</Label>
                                 <div className="flex gap-2">
-                                    {(["PUBLIC", "PRIVATE"] as AccessType[]).map((t) => (
+                                    {(["PUBLIC", "PRIVATE"] as AccessType[]).map((tp) => (
                                         <button
-                                            key={t}
+                                            key={tp}
                                             type="button"
-                                            onClick={() => set("accessType", t)}
+                                            onClick={() => set("accessType", tp)}
                                             className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                                                form.accessType === t
-                                                    ? t === "PUBLIC"
+                                                form.accessType === tp
+                                                    ? tp === "PUBLIC"
                                                         ? "bg-blue-500 text-white border-blue-500"
                                                         : "bg-purple-500 text-white border-purple-500"
                                                     : "border-gray-300 text-gray-600 hover:bg-gray-50"
                                             }`}
                                         >
-                                            {t === "PUBLIC" ? "Công khai" : "Cá nhân"}
+                                            {tp === "PUBLIC" ? t("voucher.publicLabel") : t("voucher.privateLabel")}
                                         </button>
                                     ))}
                                 </div>
                                 <p className="text-xs text-gray-500">
-                                    {form.accessType === "PUBLIC"
-                                        ? "Ai cũng có thể dùng mã này. Mỗi lần dùng, số lượng giảm 1."
-                                        : "Chỉ user được chỉ định mới dùng được. Dùng xong là hết."}
+                                    {form.accessType === "PUBLIC" ? t("voucher.publicDesc") : t("voucher.privateDesc")}
                                 </p>
                             </div>
 
                             {/* Code */}
                             <div className="grid gap-2">
-                                <Label>Mã voucher *</Label>
+                                <Label>{t("voucher.codeLabel")}</Label>
                                 <Input
                                     value={form.code}
                                     onChange={(e) => set("code", e.target.value.toUpperCase())}
@@ -281,7 +281,7 @@ export default function Voucher() {
                             {/* User picker (private only) */}
                             {form.accessType === "PRIVATE" && (
                                 <div className="grid gap-2">
-                                    <Label>Người dùng *</Label>
+                                    <Label>{t("voucher.userLabel")}</Label>
 
                                     {selectedUser ? (
                                         <div className="flex items-center gap-2 p-2.5 rounded-md border border-purple-200 bg-purple-50">
@@ -299,7 +299,7 @@ export default function Voucher() {
                                                 <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
                                                 <Input
                                                     className="pl-8"
-                                                    placeholder="Tìm theo SĐT, email, tên..."
+                                                    placeholder={t("voucher.searchUserPlaceholder")}
                                                     value={userSearch}
                                                     onChange={(e) => handleUserSearchChange(e.target.value)}
                                                 />
@@ -307,7 +307,7 @@ export default function Voucher() {
                                             {(isSearchingUser || userResults.length > 0) && (
                                                 <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                                     {isSearchingUser && (
-                                                        <div className="px-3 py-2 text-sm text-gray-400">Đang tìm...</div>
+                                                        <div className="px-3 py-2 text-sm text-gray-400">{t("voucher.searching")}</div>
                                                     )}
                                                     {!isSearchingUser && userResults.map((u) => (
                                                         <button
@@ -325,7 +325,7 @@ export default function Voucher() {
                                                         </button>
                                                     ))}
                                                     {!isSearchingUser && userSearch && userResults.length === 0 && (
-                                                        <div className="px-3 py-2 text-sm text-gray-400">Không tìm thấy</div>
+                                                        <div className="px-3 py-2 text-sm text-gray-400">{t("voucher.notFound")}</div>
                                                     )}
                                                 </div>
                                             )}
@@ -336,20 +336,20 @@ export default function Voucher() {
 
                             {/* Description */}
                             <div className="grid gap-2">
-                                <Label>Mô tả</Label>
+                                <Label>{t("voucher.descriptionLabel")}</Label>
                                 <Input
                                     value={form.description}
                                     onChange={(e) => set("description", e.target.value)}
-                                    placeholder="Mô tả ngắn về voucher"
+                                    placeholder={t("voucher.descriptionPlaceholder")}
                                 />
                             </div>
 
                             {/* Discount */}
                             <div className="grid gap-2">
-                                <Label>Giảm giá (chỉ điền 1 trong 2)</Label>
+                                <Label>{t("voucher.discountLabel")}</Label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <Label className="text-xs text-gray-500">Số tiền (VND)</Label>
+                                        <Label className="text-xs text-gray-500">{t("voucher.discountAmountLabel")}</Label>
                                         <Input
                                             type="number"
                                             min="0"
@@ -359,7 +359,7 @@ export default function Voucher() {
                                         />
                                     </div>
                                     <div>
-                                        <Label className="text-xs text-gray-500">Phần trăm (%)</Label>
+                                        <Label className="text-xs text-gray-500">{t("voucher.discountPercentLabel")}</Label>
                                         <Input
                                             type="number"
                                             min="0"
@@ -375,7 +375,7 @@ export default function Voucher() {
                             {/* Max usage */}
                             <div className={`grid gap-2 ${form.accessType === "PUBLIC" ? "grid-cols-2" : ""}`}>
                                 <div className="grid gap-2">
-                                    <Label>Số lượng tổng (để trống = không giới hạn)</Label>
+                                    <Label>{t("voucher.maxUsageLabel")}</Label>
                                     <Input
                                         type="number"
                                         min="1"
@@ -386,7 +386,7 @@ export default function Voucher() {
                                 </div>
                                 {form.accessType === "PUBLIC" && (
                                     <div className="grid gap-2">
-                                        <Label>Tối đa / user (để trống = không giới hạn)</Label>
+                                        <Label>{t("voucher.maxUsagePerUserLabel")}</Label>
                                         <Input
                                             type="number"
                                             min="1"
@@ -400,7 +400,7 @@ export default function Voucher() {
 
                             {/* Expiry */}
                             <div className="grid gap-2">
-                                <Label>Ngày hết hạn (để trống = không hết hạn)</Label>
+                                <Label>{t("voucher.expiryLabel")}</Label>
                                 <Input
                                     type="datetime-local"
                                     value={form.expiredAt}
@@ -417,11 +417,11 @@ export default function Voucher() {
                                     onChange={(e) => set("isActive", e.target.checked)}
                                     className="w-4 h-4 accent-blue-500"
                                 />
-                                <Label htmlFor="isActive">Kích hoạt</Label>
+                                <Label htmlFor="isActive">{t("voucher.activeLabel")}</Label>
                             </div>
 
                             <Button onClick={handleSubmit} disabled={isLoading}>
-                                {isLoading ? "Đang lưu..." : editingId != null ? "Cập nhật" : "Tạo Voucher"}
+                                {isLoading ? t("voucher.saving") : editingId != null ? t("voucher.updateBtn") : t("voucher.createBtn")}
                             </Button>
                         </div>
                     </DialogContent>
@@ -431,14 +431,14 @@ export default function Voucher() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Mã</TableHead>
-                        <TableHead>Loại</TableHead>
-                        <TableHead>Giảm giá</TableHead>
-                        <TableHead>Đã dùng / Tổng</TableHead>
-                        <TableHead>Tối đa / user</TableHead>
-                        <TableHead>Hết hạn</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                        <TableHead>Thao tác</TableHead>
+                        <TableHead>{t("voucher.colCode")}</TableHead>
+                        <TableHead>{t("voucher.colType")}</TableHead>
+                        <TableHead>{t("voucher.colDiscount")}</TableHead>
+                        <TableHead>{t("voucher.colUsage")}</TableHead>
+                        <TableHead>{t("voucher.colMaxPerUser")}</TableHead>
+                        <TableHead>{t("voucher.colExpiry")}</TableHead>
+                        <TableHead>{t("voucher.colStatus")}</TableHead>
+                        <TableHead>{t("voucher.colActions")}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -453,7 +453,7 @@ export default function Voucher() {
                                             : "bg-blue-100 text-blue-700"
                                     }`}
                                 >
-                                    {v.accessType === "PRIVATE" ? "Cá nhân" : "Công khai"}
+                                    {v.accessType === "PRIVATE" ? t("voucher.privateLabel") : t("voucher.publicLabel")}
                                 </span>
                             </TableCell>
                             <TableCell>
@@ -477,7 +477,7 @@ export default function Voucher() {
                                         v.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                                     }`}
                                 >
-                                    {v.isActive ? "Đang hoạt động" : "Tắt"}
+                                    {v.isActive ? t("voucher.statusActive") : t("voucher.statusInactive")}
                                 </span>
                             </TableCell>
                             <TableCell>
@@ -500,7 +500,7 @@ export default function Voucher() {
                     {paged.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={8} className="text-center text-gray-400 py-8">
-                                Chưa có voucher nào
+                                {t("voucher.noVouchers")}
                             </TableCell>
                         </TableRow>
                     )}
@@ -510,13 +510,13 @@ export default function Voucher() {
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mt-4">
                     <Button variant="outline" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
-                        <ChevronLeft className="h-4 w-4" /> Trước
+                        <ChevronLeft className="h-4 w-4" /> {t("voucher.previous")}
                     </Button>
                     <span className="flex items-center px-4 text-sm text-gray-600">
                         {page + 1} / {totalPages}
                     </span>
                     <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
-                        Tiếp <ChevronRight className="h-4 w-4" />
+                        {t("voucher.next")} <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
             )}

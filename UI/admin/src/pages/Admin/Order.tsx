@@ -1,14 +1,16 @@
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/api/adminApi";
-import { Order, OrderAdmin } from "@/types";
+import { Order } from "@/types";
 import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Package } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 
 const OrderPage = () => {
+    const { t } = useTranslation();
     const [orders, setOrders] = useState<Order[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -22,8 +24,8 @@ const OrderPage = () => {
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: "Error fetching orders",
-                description: "Please try again later"
+                title: t('order.errorFetching'),
+                description: t('common.processing')
             });
         }
     };
@@ -32,15 +34,15 @@ const OrderPage = () => {
         try {
             await adminApi.updatePaymentStatus(orderId);
             toast({
-                title: "Payment status updated",
-                description: "The order payment status has been updated successfully"
+                title: t('order.paymentUpdated'),
+                description: t('order.updateSuccess')
             });
             fetchOrders();
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: "Error updating payment status",
-                description: "Please try again later"
+                title: t('order.errorUpdating'),
+                description: t('common.processing')
             });
         }
     };
@@ -75,7 +77,7 @@ const OrderPage = () => {
             <div className="grid gap-6 md:grid-cols-3">
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">{t('order.totalOrders')}</CardTitle>
                         <Package className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
@@ -84,7 +86,7 @@ const OrderPage = () => {
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Paid Orders</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">{t('order.paidOrders')}</CardTitle>
                         <DollarSign className="h-4 w-4 text-green-500" />
                     </CardHeader>
                     <CardContent>
@@ -93,7 +95,7 @@ const OrderPage = () => {
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Unpaid Orders</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">{t('order.unpaidOrders')}</CardTitle>
                         <CreditCard className="h-4 w-4 text-red-500" />
                     </CardHeader>
                     <CardContent>
@@ -106,13 +108,13 @@ const OrderPage = () => {
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/50">
-                            <TableHead className="font-semibold">Order ID</TableHead>
-                            <TableHead className="font-semibold">Customer</TableHead>
-                            <TableHead className="font-semibold">Order Date</TableHead>
-                            <TableHead className="font-semibold">Total Price</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="font-semibold">Payment</TableHead>
-                            <TableHead className="font-semibold">Action</TableHead>
+                            <TableHead className="font-semibold">{t('order.orderId')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.customer')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.orderDate')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.totalPrice')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.status')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.payment')}</TableHead>
+                            <TableHead className="font-semibold">{t('order.action')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -135,7 +137,7 @@ const OrderPage = () => {
                                                   minute: "2-digit"
                                               }
                                           )
-                                        : "Trống"}
+                                        : t('order.empty')}
                                 </TableCell>
                                 <TableCell className="font-medium">{order.totalPrice.toLocaleString()} VNĐ</TableCell>
                                 <TableCell>
@@ -150,7 +152,7 @@ const OrderPage = () => {
                                             transition-colors duration-200
                                         `}
                                     >
-                                        {order.orderStatus ?? "Trống"}
+                                        {order.orderStatus ?? t('order.empty')}
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -165,7 +167,7 @@ const OrderPage = () => {
                                             transition-colors duration-200
                                         `}
                                     >
-                                        {order.paid ? "Paid" : "Unpaid"}
+                                        {order.paid ? t('order.paid') : t('order.unpaid')}
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -177,7 +179,7 @@ const OrderPage = () => {
                                             order.paid ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/90"
                                         }`}
                                     >
-                                        Update Payment
+                                        {t('order.updatePayment')}
                                     </Button>
                                 </TableCell>
                             </TableRow>
@@ -194,10 +196,10 @@ const OrderPage = () => {
                         className="hover:bg-muted/50"
                     >
                         <ChevronLeft className="h-4 w-4" />
-                        Previous
+                        {t('order.previous')}
                     </Button>
                     <div className="text-sm text-muted-foreground">
-                        Page {page + 1} of {totalPages}
+                        {t('order.page')} {page + 1} {t('order.of')} {totalPages}
                     </div>
                     <Button
                         variant="outline"
@@ -206,7 +208,7 @@ const OrderPage = () => {
                         disabled={page === totalPages - 1}
                         className="hover:bg-muted/50"
                     >
-                        Next
+                        {t('order.next')}
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>

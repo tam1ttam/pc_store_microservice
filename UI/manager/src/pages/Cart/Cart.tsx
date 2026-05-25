@@ -17,8 +17,10 @@ import { Loader2, MapPin, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function Cart() {
+    const { t } = useTranslation();
     const { items } = useSelector((state: RootState) => state.cart);
     console.log(items);
     const dispatch = useDispatch();
@@ -63,7 +65,7 @@ function Cart() {
 
             if (result.payload.code === 1000) {
                 toast({
-                    title: "Xóa sản phẩm thành công"
+                    title: t("clientCart.deleteSuccess")
                 });
                 dispatch(
                     getCartCount({
@@ -72,13 +74,13 @@ function Cart() {
                 );
             } else {
                 toast({
-                    title: "Xóa sản phẩm thất bại",
+                    title: t("clientCart.deleteFailed"),
                     variant: "destructive"
                 });
             }
         } catch (error) {
             toast({
-                title: "Đã có lỗi xảy ra",
+                title: t("clientCart.genericError"),
                 variant: "destructive"
             });
         }
@@ -91,11 +93,11 @@ function Cart() {
         cartApi.decreaseQuantity(user?.id as string, productId).then((result) => {
             if (result.data.code !== 1000) {
                 setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
-                toast({ title: "Giảm số lượng thất bại", variant: "destructive" });
+                toast({ title: t("clientCart.decreaseFailed"), variant: "destructive" });
             }
         }).catch(() => {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
-            toast({ title: "Đã có lỗi xảy ra", variant: "destructive" });
+            toast({ title: t("clientCart.genericError"), variant: "destructive" });
         });
     };
 
@@ -105,14 +107,14 @@ function Cart() {
             if (result.data.code !== 1000) {
                 setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
                 toast({
-                    title: result.data.code === 6001 ? "Sản phẩm không đủ số lượng trong kho" : "Tăng số lượng thất bại",
+                    title: result.data.code === 6001 ? t("clientCart.outOfStock") : t("clientCart.increaseFailed"),
                     variant: "destructive"
                 });
             }
         }).catch((error: any) => {
             setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
             toast({
-                title: error?.response?.data?.code === 6001 ? "Sản phẩm không đủ số lượng trong kho" : "Đã có lỗi xảy ra",
+                title: error?.response?.data?.code === 6001 ? t("clientCart.outOfStock") : t("clientCart.genericError"),
                 variant: "destructive"
             });
         });
@@ -121,7 +123,7 @@ function Cart() {
     const handleOrder = async () => {
         if (!address) {
             toast({
-                title: "Vui lòng nhập địa chỉ giao hàng",
+                title: t("clientCart.addressRequired"),
                 variant: "destructive"
             });
             setShowAddressModal(true);
@@ -141,7 +143,7 @@ function Cart() {
 
                 if (result.data.code === 1000) {
                     toast({
-                        title: "Đặt hàng thành công"
+                        title: t("clientCart.orderSuccess")
                     });
                     dispatch(
                         getCartCount({
@@ -159,8 +161,8 @@ function Cart() {
             } catch (error: any) {
                 if (error.response && error.response.status === 401) {
                     toast({
-                        title: "Hết phiên đăng nhập",
-                        description: "Vui lòng đăng nhập lại",
+                        title: t("clientCart.sessionExpired"),
+                        description: t("clientCart.sessionExpiredDesc"),
                         variant: "destructive"
                     });
                     setTimeout(() => {
@@ -168,8 +170,8 @@ function Cart() {
                     }, 2000);
                 } else {
                     toast({
-                        title: "Đặt hàng thất bại",
-                        description: error.message || "Đã xảy ra lỗi không xác định",
+                        title: t("clientCart.orderFailed"),
+                        description: error.message || t("clientCart.genericError"),
                         variant: "destructive"
                     });
                 }
@@ -191,14 +193,14 @@ function Cart() {
                     window.location.href = response.data.result.url;
                 } else {
                     toast({
-                        title: "Đặt hàng thất bại vui lòng thử lại",
+                        title: t("clientCart.orderFailedRetry"),
                         variant: "destructive"
                     });
                 }
             } catch (error) {
                 console.log(error);
                 toast({
-                    title: "Lỗi kết nối",
+                    title: t("clientCart.connectionError"),
                     variant: "destructive"
                 });
             } finally {
@@ -211,19 +213,19 @@ function Cart() {
         <div className="container mx-auto px-4 pb-10 relative pt-24">
             <div className="flex items-center gap-2 mb-6 text-muted-foreground">
                 <Link to="/" className="hover:text-orange-500 transition-colors">
-                    Trang chủ
+                    {t("clientCart.breadcrumbHome")}
                 </Link>
                 <span>/</span>
-                <span className="text-orange-500">Giỏ hàng</span>
+                <span className="text-orange-500">{t("clientCart.title")}</span>
             </div>
-            <h1 className="text-3xl font-bold mb-8">Giỏ hàng của bạn</h1>
+            <h1 className="text-3xl font-bold mb-8">{t("clientCart.title")}</h1>
 
             {!items?.length ? (
                 <div className="text-center py-16">
                     <ShoppingCart className="w-20 h-20 mx-auto text-orange-500 mb-4" />
-                    <p className="text-muted-foreground text-lg mb-4">Không có sản phẩm trong giỏ hàng</p>
+                    <p className="text-muted-foreground text-lg mb-4">{t("clientCart.emptyMsg")}</p>
                     <Button asChild variant="outline" className="hover:text-orange-500 hover:border-orange-500">
-                        <Link to="/products">Tiếp tục mua sắm</Link>
+                        <Link to="/products">{t("clientCart.continueShopping")}</Link>
                     </Button>
                 </div>
             ) : (
@@ -240,7 +242,7 @@ function Cart() {
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-base line-clamp-2">{item.product.name}</h3>
                                         <p className="text-muted-foreground text-sm">
-                                            Nhà cung cấp: {item.product.supplier.name}
+                                            {t("clientCart.supplier")}: {item.product.supplier.name}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="font-medium text-orange-500">
@@ -292,12 +294,12 @@ function Cart() {
                                 <div className="flex items-center gap-3">
                                     <MapPin className="text-orange-500" size={20} />
                                     <div className="flex-1 min-w-0">
-                                        <span className="font-medium block mb-1">Địa chỉ giao hàng</span>
+                                        <span className="font-medium block mb-1">{t("clientCart.shipAddress")}</span>
                                         {address ? (
                                             <p className="text-muted-foreground text-sm truncate">{address}</p>
                                         ) : (
                                             <Badge variant="outline" className="text-orange-500 border-orange-500">
-                                                Chưa có địa chỉ
+                                                {t("clientCart.noAddress")}
                                             </Badge>
                                         )}
                                     </div>
@@ -307,14 +309,14 @@ function Cart() {
                                         className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
                                         onClick={() => setShowAddressModal(true)}
                                     >
-                                        {address ? "Sửa" : "Thêm"}
+                                        {address ? t("clientCart.editAddress") : t("clientCart.addAddress")}
                                     </Button>
                                 </div>
 
                                 <Separator />
 
                                 <div>
-                                    <h3 className="font-medium mb-3">Phương thức thanh toán</h3>
+                                    <h3 className="font-medium mb-3">{t("clientCart.paymentMethod")}</h3>
                                     <RadioGroup
                                         defaultValue="ship"
                                         className="grid grid-cols-2 gap-3"
@@ -327,7 +329,7 @@ function Cart() {
                                             >
                                                 <img src={ShipCOD} alt="COD" className="w-8 h-8" />
                                                 <RadioGroupItem value="ship" id="ship" className="sr-only" />
-                                                <span className="text-sm text-center">Thanh toán khi nhận hàng</span>
+                                                <span className="text-sm text-center">{t("clientCart.cod")}</span>
                                             </Label>
                                         </div>
                                         <div className="col-span-1">
@@ -337,7 +339,7 @@ function Cart() {
                                             >
                                                 <img src={PayPal} alt="paypal" className="w-8 h-8" />
                                                 <RadioGroupItem value="paypal" id="paypal" className="sr-only" />
-                                                <span className="text-sm text-center">Thanh toán bằng PayPal</span>
+                                                <span className="text-sm text-center">{t("clientCart.paypal")}</span>
                                             </Label>
                                         </div>
                                     </RadioGroup>
@@ -347,16 +349,16 @@ function Cart() {
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-muted-foreground">
-                                        <span>Tạm tính:</span>
+                                        <span>{t("clientCart.subtotal")}:</span>
                                         <span>{totalPrice.toLocaleString("vi-VN")}đ</span>
                                     </div>
                                     <div className="flex justify-between text-muted-foreground">
-                                        <span>Phí vận chuyển:</span>
+                                        <span>{t("clientCart.shipping")}:</span>
                                         <span>0đ</span>
                                     </div>
                                     <Separator />
                                     <div className="flex justify-between items-center font-medium text-lg">
-                                        <span>Tổng tiền:</span>
+                                        <span>{t("clientCart.total")}:</span>
                                         <span className="text-orange-500">{totalPrice.toLocaleString("vi-VN")}đ</span>
                                     </div>
                                 </div>
@@ -370,12 +372,12 @@ function Cart() {
                                     {isOrdering ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                            Đang xử lý...
+                                            {t("clientCart.processing")}
                                         </>
                                     ) : (
                                         <>
                                             <ShoppingCart className="w-4 h-4 mr-2" />
-                                            {paymentMethod === "ship" ? "Đặt hàng" : "Thanh toán"}
+                                            {paymentMethod === "ship" ? t("clientCart.placeOrder") : t("clientCart.checkout")}
                                         </>
                                     )}
                                 </Button>
@@ -388,11 +390,11 @@ function Cart() {
             <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Địa chỉ giao hàng</DialogTitle>
+                        <DialogTitle>{t("clientCart.addressDialogTitle")}</DialogTitle>
                     </DialogHeader>
                     <Textarea
                         className="min-h-[100px] resize-none"
-                        placeholder="Nhập địa chỉ giao hàng của bạn"
+                        placeholder={t("clientCart.addressPlaceholder")}
                         value={address}
                         onChange={(e) => {
                             setAddress(e.target.value);
@@ -401,7 +403,7 @@ function Cart() {
                     />
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowAddressModal(false)}>
-                            Hủy
+                            {t("common.cancel")}
                         </Button>
                         <Button
                             className="bg-orange-500 hover:bg-orange-600"
@@ -410,13 +412,13 @@ function Cart() {
                                     setShowAddressModal(false);
                                 } else {
                                     toast({
-                                        title: "Vui lòng nhập địa chỉ giao hàng",
+                                        title: t("clientCart.addressRequired"),
                                         variant: "destructive"
                                     });
                                 }
                             }}
                         >
-                            Xác nhận
+                            {t("clientCart.confirm")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

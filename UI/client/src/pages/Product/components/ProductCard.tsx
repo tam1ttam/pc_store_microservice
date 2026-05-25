@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ShoppingCart, Heart, Star, Check, Loader2, Tag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { RootState } from '@/redux/store';
 import { getCart, upsertCartItem } from '@/redux/thunks/cart';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +30,7 @@ const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 export default function ProductCard({ product }: Props) {
+    const { t } = useTranslation();
     const dispatch = useDispatch<any>();
     const { info: user } = useSelector((state: RootState) => state.user);
     const isLogin = useSelector((state: RootState) => state.auth.isLogin);
@@ -38,11 +40,6 @@ export default function ProductCard({ product }: Props) {
     const navigate = useNavigate();
     const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
 
-    /**
-     * Tìm voucher tốt nhất cho sản phẩm này (chỉ khi đăng nhập).
-     * VD: User A có public 5% + private 3% → best = 5%  → giá 95.000đ
-     *     User B có public 5% + private 8% → best = 8%  → giá 92.000đ
-     */
     const bestResult = useMemo(() => {
         if (!isLogin || !availableVouchers.length) return null;
         return findBestVoucher(product.price ?? 0, availableVouchers);
@@ -66,7 +63,7 @@ export default function ProductCard({ product }: Props) {
         e.stopPropagation();
         if (adding === 'loading') return;
         if (!user) {
-            toast({ title: 'Thông báo', description: 'Vui lòng đăng nhập để mua hàng' });
+            toast({ title: t('product.addToCartNotify'), description: t('product.addToCartLoginRequired') });
             navigate('/login');
             return;
         }
@@ -90,8 +87,8 @@ export default function ProductCard({ product }: Props) {
             setAdding('idle');
             toast({
                 variant: 'destructive',
-                title: 'Lỗi',
-                description: error?.response?.data?.message ?? 'Không thể thêm vào giỏ hàng',
+                title: t('common.error'),
+                description: error?.response?.data?.message ?? t('product.addToCartError'),
             });
         }
     };
@@ -103,7 +100,6 @@ export default function ProductCard({ product }: Props) {
                     <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 </button>
 
-                {/* Badge % voucher tốt nhất của user */}
                 {discountLabel && (
                     <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
                         <Tag className="w-3 h-3" />
@@ -122,7 +118,7 @@ export default function ProductCard({ product }: Props) {
                 <div className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                            {product.supplier?.name ?? 'Nhà cung cấp'}
+                            {product.supplier?.name ?? t('product.supplier')}
                         </span>
                         <div className="flex items-center gap-0.5">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -136,7 +132,6 @@ export default function ProductCard({ product }: Props) {
 
                     <div className="mb-3">
                         {bestResult ? (
-                            /* Hiện giá sau voucher + gạch giá gốc */
                             <div className="space-y-0.5">
                                 <div className="text-xs text-gray-400 line-through">
                                     {formatPrice(product.price ?? 0)}
@@ -151,7 +146,6 @@ export default function ProductCard({ product }: Props) {
                                 </div>
                             </div>
                         ) : (
-                            /* Không có voucher → giá gốc */
                             <div className="flex items-baseline gap-2">
                                 <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
                                     {formatPrice(product.price ?? 0)}
@@ -175,7 +169,7 @@ export default function ProductCard({ product }: Props) {
                         {adding === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                         {adding === 'done' && <Check className="w-4 h-4" />}
                         {adding === 'idle' && <ShoppingCart className="w-4 h-4" />}
-                        {adding === 'done' ? 'Đã thêm' : 'Thêm vào giỏ'}
+                        {adding === 'done' ? t('product.added') : t('product.addToCart')}
                     </button>
                 </div>
             </div>

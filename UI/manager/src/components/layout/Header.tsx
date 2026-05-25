@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { RootState } from "@/redux/store";
 import { toast } from "@/hooks";
 import { logout } from "@/redux/thunks/auth";
 import { updateUserInfo } from "@/redux/thunks/user";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Header() {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const userMenuRef = useRef<HTMLDivElement>(null);
@@ -89,17 +92,17 @@ export default function Header() {
             const result = await dispatch(logout() as any);
             if (result.payload.code === 1000) {
                 toast({
-                    title: "Đăng xuất thành công"
+                    title: t("auth.logoutSuccess")
                 });
                 navigate("/");
             } else {
                 toast({
-                    title: "Đăng xuất thất bại"
+                    title: t("auth.logoutFailed")
                 });
             }
         } catch (error) {
             toast({
-                title: "Đăng xuất thất bại"
+                title: t("auth.logoutFailed")
             });
         }
     };
@@ -122,14 +125,12 @@ export default function Header() {
         );
         if (result.payload.code === 1000) {
             toast({
-                title: "Cập nhật thành công"
+                title: t("user.updateSuccess")
             });
             setIsEditing(false);
-            // Optionally, refetch user info to update the UI from the source of truth
-            // await dispatch(getUserInfo({ token: token as string }) as any);
         } else {
             toast({
-                title: "Cập nhật thất bại",
+                title: t("user.updateFailed"),
                 description: result.payload.message
             });
         }
@@ -138,25 +139,10 @@ export default function Header() {
     return (
         <>
             <header className="fixed top-3 right-6 z-50">
-                <nav className="flex items-center">
+                <nav className="flex items-center gap-2">
+                    <LanguageSwitcher />
                     {isLogin ? (
                         <div className="flex items-center gap-2 sm:gap-4">
-                            {/* <div className="relative">
-                                    <Link
-                                        to="/cart"
-                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-green-400 hover:scale-105 transition-all ${cartCount == 0
-                                            ? "bg-green-500/10"
-                                            : "bg-gradient-to-br from-green-400 to-green-600"
-                                            } flex items-center justify-center shadow-md`}
-                                    >
-                                        <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                                    </Link>
-                                    {cartCount > 0 && (
-                                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] sm:text-[10px] font-medium rounded-full min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] flex items-center justify-center">
-                                            {cartCount > 99 ? "99+" : cartCount}
-                                        </div>
-                                    )}
-                                </div> */}
                             <div className="relative" ref={userMenuRef}>
                                 <div
                                     className="w-8 h-8 sm:w-10 sm:h-10 p-1.5 sm:p-2 rounded-full cursor-pointer hover:ring-2 hover:ring-green-400 hover:scale-110 transition-all text-white bg-green-500/20 flex items-center justify-center"
@@ -174,16 +160,8 @@ export default function Header() {
                                             }}
                                             className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                         >
-                                            Thông tin cá nhân
+                                            {t("header.profile")}
                                         </button>
-                                        {/* <button
-                                                onClick={() => {
-                                                    handleOrderList();
-                                                }}
-                                                className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
-                                            >
-                                                Lịch sử mua hàng
-                                            </button> */}
                                         {isAdmin && (
                                             <>
                                                 <div className="h-[1px] bg-gray-200 my-1"></div>
@@ -194,7 +172,7 @@ export default function Header() {
                                                     }}
                                                     className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                                 >
-                                                    Quản lý người dùng
+                                                    {t("header.manageCustomers")}
                                                 </button>
                                                 <button
                                                     onClick={() => {
@@ -203,7 +181,7 @@ export default function Header() {
                                                     }}
                                                     className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                                 >
-                                                    Quản lý sản phẩm
+                                                    {t("header.manageProducts")}
                                                 </button>
                                                 <button
                                                     onClick={() => {
@@ -212,7 +190,7 @@ export default function Header() {
                                                     }}
                                                     className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                                 >
-                                                    Quản lý đơn hàng
+                                                    {t("header.manageOrders")}
                                                 </button>
                                                 <div className="h-[1px] bg-gray-200 my-1"></div>
                                             </>
@@ -221,7 +199,7 @@ export default function Header() {
                                             onClick={handleLogout}
                                             className="block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-green-100 transition-colors duration-200"
                                         >
-                                            Đăng xuất
+                                            {t("header.logout")}
                                         </button>
                                     </div>
                                 )}
@@ -248,7 +226,7 @@ export default function Header() {
                             <div className="bg-green-500/10 w-12 h-12 sm:w-16 sm:h-16 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center">
                                 <User className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
                             </div>
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Thông tin người dùng</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t("user.info")}</h2>
                         </div>
 
                         <div className="space-y-3 sm:space-y-4 bg-green-50/50 p-4 sm:p-6 rounded-lg">
@@ -256,7 +234,7 @@ export default function Header() {
                                 <>
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Họ:
+                                            {t("user.lastName")}:
                                         </span>
                                         <Input
                                             name="lastName"
@@ -268,7 +246,7 @@ export default function Header() {
                                     </div>
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Tên:
+                                            {t("user.firstName")}:
                                         </span>
                                         <Input
                                             name="firstName"
@@ -280,7 +258,7 @@ export default function Header() {
                                     </div>
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Email:
+                                            {t("user.email")}:
                                         </span>
                                         <Input
                                             name="email"
@@ -293,7 +271,7 @@ export default function Header() {
                                     </div>
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Số điện thoại:
+                                            {t("user.phone")}:
                                         </span>
                                         <Input
                                             name="phoneNumber"
@@ -308,7 +286,7 @@ export default function Header() {
                                 <>
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Họ tên:
+                                            {t("user.fullName")}:
                                         </span>
                                         <span className="text-gray-800 break-words text-sm sm:text-base">
                                             {user?.firstName} {user?.lastName}
@@ -317,7 +295,7 @@ export default function Header() {
 
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Email:
+                                            {t("user.email")}:
                                         </span>
                                         <span className="text-gray-800 break-all text-sm sm:text-base">
                                             {user?.email}
@@ -326,7 +304,7 @@ export default function Header() {
 
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Số điện thoại:
+                                            {t("user.phone")}:
                                         </span>
                                         <span className="text-gray-800 break-words text-sm sm:text-base">
                                             {user?.phoneNumber}
@@ -335,7 +313,7 @@ export default function Header() {
 
                                     <div className="grid grid-cols-[100px,1fr] sm:grid-cols-[120px,1fr] items-center p-2 sm:p-3 bg-white rounded-lg shadow-sm">
                                         <span className="font-medium text-gray-600 text-sm sm:text-base">
-                                            Tên đăng nhập:
+                                            {t("user.username")}:
                                         </span>
                                         <span className="text-gray-800 break-words text-sm sm:text-base">
                                             {user?.userName}
@@ -362,14 +340,14 @@ export default function Header() {
                                             setIsChanged(false);
                                         }}
                                     >
-                                        Hủy
+                                        {t("user.cancel")}
                                     </Button>
                                     <Button onClick={handleUpdateUser} disabled={!isChanged}>
-                                        Lưu thay đổi
+                                        {t("user.saveChanges")}
                                     </Button>
                                 </>
                             ) : (
-                                <Button onClick={() => setIsEditing(true)}>Chỉnh sửa</Button>
+                                <Button onClick={() => setIsEditing(true)}>{t("user.edit")}</Button>
                             )}
                         </div>
                     </div>
