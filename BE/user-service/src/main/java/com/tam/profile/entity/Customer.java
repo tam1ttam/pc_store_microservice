@@ -42,11 +42,11 @@ public class Customer {
 
     String firstName;
     String lastName;
-    String email;
-    String phoneNumber;
+    // String email;
+    // String phoneNumber;
     String avatar;
     LocalDate dob;
-    String city;
+    // String city;
 
     String defaultPhoneNumber;
     String defaultEmail;

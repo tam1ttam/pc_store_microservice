@@ -1,13 +1,13 @@
 import { PayPal, ShipCOD } from "@/assets/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import AddressDialog, { type AddressFormData } from "@/components/AddressDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { getCart } from "@/redux/thunks/cart";
@@ -15,6 +15,7 @@ import { viewOrder } from "@/redux/thunks/order";
 import { post } from "@/services/api.service";
 import { voucherApi } from "@/services/api/voucherApi";
 import ENDPOINT from "@/constants/endpoint";
+import { getAccessToken } from "@/config/axios.config";
 import { decodeJwtSub } from "@/utils/jwtUtils";
 import { Box, Loader2, MapPin, Tag, Ticket, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -46,11 +47,11 @@ function Checkout() {
     const selectedItemIds: number[] = (location.state as any)?.selectedItemIds ?? [];
     const { items } = useSelector((state: RootState) => state.cart);
     const { info: user } = useSelector((state: RootState) => state.user);
-    const { token } = useSelector((state: RootState) => state.auth);
 
     const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
 
     const [address, setAddress] = useState(localStorage.getItem("addressShipping") || "");
+    const [addressFormData, setAddressFormData] = useState<AddressFormData | null>(null);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<string>("ship");
     const [isOrdering, setIsOrdering] = useState(false);
@@ -157,7 +158,7 @@ function Checkout() {
             return;
         }
 
-        const identityUserId = token ? decodeJwtSub(token) : null;
+        const identityUserId = decodeJwtSub(getAccessToken() ?? "");
         const customerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.id || "";
 
         if (paymentMethod === "ship") {
@@ -190,7 +191,7 @@ function Checkout() {
             } catch (error: any) {
                 if (error.response?.status === 401) {
                     toast({ variant: "destructive", title: t('checkout.sessionExpired'), description: t('checkout.sessionExpiredDesc') });
-                    setTimeout(() => (window.location.href = "/login"), 2000);
+                    setTimeout(() => window.dispatchEvent(new CustomEvent('auth:session-expired')), 2000);
                 } else {
                     toast({
                         variant: "destructive",
@@ -435,40 +436,24 @@ function Checkout() {
                 </div>
             </div>
 
-            {showCompleteProfile && <ProfileCompletionModal onClose={() => setShowCompleteProfile(false)} />}
+            {showCompleteProfile && (
+                <ProfileCompletionModal
+                    onClose={() => setShowCompleteProfile(false)}
+                    prefillAddress={addressFormData}
+                />
+            )}
 
-            {/* Address dialog */}
-            <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{t('checkout.addressDialog')}</DialogTitle>
-                    </DialogHeader>
-                    <Textarea
-                        className="min-h-[100px] resize-none"
-                        placeholder={t('checkout.addressPlaceholder')}
-                        value={address}
-                        onChange={(e) => {
-                            setAddress(e.target.value);
-                            localStorage.setItem("addressShipping", e.target.value);
-                        }}
-                    />
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowAddressModal(false)}>{t('common.cancel')}</Button>
-                        <Button
-                            className="bg-orange-500 hover:bg-orange-600"
-                            onClick={() => {
-                                if (address.trim()) {
-                                    setShowAddressModal(false);
-                                } else {
-                                    toast({ variant: "destructive", title: t('checkout.enterAddress') });
-                                }
-                            }}
-                        >
-                            {t('common.confirm')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Address dialog — dùng form có cấu trúc + Google Maps */}
+            <AddressDialog
+                open={showAddressModal}
+                onClose={() => setShowAddressModal(false)}
+                initialFormData={addressFormData}
+                onSave={(formatted, formData) => {
+                    setAddress(formatted);
+                    setAddressFormData(formData);
+                    localStorage.setItem("addressShipping", formatted);
+                }}
+            />
 
             {/* Voucher picker dialog */}
             <Dialog open={showVoucherPicker} onOpenChange={setShowVoucherPicker}>

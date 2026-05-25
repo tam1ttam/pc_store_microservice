@@ -49,6 +49,8 @@ instance.interceptors.response.use(
         if (error.response?.status === 401 && !original._retry && !isRefreshRequest) {
             // Đang refresh rồi → xếp hàng chờ token mới
             if (isRefreshing) {
+                // Đánh dấu _retry để tránh refresh vòng 2 nếu retry request cũng bị 401
+                original._retry = true;
                 return new Promise<string>((resolve, reject) => {
                     pendingQueue.push({ resolve, reject });
                 }).then((newToken) => {
@@ -79,7 +81,9 @@ instance.interceptors.response.use(
                 flushQueue(null, error);
                 inMemoryToken = null;
                 localStorage.removeItem("addressShipping");
-                window.location.href = "/login";
+                // Dùng custom event thay vì hard reload (window.location.href)
+                // để tránh vòng lặp: reload → restore() → 401 → reload → ...
+                window.dispatchEvent(new CustomEvent('auth:session-expired'));
                 return Promise.reject(error);
             } finally {
                 isRefreshing = false;

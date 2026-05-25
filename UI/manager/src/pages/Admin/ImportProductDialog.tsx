@@ -535,8 +535,18 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                                                     ) : "—"}
                                                 </td>
                                                 <td className="px-2 py-1 max-w-[100px] truncate">{p.supplier.name || "—"}</td>
-                                                <td className="px-2 py-1 text-gray-500">
-                                                    {t("import.attributeCount", { count: p.attributes.length })}
+                                                <td
+                                                    className="px-2 py-1 text-gray-500"
+                                                    onMouseEnter={(e) => {
+                                                        if (p.attributes.length === 0) return;
+                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                        setAttrTooltip({ attrs: p.attributes, x: rect.left, y: rect.top });
+                                                    }}
+                                                    onMouseLeave={() => setAttrTooltip(null)}
+                                                >
+                                                    <span className={p.attributes.length > 0 ? "cursor-help underline decoration-dotted decoration-gray-400" : ""}>
+                                                        {t("import.attributeCount", { count: p.attributes.length })}
+                                                    </span>
                                                 </td>
                                             </tr>
                                         );
@@ -644,6 +654,33 @@ export default function ImportProductDialog({ open, onOpenChange, onImported }: 
                     </div>
                 )}
             </DialogContent>
+
+            {/* ── attribute tooltip (fixed position to escape overflow-auto clipping) ── */}
+            {attrTooltip && (
+                <div
+                    className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-xl p-3 text-xs min-w-[200px] max-w-xs pointer-events-none"
+                    style={{
+                        left: attrTooltip.x,
+                        top: attrTooltip.y,
+                        transform: "translateY(calc(-100% - 6px))",
+                    }}
+                >
+                    <p className="font-semibold text-gray-700 mb-1.5 pb-1 border-b border-gray-100">
+                        {t("import.attributeListTitle")} ({attrTooltip.attrs.length})
+                    </p>
+                    <div className="space-y-0.5">
+                        {attrTooltip.attrs.map((a, ai) => (
+                            <div key={ai} className="flex gap-1 text-gray-600">
+                                <span className="font-medium text-gray-800 shrink-0">{a.name}:</span>
+                                <span>{a.value}{a.unit ? ` ${a.unit}` : ""}</span>
+                                {a.description && (
+                                    <span className="text-gray-400 italic">({a.description})</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </Dialog>
     );
 }

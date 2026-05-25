@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
     ShoppingCart,
@@ -42,6 +42,7 @@ export default function ProductDetail() {
     const { t } = useTranslation();
     const dispatch = useDispatch<AppDispatch>();
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const {
         currentProduct,
@@ -49,6 +50,7 @@ export default function ProductDetail() {
         productDetailError: error
     } = useSelector((state: RootState) => state.product);
     const { info: user } = useSelector((state: RootState) => state.user);
+    const { isLogin } = useSelector((state: RootState) => state.auth);
 
     const product = currentProduct as any;
 
@@ -88,6 +90,18 @@ export default function ProductDetail() {
 
     const handleAddToCart = async () => {
         if (isAddingToCart || !product) return;
+
+        // Kiểm tra đăng nhập trước khi thêm vào giỏ — tránh gọi API rồi bị chặn
+        if (!isLogin) {
+            toast({
+                variant: "destructive",
+                title: t('product.addToCartNotify'),
+                description: t('product.loginRequired'),
+            });
+            navigate('/login');
+            return;
+        }
+
         setIsAddingToCart(true);
         dispatch(optimisticAddToCart({ quantity }));
 

@@ -197,11 +197,25 @@ const Product = () => {
             setIsLoading(true);
             const { images, imagesUpload, ...productData } = formData;
             const detailRequest = { attributes: attributes.filter(a => a.name.trim() !== ""), images: formData.images, imagesUpload: formData.imagesUpload ?? [] };
+
+            // Auto-create category if the typed value doesn't match any existing keyword
+            let effectiveCategory: string = formData.category;
+            if (formData.category && !categories.some(c => c.keyword === formData.category)) {
+                try {
+                    const createRes: any = await adminApi.createCategory(formData.category);
+                    const newKeyword: string = createRes.data?.result?.keyword ?? formData.category;
+                    effectiveCategory = newKeyword;
+                    await fetchCategories();
+                } catch {
+                    // Category may already exist with slightly different slug — proceed
+                }
+            }
+
             if (editingProduct) {
-                await adminApi.updateProduct(editingProduct.id, { ...productData, productDetailCreationRequest: detailRequest });
+                await adminApi.updateProduct(editingProduct.id, { ...productData, category: effectiveCategory, productDetailCreationRequest: detailRequest });
                 toast({ title: t("common.success"), description: t("product.updateSuccess") });
             } else {
-                await adminApi.addProduct({ ...productData, productDetailCreationRequest: detailRequest });
+                await adminApi.addProduct({ ...productData, category: effectiveCategory, productDetailCreationRequest: detailRequest });
                 toast({ title: t("common.success"), description: t("product.addSuccess") });
             }
             setIsOpen(false);
@@ -370,11 +384,27 @@ const Product = () => {
                                     </div>
                                     <div className="grid gap-2">
                                         <Label>{t("product.productCategory")}</Label>
-                                        <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isReadOnly}
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                                            <option value="">{t("product.selectCategory")}</option>
-                                            {categories.map(c => <option key={c.id} value={c.keyword}>{c.name}</option>)}
-                                        </select>
+                                        <input
+                                            type="text"
+                                            list="category-datalist"
+                                            value={formData.category}
+                                            onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                            disabled={isReadOnly}
+                                            placeholder={t("productExtra.selectOrTypeCategory")}
+                                            autoComplete="off"
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        />
+                                        <datalist id="category-datalist">
+                                            {categories.map(c => (
+                                                <option key={c.id} value={c.keyword}>{c.name}</option>
+                                            ))}
+                                        </datalist>
+                                        {formData.category && !categories.some(c => c.keyword === formData.category) && (
+                                            <p className="text-xs text-blue-600 flex items-center gap-1">
+                                                <Plus className="h-3 w-3" />
+                                                {t("productExtra.newCategoryWillBeCreated", { name: formData.category })}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="grid gap-2">
                                         <Label>{t("product.supplierInfo")}</Label>

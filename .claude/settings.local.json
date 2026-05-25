@@ -6,7 +6,15 @@
       "Bash(xargs grep -l -i \"fallback\")",
       "Bash(xargs grep -l '[àáâãèéêìíòóôõùúýăđươ]')",
       "Bash(xargs grep -L \"useTranslation\")",
-      "Bash(Get-ChildItem -Path \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\" -Directory)"
+      "Bash(Get-ChildItem -Path \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\" -Directory)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/react-leaflet/package.json'\\).version\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/react-leaflet/package.json'\\); console.log\\('react-leaflet:', p.version, '| peerDep react:', p.peerDependencies?.react\\)\")",
+      "Bash(Remove-Item -Recurse -Force \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\node_modules\\\\.vite\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Cleared\")",
+      "Bash(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(\\(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\"\\).Count)"
     ]
   }
 }

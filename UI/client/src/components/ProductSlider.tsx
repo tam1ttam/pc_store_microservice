@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppSelector } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { findBestVoucher } from "@/redux/slices/voucher";
+import { useTranslation } from "react-i18next";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -26,6 +27,7 @@ const SimpleProductCard = ({ product }: { product: any }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
     const { toast } = useToast();
+    const { t } = useTranslation();
     const { info: user } = useAppSelector((state: RootState) => state.user);
     const isLogin = useSelector((state: RootState) => state.auth.isLogin);
     const availableVouchers = useSelector((state: RootState) => state.voucher.available);
@@ -42,8 +44,11 @@ const SimpleProductCard = ({ product }: { product: any }) => {
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!user) {
-            toast({ title: "Thông báo", description: "Vui lòng đăng nhập để mua hàng" });
+        if (!isLogin) {
+            toast({
+                title: t('product.addToCartNotify'),
+                description: t('product.loginRequired'),
+            });
             navigate("/login");
             return;
         }
@@ -58,9 +63,9 @@ const SimpleProductCard = ({ product }: { product: any }) => {
                 })
             ).unwrap();
             dispatch(getCart());
-            toast({ title: "Thành công", description: "Đã thêm vào giỏ hàng" });
+            toast({ title: t('common.success'), description: t('product.addedToCart') });
         } catch {
-            toast({ variant: "destructive", title: "Lỗi", description: "Không thể thêm sản phẩm" });
+            toast({ variant: "destructive", title: t('common.error'), description: t('product.addToCartError') });
         }
     };
 

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks";
 import { setProfileActive } from "@/redux/slices/user";
 import { userApi, type AddressRequest } from "@/services/api/userApi";
+import type { AddressFormData } from "@/components/AddressDialog";
 
 interface AddressForm {
     country: string;
@@ -28,9 +29,11 @@ const emptyAddress = (): AddressForm => ({
 
 interface Props {
     onClose?: () => void;
+    /** Địa chỉ đã chọn ở trang Checkout — tự động điền vào form địa chỉ */
+    prefillAddress?: AddressFormData | null;
 }
 
-export default function ProfileCompletionModal({ onClose }: Props) {
+export default function ProfileCompletionModal({ onClose, prefillAddress }: Props) {
     const { t } = useTranslation();
     const dispatch = useDispatch();
     const [step, setStep] = useState<"profile" | "otp">("profile");
@@ -51,7 +54,21 @@ export default function ProfileCompletionModal({ onClose }: Props) {
         defaultEmail: "",
     });
 
-    const [addresses, setAddresses] = useState<AddressForm[]>([{ ...emptyAddress(), isDefault: true }]);
+    const [addresses, setAddresses] = useState<AddressForm[]>(() => {
+        // Nếu người dùng đã chọn địa chỉ ở Checkout → điền sẵn vào form
+        if (prefillAddress && (prefillAddress.province || prefillAddress.street)) {
+            return [{
+                country:      prefillAddress.country  || "Việt Nam",
+                province:     prefillAddress.province || "",
+                city:         prefillAddress.city     || "",
+                ward:         prefillAddress.ward     || "",
+                street:       prefillAddress.street   || "",
+                isDefault:    true,
+                phoneContacts: prefillAddress.phoneContacts.filter(Boolean),
+            }];
+        }
+        return [{ ...emptyAddress(), isDefault: true }];
+    });
 
     const setField = (key: keyof typeof form, value: string) => {
         setForm(prev => ({ ...prev, [key]: value }));
