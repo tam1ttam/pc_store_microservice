@@ -14,7 +14,8 @@
       "Bash(Write-Host \"Cleared\")",
       "Bash(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\")",
       "Bash(Measure-Object -Line)",
-      "PowerShell(\\(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\"\\).Count)"
+      "PowerShell(\\(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\"\\).Count)",
+      "Bash(xargs grep -l \"\\\\bCustomer\\\\b\")"
     ]
   }
 }
