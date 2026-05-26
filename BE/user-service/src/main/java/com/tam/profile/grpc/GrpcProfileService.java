@@ -6,11 +6,11 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-import com.tam.profile.dto.request.CustomerCreationRequest;
-import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.request.ProfileCreationRequest;
+import com.tam.profile.dto.request.ProfileUpdateRequest;
 import com.tam.profile.dto.response.AddressResponse;
-import com.tam.profile.dto.response.CustomerResponse;
-import com.tam.profile.service.CustomerService;
+import com.tam.profile.dto.response.ProfileResponse;
+import com.tam.profile.service.ProfileService;
 import com.tam.proto.profile.v1.*;
 
 import io.grpc.Status;
@@ -24,12 +24,12 @@ import net.devh.boot.grpc.server.service.GrpcService;
 @RequiredArgsConstructor
 public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBase {
 
-    private final CustomerService customerService;
+    private final ProfileService profileService;
 
     @Override
     public void createCustomer(CreateCustomerRequest request, StreamObserver<CreateCustomerResponse> responseObserver) {
         try {
-            CustomerCreationRequest creationRequest = CustomerCreationRequest.builder()
+            ProfileCreationRequest creationRequest = ProfileCreationRequest.builder()
                     .userName(request.getUserName())
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
@@ -38,22 +38,19 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
                     .userId(request.getUserId())
                     .build();
 
-            CustomerResponse customer = customerService.createCustomer(creationRequest);
+            ProfileResponse profile = profileService.createProfile(creationRequest);
 
             responseObserver.onNext(CreateCustomerResponse.newBuilder()
-                    .setId(customer.getId())
-                    .setUserName(safe(customer.getUserName()))
-                    .setFirstName(safe(customer.getFirstName()))
-                    .setLastName(safe(customer.getLastName()))
-                    .setEmail(safe(customer.getEmail()))
-                    .setPhoneNumber(safe(customer.getPhoneNumber()))
-                    .setAvatar(safe(customer.getAvatar()))
-                    .setDob(safe(customer.getDob()))
-                    .setCity(safe(customer.getCity()))
-                    .setDefaultPhoneNumber(safe(customer.getDefaultPhoneNumber()))
-                    .setDefaultEmail(safe(customer.getDefaultEmail()))
-                    .setGender(safe(customer.getGender()))
-                    .setIsActive(Boolean.TRUE.equals(customer.getIsActive()))
+                    .setId(profile.getId())
+                    .setUserName(safe(profile.getUserName()))
+                    .setFirstName(safe(profile.getFirstName()))
+                    .setLastName(safe(profile.getLastName()))
+                    .setEmail(safe(profile.getEmail()))
+                    .setPhoneNumber(safe(profile.getPhoneNumber()))
+                    .setAvatar(safe(profile.getAvatar()))
+                    .setDob(safe(profile.getDob()))
+                    .setGender(safe(profile.getGender()))
+                    .setIsActive(Boolean.TRUE.equals(profile.getIsActive()))
                     .build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -66,8 +63,8 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     @Override
     public void getCustomer(GetCustomerRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
         try {
-            CustomerResponse customer = customerService.getCustomerByUserName(request.getUserName());
-            responseObserver.onNext(toGetCustomerResponse(customer));
+            ProfileResponse profile = profileService.getProfileByUserName(request.getUserName());
+            responseObserver.onNext(toGetCustomerResponse(profile));
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("getCustomer gRPC error", e);
@@ -79,8 +76,8 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     @Override
     public void getCustomerInfo(GetCustomerInfoRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
         try {
-            CustomerResponse customer = customerService.getCustomerByUserName(request.getUserName());
-            responseObserver.onNext(toGetCustomerResponse(customer));
+            ProfileResponse profile = profileService.getProfileByUserName(request.getUserName());
+            responseObserver.onNext(toGetCustomerResponse(profile));
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("getCustomerInfo gRPC error", e);
@@ -93,8 +90,8 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     public void getCustomerByUserId(
             GetCustomerByUserIdRequest request, StreamObserver<GetCustomerResponse> responseObserver) {
         try {
-            CustomerResponse customer = customerService.getCustomerByUserId(request.getUserId());
-            responseObserver.onNext(toGetCustomerResponse(customer));
+            ProfileResponse profile = profileService.getProfileByUserId(request.getUserId());
+            responseObserver.onNext(toGetCustomerResponse(profile));
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("getCustomerByUserId gRPC error", e);
@@ -106,23 +103,20 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     @Override
     public void updateCustomer(UpdateCustomerRequest request, StreamObserver<UpdateCustomerResponse> responseObserver) {
         try {
-            CustomerUpdateRequest updateRequest = CustomerUpdateRequest.builder()
+            ProfileUpdateRequest updateRequest = ProfileUpdateRequest.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
                     .avatar(request.getAvatar())
                     .dob(request.getDob())
-                    .city(request.getCity())
-                    .defaultPhoneNumber(request.getDefaultPhoneNumber())
-                    .defaultEmail(request.getDefaultEmail())
                     .gender(request.getGender())
                     .build();
 
-            CustomerResponse customer = customerService.updateProfile(request.getUserName(), updateRequest);
+            ProfileResponse profile = profileService.updateProfile(request.getUserName(), updateRequest);
 
             responseObserver.onNext(UpdateCustomerResponse.newBuilder()
-                    .setId(customer.getId())
+                    .setId(profile.getId())
                     .setUpdated(true)
                     .build());
             responseObserver.onCompleted();
@@ -136,7 +130,7 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     @Override
     public void deleteCustomer(DeleteCustomerRequest request, StreamObserver<DeleteCustomerResponse> responseObserver) {
         try {
-            customerService.deleteCustomer(request.getUserName());
+            profileService.deleteProfile(request.getUserName());
             responseObserver.onNext(
                     DeleteCustomerResponse.newBuilder().setDeleted(true).build());
             responseObserver.onCompleted();
@@ -151,7 +145,7 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
     public void searchCustomers(
             SearchCustomersRequest request, StreamObserver<SearchCustomersResponse> responseObserver) {
         try {
-            Page<CustomerResponse> page = customerService.searchCustomersByName(
+            Page<ProfileResponse> page = profileService.searchProfilesByName(
                     request.getSearchKey(), PageRequest.of(request.getPage(), request.getSize()));
 
             SearchCustomersResponse.Builder builder = SearchCustomersResponse.newBuilder()
@@ -169,23 +163,20 @@ public class GrpcProfileService extends ProfileServiceGrpc.ProfileServiceImplBas
         }
     }
 
-    private GetCustomerResponse toGetCustomerResponse(CustomerResponse customer) {
+    private GetCustomerResponse toGetCustomerResponse(ProfileResponse profile) {
         GetCustomerResponse.Builder builder = GetCustomerResponse.newBuilder()
-                .setId(safe(customer.getId()))
-                .setUserName(safe(customer.getUserName()))
-                .setFirstName(safe(customer.getFirstName()))
-                .setLastName(safe(customer.getLastName()))
-                .setEmail(safe(customer.getEmail()))
-                .setPhoneNumber(safe(customer.getPhoneNumber()))
-                .setAvatar(safe(customer.getAvatar()))
-                .setDob(safe(customer.getDob()))
-                .setCity(safe(customer.getCity()))
-                .setDefaultPhoneNumber(safe(customer.getDefaultPhoneNumber()))
-                .setDefaultEmail(safe(customer.getDefaultEmail()))
-                .setGender(safe(customer.getGender()))
-                .setIsActive(Boolean.TRUE.equals(customer.getIsActive()));
+                .setId(safe(profile.getId()))
+                .setUserName(safe(profile.getUserName()))
+                .setFirstName(safe(profile.getFirstName()))
+                .setLastName(safe(profile.getLastName()))
+                .setEmail(safe(profile.getEmail()))
+                .setPhoneNumber(safe(profile.getPhoneNumber()))
+                .setAvatar(safe(profile.getAvatar()))
+                .setDob(safe(profile.getDob()))
+                .setGender(safe(profile.getGender()))
+                .setIsActive(Boolean.TRUE.equals(profile.getIsActive()));
 
-        List<AddressResponse> addresses = customer.getAddresses();
+        List<AddressResponse> addresses = profile.getAddresses();
         if (addresses != null) {
             builder.addAllAddresses(addresses.stream().map(this::toProtoAddress).collect(Collectors.toList()));
         }

@@ -29,7 +29,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Getter
 @Setter
-public class Customer {
+public class Profile {
     @Id
     @Field("_id")
     @JsonSerialize(using = ToStringSerializer.class)
@@ -42,14 +42,10 @@ public class Customer {
 
     String firstName;
     String lastName;
-    // String email;
-    // String phoneNumber;
+    String email;
+    String phoneNumber;
     String avatar;
     LocalDate dob;
-    // String city;
-
-    String defaultPhoneNumber;
-    String defaultEmail;
     String gender;
 
     @Builder.Default

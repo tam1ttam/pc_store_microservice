@@ -480,10 +480,12 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 2. Ở client UI:
   - ở client nếu token hết hạn thì nó gọi api refresh rồi tự reload lại UI liên tục xong cuối cùng rơi vào 429 do bị chặn spam.
   - khi thêm sản phẩm vào giỏ hàng nó báo phải đăng nhập mới thực hiện được hành động này xong redirect về login. Nếu load lại ngay lúc này thì các api fetch profile hay product lên homepage vẫn 200 mà vẫn ở login
-3. Ở manager UI:
-  - phần modal thêm sản phẩm bằng cách upload file, chỗ thuộc tính thì di chuột vào sẽ hiện popup hiện các thuộc tính thêm đó
-  - nếu thêm product theo cách thủ công hay upload file, nếu như category chưa tồn tại thì hãy tạo category trước rồi mới tạo product link vào category đó.
-4. Manager đang có quyền cấp quyền ngay trong trang quản lý khách hàng, giờ vẫn giữ nguyên phần hiển thị danh sách, thêm nút xem chi tiết, chuyển phần cấp quyền qua cho UI quản lý user của admin, ko hiện vai trò (role) của client, chỉ hiển thị danh sách client chứ ko hiển thị manager/admin khác, ko hiển thị userid, . Các cột bao gồm stt, họ tên, username, gmail, sđt, xem chi tiết
+3. [DONE] Ở manager UI — attribute tooltip + auto-create category (đã có sẵn).
+
+4. [DONE] Manager customer list + Admin user management:
+  - Manager `Customer.tsx`: bỏ "Grant Admin" + cột Role, thêm cột "Xem chi tiết" mở slide-out panel.
+  - Admin `UserManagement.tsx`: bỏ cột City, thêm cột STT, nút "Xem chi tiết" → slide-out panel có "Grant Admin" action.
+  - Cả hai chỉ lấy data từ user-service (tự nhiên chỉ là client, không có manager/admin).
 
 5. Tận dụng socket của chat-service để silent refresh data
   - Ý tưởng: khi bất kì user của role nào thực hiện việc mà có thay đổi db (client mua

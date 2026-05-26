@@ -309,7 +309,11 @@
     "otpRequired": "Vui lòng nhập mã xác minh",
     "otpVerifyTitle": "Xác minh email",
     "otpSentDesc": "Mã xác minh đã được gửi đến email của bạn. Nhập mã để hoàn tất.",
-    "verifySuccess": "Xác minh thành công! Chào mừng bạn."
+    "verifySuccess": "Xác minh thành công! Chào mừng bạn.",
+    "exitConfirmTitle": "Thoát khỏi hoàn thiện hồ sơ?",
+    "exitConfirmDesc": "Bạn sẽ không thể đặt hàng nếu chưa hoàn thiện hồ sơ.",
+    "exitConfirmBtn": "Thoát",
+    "stayBtn": "Tiếp tục hoàn thiện"
   },
   "notFound": {
     "title": "Trang không tìm thấy",

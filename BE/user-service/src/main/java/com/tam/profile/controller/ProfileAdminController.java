@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.request.ProfileUpdateRequest;
 import com.tam.profile.dto.response.ApiResponse;
-import com.tam.profile.dto.response.CustomerResponse;
-import com.tam.profile.service.CustomerService;
+import com.tam.profile.dto.response.ProfileResponse;
+import com.tam.profile.service.ProfileService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -31,16 +31,16 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class ProfileAdminController {
-    CustomerService customerService;
+    ProfileService profileService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<Page<CustomerResponse>>> getAllCustomers(Pageable pageable) {
-        log.info("Admin: Getting all customers with pagination");
+    public ResponseEntity<ApiResponse<Page<ProfileResponse>>> getAllProfiles(Pageable pageable) {
+        log.info("Admin: Getting all profiles with pagination");
 
-        Page<CustomerResponse> response = customerService.getAllCustomers(pageable);
+        Page<ProfileResponse> response = profileService.getAllProfiles(pageable);
 
-        return ResponseEntity.ok(ApiResponse.<Page<CustomerResponse>>builder()
+        return ResponseEntity.ok(ApiResponse.<Page<ProfileResponse>>builder()
                 .code(1000)
                 .message("Lấy danh sách thành công")
                 .result(response)
@@ -49,13 +49,13 @@ public class ProfileAdminController {
 
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<Page<CustomerResponse>>> searchCustomers(
+    public ResponseEntity<ApiResponse<Page<ProfileResponse>>> searchProfiles(
             @RequestParam String searchKey, Pageable pageable) {
-        log.info("Admin: Searching customers with key: {}", searchKey);
+        log.info("Admin: Searching profiles with key: {}", searchKey);
 
-        Page<CustomerResponse> response = customerService.searchCustomersByName(searchKey, pageable);
+        Page<ProfileResponse> response = profileService.searchProfilesByName(searchKey, pageable);
 
-        return ResponseEntity.ok(ApiResponse.<Page<CustomerResponse>>builder()
+        return ResponseEntity.ok(ApiResponse.<Page<ProfileResponse>>builder()
                 .code(1000)
                 .message("Tìm kiếm thành công")
                 .result(response)
@@ -64,13 +64,13 @@ public class ProfileAdminController {
 
     @PutMapping("/{userName}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
-            @PathVariable String userName, @Valid @RequestBody CustomerUpdateRequest request) {
-        log.info("Admin: Updating customer profile: {}", userName);
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(
+            @PathVariable String userName, @Valid @RequestBody ProfileUpdateRequest request) {
+        log.info("Admin: Updating profile: {}", userName);
 
-        CustomerResponse response = customerService.updateProfile(userName, request);
+        ProfileResponse response = profileService.updateProfile(userName, request);
 
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Cập nhật thành công")
                 .result(response)
@@ -79,10 +79,10 @@ public class ProfileAdminController {
 
     @DeleteMapping("/{userName}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<String>> deleteCustomer(@PathVariable String userName) {
-        log.info("Admin: Deleting customer: {}", userName);
+    public ResponseEntity<ApiResponse<String>> deleteProfile(@PathVariable String userName) {
+        log.info("Admin: Deleting profile: {}", userName);
 
-        customerService.deleteCustomer(userName);
+        profileService.deleteProfile(userName);
 
         return ResponseEntity.ok(ApiResponse.<String>builder()
                 .code(1000)
@@ -93,11 +93,11 @@ public class ProfileAdminController {
 
     @GetMapping("/count")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Long>> countCustomers() {
+    public ResponseEntity<ApiResponse<Long>> countProfiles() {
         return ResponseEntity.ok(ApiResponse.<Long>builder()
                 .code(1000)
                 .message("Lấy số lượng thành công")
-                .result(customerService.countCustomers())
+                .result(profileService.countProfiles())
                 .build());
     }
 }

@@ -51,7 +51,12 @@ function Checkout() {
     const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
 
     const [address, setAddress] = useState(localStorage.getItem("addressShipping") || "");
-    const [addressFormData, setAddressFormData] = useState<AddressFormData | null>(null);
+    const [addressFormData, setAddressFormData] = useState<AddressFormData | null>(() => {
+        try {
+            const saved = localStorage.getItem("addressFormData");
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
+    });
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<string>("ship");
     const [isOrdering, setIsOrdering] = useState(false);
@@ -452,6 +457,7 @@ function Checkout() {
                     setAddress(formatted);
                     setAddressFormData(formData);
                     localStorage.setItem("addressShipping", formatted);
+                    localStorage.setItem("addressFormData", JSON.stringify(formData));
                 }}
             />
 

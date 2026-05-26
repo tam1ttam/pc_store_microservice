@@ -426,10 +426,7 @@ export default function AddressDialog({ open, onClose, onSave, initialFormData }
             email: user.email!,
             phoneNumber: user.phoneNumber!,
             dob: user.dob,
-            city: user.city,
             gender: user.gender,
-            defaultPhoneNumber: user.defaultPhoneNumber,
-            defaultEmail: user.defaultEmail,
             addresses: updatedAddresses,
         });
         return resultType;

@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tam.profile.dto.request.AvatarUpdateRequest;
-import com.tam.profile.dto.request.CustomerCreationRequest;
-import com.tam.profile.dto.request.CustomerUpdateRequest;
 import com.tam.profile.dto.request.ProfileCompletionRequest;
+import com.tam.profile.dto.request.ProfileCreationRequest;
+import com.tam.profile.dto.request.ProfileUpdateRequest;
 import com.tam.profile.dto.response.ApiResponse;
-import com.tam.profile.dto.response.CustomerResponse;
-import com.tam.profile.service.CustomerService;
+import com.tam.profile.dto.response.ProfileResponse;
+import com.tam.profile.service.ProfileService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -30,17 +30,17 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
-public class CustomerController {
-    CustomerService customerService;
+public class ProfileController {
+    ProfileService profileService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<CustomerResponse>> register(@Valid @RequestBody CustomerCreationRequest request) {
-        log.info("Registering new customer: {}", request.getUserName());
+    public ResponseEntity<ApiResponse<ProfileResponse>> register(@Valid @RequestBody ProfileCreationRequest request) {
+        log.info("Registering new profile: {}", request.getUserName());
 
-        CustomerResponse response = customerService.createCustomer(request);
+        ProfileResponse response = profileService.createProfile(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.<CustomerResponse>builder()
+                .body(ApiResponse.<ProfileResponse>builder()
                         .code(1000)
                         .message("Đăng ký thành công")
                         .result(response)
@@ -48,12 +48,12 @@ public class CustomerController {
     }
 
     @GetMapping("/{userName}")
-    public ResponseEntity<ApiResponse<CustomerResponse>> getCustomer(@PathVariable String userName) {
-        log.info("Getting customer by userName: {}", userName);
+    public ResponseEntity<ApiResponse<ProfileResponse>> getProfile(@PathVariable String userName) {
+        log.info("Getting profile by userName: {}", userName);
 
-        CustomerResponse response = customerService.getCustomerByUserName(userName);
+        ProfileResponse response = profileService.getProfileByUserName(userName);
 
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Lấy thông tin thành công")
                 .result(response)
@@ -61,12 +61,12 @@ public class CustomerController {
     }
 
     @GetMapping("/info")
-    public ResponseEntity<ApiResponse<CustomerResponse>> getInfo() {
+    public ResponseEntity<ApiResponse<ProfileResponse>> getInfo() {
         log.info("Getting current user info");
 
-        CustomerResponse response = customerService.getInfo();
+        ProfileResponse response = profileService.getInfo();
 
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Lấy thông tin thành công")
                 .result(response)
@@ -74,11 +74,11 @@ public class CustomerController {
     }
 
     @PutMapping("/complete-profile")
-    public ResponseEntity<ApiResponse<CustomerResponse>> completeProfile(
+    public ResponseEntity<ApiResponse<ProfileResponse>> completeProfile(
             @Valid @RequestBody ProfileCompletionRequest request) {
         log.info("Completing profile for current user");
-        CustomerResponse response = customerService.completeProfile(request);
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+        ProfileResponse response = profileService.completeProfile(request);
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Hoàn thiện hồ sơ thành công")
                 .result(response)
@@ -86,11 +86,11 @@ public class CustomerController {
     }
 
     @PutMapping("/{userName}")
-    public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
-            @PathVariable String userName, @RequestBody CustomerUpdateRequest request) {
-        log.info("Updating customer: {}", userName);
-        CustomerResponse response = customerService.updateCustomer(userName, request);
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(
+            @PathVariable String userName, @RequestBody ProfileUpdateRequest request) {
+        log.info("Updating profile: {}", userName);
+        ProfileResponse response = profileService.updateProfile(userName, request);
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Cập nhật thành công")
                 .result(response)
@@ -98,10 +98,10 @@ public class CustomerController {
     }
 
     @PutMapping("/avatar")
-    public ResponseEntity<ApiResponse<CustomerResponse>> updateAvatar(@RequestBody AvatarUpdateRequest request) {
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateAvatar(@RequestBody AvatarUpdateRequest request) {
         log.info("Updating avatar for current user");
-        CustomerResponse response = customerService.updateAvatar(request.getAvatar());
-        return ResponseEntity.ok(ApiResponse.<CustomerResponse>builder()
+        ProfileResponse response = profileService.updateAvatar(request.getAvatar());
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
                 .code(1000)
                 .message("Cập nhật ảnh đại diện thành công")
                 .result(response)

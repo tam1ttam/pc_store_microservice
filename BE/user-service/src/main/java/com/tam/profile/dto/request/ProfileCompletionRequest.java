@@ -37,10 +37,7 @@ public class ProfileCompletionRequest {
     String phoneNumber;
 
     String dob;
-    String city;
     String gender;
-    String defaultPhoneNumber;
-    String defaultEmail;
 
     @NotEmpty(message = "Phải có ít nhất một địa chỉ")
     @Valid

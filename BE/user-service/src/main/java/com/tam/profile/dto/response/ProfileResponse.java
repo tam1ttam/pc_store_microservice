@@ -14,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CustomerResponse {
+public class ProfileResponse {
     String id;
     String userName;
     String firstName;
@@ -23,9 +23,6 @@ public class CustomerResponse {
     String phoneNumber;
     String avatar;
     String dob;
-    String city;
-    String defaultPhoneNumber;
-    String defaultEmail;
     String gender;
     Boolean isActive;
     List<AddressResponse> addresses;

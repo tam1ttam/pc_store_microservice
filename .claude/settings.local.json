@@ -15,7 +15,17 @@
       "Bash(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\")",
       "Bash(Measure-Object -Line)",
       "PowerShell(\\(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\client\\\\src\\\\components\\\\AddressDialog.tsx\"\\).Count)",
-      "Bash(xargs grep -l \"\\\\bCustomer\\\\b\")"
+      "Bash(xargs grep -l \"\\\\bCustomer\\\\b\")",
+      "Bash(git -C /d/nhap/nhap_iluttmab status --short)",
+      "Bash(git -C /d/nhap/nhap_iluttmab diff HEAD -- BE/user-service/src/main/java/com/tam/profile/kafka/UserEventConsumer.java)",
+      "Bash(xxd /d/nhap/nhap_iluttmab/BE/user-service/src/main/java/com/tam/profile/kafka/event/UserDeletedEvent.java)",
+      "Bash(mvn compile *)",
+      "Bash(find ~/.m2/repository/com/tam -name \"proto-common*.jar\" -o -name \"*.jar\" 2>/dev/null | grep -i proto | head -10)",
+      "Read(//d/dev/maven-repo/repository/com/tam/**)",
+      "Bash(jar tf *)",
+      "Bash(mvn install *)",
+      "Bash(xargs grep -l \"setIsAdmin\\\\|updateUserRole\")",
+      "Bash(del \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\admin\\\\src\\\\pages\\\\Admin\\\\Customer.tsx\")"
     ]
   }
 }

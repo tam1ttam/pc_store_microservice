@@ -28,10 +28,7 @@ export const userSchema = z.object({
   roles: z.array(roleSchema).optional(),
   avatar: z.string().optional(),
   dob: z.string().optional(),
-  city: z.string().optional(),
   gender: z.string().optional(),
-  defaultPhoneNumber: z.string().optional(),
-  defaultEmail: z.string().optional(),
   isActive: z.boolean().optional(),
   addresses: z.array(addressSchema).optional(),
 });

@@ -17,10 +17,7 @@ export interface ProfileCompletionData {
     email: string;
     phoneNumber: string;
     dob?: string;
-    city?: string;
     gender?: string;
-    defaultPhoneNumber?: string;
-    defaultEmail?: string;
     addresses: AddressRequest[];
 }
 

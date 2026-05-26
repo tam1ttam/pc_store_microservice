@@ -8,12 +8,17 @@ export const roleSchema = z.object({
 export const userSchema = z.object({
   id: z.string(),
   userName: z.string().min(4, "Tên người dùng phải có ít nhất 4 ký tự"),
-  firstName: z.string().min(1, "Họ không được để trống"),
-  lastName: z.string().min(1, "Tên không được để trống"),
-  email: z.string().email("Email không hợp lệ"),
-  phoneNumber: z.string().regex(/^0[0-9]{9}$/, "Số điện thoại gồm 10 số và bắt đầu bằng 0"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-  roles: z.array(roleSchema),
+  firstName: z.string().optional().nullable().default(""),
+  lastName: z.string().optional().nullable().default(""),
+  email: z.string().optional().nullable().default(""),
+  phoneNumber: z.string().optional().nullable().default(""),
+  password: z.string().optional().default(""),
+  avatar: z.string().optional().nullable(),
+  dob: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  isActive: z.boolean().optional().nullable(),
+  addresses: z.array(z.any()).optional(),
+  roles: z.array(roleSchema).optional(),
 });
 
 export const loginRequestSchema = z.object({

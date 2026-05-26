@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CheckCircle, Plus, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { AlertTriangle, CheckCircle, Plus, Trash2, X } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks";
@@ -41,6 +41,8 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [otpCode, setOtpCode] = useState("");
     const [otpError, setOtpError] = useState("");
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
+    const bodyRef = useRef<HTMLDivElement>(null);
 
     const [form, setForm] = useState({
         firstName: "",
@@ -48,10 +50,7 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
         email: "",
         phoneNumber: "",
         dob: "",
-        city: "",
         gender: "",
-        defaultPhoneNumber: "",
-        defaultEmail: "",
     });
 
     const [addresses, setAddresses] = useState<AddressForm[]>(() => {
@@ -118,7 +117,11 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
     };
 
     const handleSubmit = async () => {
-        if (!validate()) return;
+        if (!validate()) {
+            // Scroll về đầu để user thấy lỗi trên các field thông tin cá nhân
+            bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
         setLoading(true);
         try {
             await userApi.completeProfile({
@@ -143,6 +146,43 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
         onClose?.();
     };
 
+    // ── Exit confirmation ──────────────────────────────────────────────────────
+    const handleCloseAttempt = () => setShowExitConfirm(true);
+    const handleConfirmExit = () => { setShowExitConfirm(false); onClose?.(); };
+    const handleCancelExit  = () => setShowExitConfirm(false);
+
+    // ── Exit confirm overlay ───────────────────────────────────────────────────
+    const ExitConfirmDialog = () => (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-2xl">
+            <div className="bg-white rounded-xl p-6 mx-6 shadow-xl max-w-sm w-full text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <AlertTriangle className="w-6 h-6 text-orange-500" />
+                </div>
+                <h3 className="text-base font-bold text-gray-800 mb-2">
+                    {t('profile.exitConfirmTitle')}
+                </h3>
+                <p className="text-sm text-gray-500 mb-5">
+                    {t('profile.exitConfirmDesc')}
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleCancelExit}
+                        className="flex-1 border border-orange-500 text-orange-500 font-semibold py-2.5 rounded-lg hover:bg-orange-50 transition-colors text-sm"
+                    >
+                        {t('profile.stayBtn')}
+                    </button>
+                    <button
+                        onClick={handleConfirmExit}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                        {t('profile.exitConfirmBtn')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // ── OTP step ───────────────────────────────────────────────────────────────
     if (step === "otp") {
         return (
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
@@ -176,17 +216,31 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] relative">
+
+                {/* Exit confirm overlay (sits on top of the modal card) */}
+                {showExitConfirm && <ExitConfirmDialog />}
+
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-800">{t('profile.complete')}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {t('profile.subtitle')}
-                    </p>
+                <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">{t('profile.complete')}</h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {t('profile.subtitle')}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleCloseAttempt}
+                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-1.5 transition-colors mt-0.5 ml-4 shrink-0"
+                        aria-label="Đóng"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Body — scrollable */}
-                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-6">
+                <div ref={bodyRef} className="overflow-y-auto flex-1 px-6 py-4 space-y-6">
                     {/* Personal info */}
                     <section>
                         <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
@@ -232,7 +286,7 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
                                 />
                             </Field>
                         </div>
-                        <div className="grid grid-cols-3 gap-3 mt-3">
+                        <div className="grid grid-cols-2 gap-3 mt-3">
                             <Field label={t('profile.dob')}>
                                 <input
                                     type="date"
@@ -252,15 +306,6 @@ export default function ProfileCompletionModal({ onClose, prefillAddress }: Prop
                                     <option value="Nữ">{t('profile.female')}</option>
                                     <option value="Khác">Khác</option>
                                 </select>
-                            </Field>
-                            <Field label={t('profile.province')}>
-                                <input
-                                    type="text"
-                                    value={form.city}
-                                    onChange={e => setField("city", e.target.value)}
-                                    placeholder="Hà Nội"
-                                    className={inputCls()}
-                                />
                             </Field>
                         </div>
                     </section>

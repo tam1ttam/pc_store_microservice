@@ -49,8 +49,8 @@ public class PermissionInitConfig {
             p(
                     "ADMIN_UPDATE_ROLE",
                     "admin",
-                    "PUT /identity-service/admin/users/{userId}/role",
-                    "Admin update user role"),
+                    "POST /identity-service/api/admin/update-role/{userName}",
+                    "Admin grant ADMIN role to user"),
             p("ADMIN_HISTORY", "admin", "GET /identity-service/api/admin/history", "Admin view action history"),
             p(
                     "INTERNAL_MANAGER_LIST",

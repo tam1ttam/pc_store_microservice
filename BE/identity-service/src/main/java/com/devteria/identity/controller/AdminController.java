@@ -2,6 +2,7 @@ package com.devteria.identity.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ public class AdminController {
     AdminService adminService;
 
     @PostMapping("/update-role/{userName}")
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<Void> updateRoleForUser(@PathVariable String userName) {
         log.info("Update role for user: {}", userName);
         userService.assignRoleToUser(userName, "ADMIN");
@@ -38,6 +40,7 @@ public class AdminController {
     }
 
     @GetMapping("/history")
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<List<HistoryAction>> getHistory() {
         return ApiResponse.<List<HistoryAction>>builder()
                 .result(adminService.getAllHistory())

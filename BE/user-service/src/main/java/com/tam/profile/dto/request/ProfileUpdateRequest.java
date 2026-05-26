@@ -16,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CustomerUpdateRequest {
+public class ProfileUpdateRequest {
     @Size(min = 1, max = 50, message = "Tên phải từ 1-50 ký tự")
     String firstName;
 
@@ -31,8 +31,5 @@ public class CustomerUpdateRequest {
 
     String avatar;
     String dob;
-    String city;
-    String defaultPhoneNumber;
-    String defaultEmail;
     String gender;
 }

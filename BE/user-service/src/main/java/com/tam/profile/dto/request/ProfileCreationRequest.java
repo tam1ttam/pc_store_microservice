@@ -18,7 +18,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CustomerCreationRequest {
+public class ProfileCreationRequest {
     @NotBlank(message = "Tên người dùng không được để trống")
     @Size(min = 3, max = 50, message = "Tên người dùng phải từ 3-50 ký tự")
     String userName;
@@ -40,6 +40,5 @@ public class CustomerCreationRequest {
 
     String avatar;
     String dob;
-    String city;
     String userId;
 }

@@ -96,7 +96,7 @@
   "customer": {
     "title": "Manage Users", "customerList": "User list",
     "stt": "No.", "customerName": "Full name", "customerUsername": "Username",
-    "customerEmail": "Email", "customerPhone": "Phone",
+    "customerEmail": "Gmail", "customerPhone": "Phone",
     "viewDetail": "View detail",
     "detail": "User detail", "roles": "Roles",
     "permissions": "Permissions", "addPermission": "Grant permission",
@@ -108,10 +108,14 @@
     "closeDetail": "Close",
     "grantAdmin": "Grant Admin",
     "alreadyAdmin": "Already Admin",
-    "grantAdminSuccess": "Admin role granted to user",
+    "grantAdminSuccess": "Admin role granted to {{username}}",
     "grantAdminFailed": "Failed to grant admin role",
     "successTitle": "Success",
-    "failedTitle": "Failed"
+    "failedTitle": "Failed",
+    "detailGender": "Gender",
+    "detailDob": "Date of birth",
+    "detailAddresses": "Addresses",
+    "defaultAddress": "Default"
   },
   "product": {
     "title": "Manage Products", "addProduct": "Add product",

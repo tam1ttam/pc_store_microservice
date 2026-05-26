@@ -65,8 +65,4 @@ export const adminApi = {
         return get(`${ENDPOINTS.LIST_CUSTOMER}/search?searchKey=${searchKey}&page=${page}&size=${size}`);
     },
 
-    // Roles
-    updateUserRole: (userName: string) => {
-        return post(`${ENDPOINTS.ADMIN}/update-role/${userName}`, {});
-    },
 };

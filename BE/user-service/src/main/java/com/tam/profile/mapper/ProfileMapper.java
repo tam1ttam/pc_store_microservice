@@ -6,21 +6,21 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import com.tam.profile.dto.request.AddressRequest;
-import com.tam.profile.dto.request.CustomerCreationRequest;
-import com.tam.profile.dto.request.CustomerUpdateRequest;
+import com.tam.profile.dto.request.ProfileCreationRequest;
+import com.tam.profile.dto.request.ProfileUpdateRequest;
 import com.tam.profile.dto.response.AddressResponse;
-import com.tam.profile.dto.response.CustomerResponse;
+import com.tam.profile.dto.response.ProfileResponse;
 import com.tam.profile.entity.Address;
-import com.tam.profile.entity.Customer;
+import com.tam.profile.entity.Profile;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-public interface CustomerMapper {
+public interface ProfileMapper {
 
-    Customer toCustomer(CustomerCreationRequest request);
+    Profile toProfile(ProfileCreationRequest request);
 
-    @Mapping(target = "id", expression = "java(customer.getId().toString())")
-    @Mapping(target = "dob", expression = "java(customer.getDob() != null ? customer.getDob().toString() : null)")
-    CustomerResponse toCustomerResponse(Customer customer);
+    @Mapping(target = "id", expression = "java(profile.getId().toString())")
+    @Mapping(target = "dob", expression = "java(profile.getDob() != null ? profile.getDob().toString() : null)")
+    ProfileResponse toProfileResponse(Profile profile);
 
     AddressResponse toAddressResponse(Address address);
 
@@ -32,5 +32,5 @@ public interface CustomerMapper {
     @Mapping(target = "userName", ignore = true)
     @Mapping(target = "userId", ignore = true)
     @Mapping(target = "addresses", ignore = true)
-    void updateCustomerFromRequest(CustomerUpdateRequest request, @MappingTarget Customer customer);
+    void updateProfileFromRequest(ProfileUpdateRequest request, @MappingTarget Profile profile);
 }

@@ -108,10 +108,14 @@
     "closeDetail": "Đóng",
     "grantAdmin": "Cấp quyền Admin",
     "alreadyAdmin": "Đã là Admin",
-    "grantAdminSuccess": "Cấp quyền Admin cho người dùng",
-    "grantAdminFailed": "Cấp quyền Admin cho người dùng",
+    "grantAdminSuccess": "Đã cấp quyền Admin cho {{username}}",
+    "grantAdminFailed": "Cấp quyền Admin thất bại",
     "successTitle": "Thành công",
-    "failedTitle": "Thất bại"
+    "failedTitle": "Thất bại",
+    "detailGender": "Giới tính",
+    "detailDob": "Ngày sinh",
+    "detailAddresses": "Địa chỉ",
+    "defaultAddress": "Mặc định"
   },
   "product": {
     "title": "Quản lý sản phẩm", "addProduct": "Thêm sản phẩm",

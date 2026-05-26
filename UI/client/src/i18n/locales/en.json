@@ -308,7 +308,11 @@
     "otpRequired": "Please enter the verification code",
     "otpVerifyTitle": "Verify email",
     "otpSentDesc": "A verification code has been sent to your email. Enter the code to finish.",
-    "verifySuccess": "Verification successful! Welcome."
+    "verifySuccess": "Verification successful! Welcome.",
+    "exitConfirmTitle": "Exit profile completion?",
+    "exitConfirmDesc": "You won't be able to place an order without completing your profile.",
+    "exitConfirmBtn": "Exit",
+    "stayBtn": "Continue completing"
   },
   "notFound": {
     "title": "Page not found",
