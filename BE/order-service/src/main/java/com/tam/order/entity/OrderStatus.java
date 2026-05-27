@@ -4,6 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum OrderStatus {
+    PENDING("Chờ thanh toán"),
+    PAID("Đã thanh toán"),
     DELIVERING("Đang giao hàng"),
     DELIVERED("Đã giao hàng"),
     CANCELLED("Đã hủy");

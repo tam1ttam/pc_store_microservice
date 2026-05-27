@@ -94,6 +94,16 @@
             <version>${grpc.spring.boot.starter.version}</version>
         </dependency>
 
+        <!-- MongoDB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
         <!-- Misc -->
         <dependency>
             <groupId>javax.annotation</groupId>

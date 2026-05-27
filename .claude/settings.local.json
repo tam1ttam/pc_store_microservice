@@ -25,7 +25,21 @@
       "Bash(jar tf *)",
       "Bash(mvn install *)",
       "Bash(xargs grep -l \"setIsAdmin\\\\|updateUserRole\")",
-      "Bash(del \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\admin\\\\src\\\\pages\\\\Admin\\\\Customer.tsx\")"
+      "Bash(del \"d:\\\\nhap\\\\nhap_iluttmab\\\\UI\\\\admin\\\\src\\\\pages\\\\Admin\\\\Customer.tsx\")",
+      "Bash(ls -la ..)",
+      "Read(//d/nhap/nhap_iluttmab/.claude/worktrees/**)",
+      "Bash(cd \"d:\\\\nhap\\\\nhap_iluttmab\" && ls -la)",
+      "Read(//d/nhap/nhap_iluttmab/**)",
+      "Bash(git checkout *)",
+      "Bash(git worktree *)",
+      "Bash(git pull *)",
+      "Bash(findstr feat *)",
+      "Bash(git stash *)",
+      "Bash(git merge *)",
+      "Bash(./mvnw clean *)",
+      "Bash(mvn -version)",
+      "Bash(git push *)",
+      "Bash(set MAVEN_OPTS=-Xmx512m)"
     ]
   }
 }

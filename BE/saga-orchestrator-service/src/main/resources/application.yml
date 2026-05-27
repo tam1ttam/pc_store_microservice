@@ -12,6 +12,22 @@ spring:
     exclude:
       - tam.common.config.BaseSecurityConfig
       - tam.common.config.CustomJwtDecoder
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:6000/saga-orchestrator}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: saga-orchestrator-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 app:
   security:
     allowed-origins:

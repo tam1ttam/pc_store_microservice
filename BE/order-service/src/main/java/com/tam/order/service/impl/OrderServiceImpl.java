@@ -1,7 +1,9 @@
 package com.tam.order.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.kafka.core.KafkaTemplate;
@@ -67,7 +69,7 @@ public class OrderServiceImpl implements OrderService {
                 .currency("VND")
                 .totalPrice(total)
                 .isPaid(false)
-                .orderStatus(OrderStatus.DELIVERING)
+                .orderStatus(OrderStatus.PENDING) // Changed from DELIVERING to PENDING for Saga
                 .build();
 
         for (CartItem ci : selectedItems) {
@@ -82,12 +84,23 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order = orderRepository.save(order);
-        log.info("Checkout order saved: orderId={}", order.getId());
+        log.info("Checkout order saved (PENDING): orderId={}", order.getId());
 
         cart.getItems().removeAll(selectedItems);
         cartRepository.save(cart);
 
-        publishCheckoutEvents(order, request);
+        // Start Saga
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", order.getId());
+        payload.put("userId", identityUserId);
+        payload.put(
+                "items",
+                order.getItems().stream()
+                        .map(i -> Map.of("productId", i.getProductId(), "quantity", i.getQuantity()))
+                        .toList());
+
+        kafkaTemplate.send("checkout.started", payload);
+
         return toResponse(order);
     }
 
@@ -347,6 +360,7 @@ public class OrderServiceImpl implements OrderService {
                     case DELIVERING -> String.format("Đơn hàng #%s đang được giao đến bạn.", order.getId());
                     case DELIVERED -> String.format("Đơn hàng #%s đã được giao thành công.", order.getId());
                     case CANCELLED -> String.format("Đơn hàng #%s đã bị huỷ.", order.getId());
+                    default -> String.format("Trạng thái đơn hàng #%s đã thay đổi.", order.getId());
                 };
         try {
             kafkaTemplate.send(

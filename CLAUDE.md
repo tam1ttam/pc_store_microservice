@@ -527,56 +527,119 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
    - PayPal Sandbox credentials lưu trong `BE/.env`, không hardcode.
    - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
 
-4. **Saga pattern — rollback cho toàn bộ business flow có lỗi**
-   - Hiện tại `saga-orchestrator` service đã có nhưng chưa implement compensating transaction.
-   - Các flow cần áp dụng saga rollback (theo thứ tự ưu tiên):
+4. Saga pattern — rollback cho toàn bộ business flow có lỗi
+- Hiện tại saga-orchestrator service đã có nhưng chưa implement compensating transaction. Cần áp dụng cho 4 flow theo thứ tự ưu tiên dưới đây.
+- Kiến trúc chung:
 
-   **Flow 1 — Checkout (quan trọng nhất)**
-   ```
-   Steps:
-     1. Tạo Order (order-service)
-     2. Trừ stock sản phẩm (product-service) ← gRPC
-     3. Áp voucher / trừ usage (order-service)
-     4. Tạo PayPal payment order (nếu online payment)
-   Compensate nếu fail tại step N:
-     - Step 2 fail → xóa Order
-     - Step 3 fail → hoàn stock + xóa Order
-     - Step 4 fail → hoàn voucher + hoàn stock + xóa Order
-   ```
+* Orchestrator nhận command từ business service qua Kafka
+* Orchestrator gọi từng step theo thứ tự, lắng nghe reply topic
+* Nếu step nào fail → orchestrator gửi compensate command ngược lại từng bước
+* Mỗi service implement cả execute handler và compensate handler
+* State của saga lưu trong saga-orchestrator (MongoDB)
+* Mỗi step phải idempotent — retry không gây side effect
+* Compensate phải luôn thành công — retry with exponential backoff nếu cần
+* Không dùng distributed transaction (2PC) — chỉ dùng eventual consistency
 
-   **Flow 2 — Tạo user mới**
-   ```
-   Steps:
-     1. Tạo identity account (identity-service)
-     2. Tạo customer profile (user-service) ← Kafka
-     3. Tạo Cart (order-service) ← Kafka
-   Compensate nếu fail:
-     - Step 2 fail → xóa identity account
-     - Step 3 fail → xóa customer profile + xóa identity account
-   ```
 
-   **Flow 3 — Cập nhật trạng thái đơn hàng (manager)**
-   ```
-   Steps:
-     1. Cập nhật Order status (order-service)
-     2. Hoàn stock nếu CANCELLED (product-service) ← gRPC
-     3. Hoàn voucher nếu CANCELLED (order-service)
-   Compensate nếu fail:
-     - Step 2 fail → rollback Order status về trạng thái trước
-     - Step 3 fail → rollback stock + rollback Order status
-   ```
++ Flow 1 — Checkout (ưu tiên cao nhất)
+Hiện tại OrderServiceImpl.checkout chỉ lưu Order và bắn event order.created — chưa có rollback nếu các step sau fail.
 
-   - Hiện thực qua `saga-orchestrator`:
-     * Orchestrator nhận command từ business service qua Kafka
-     * Orchestrator gọi từng step theo thứ tự, lắng nghe reply
-     * Nếu step nào fail → orchestrator gửi compensate command ngược lại
-     * Mỗi service cần implement cả execute và compensate handler
-     * State của saga lưu trong orchestrator (MongoDB hoặc in-memory với Redis)
-   - Lưu ý:
-     * Idempotency: mỗi step phải idempotent — retry không gây side effect.
-     * Compensate phải luôn thành công (retry with backoff nếu cần).
-     * Không dùng distributed transaction (2PC) — chỉ dùng eventual consistency.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+   Step 1 — order-service:
+     Tạo Order status = PENDING
+     → emit saga command: CHECKOUT_STARTED
+
+   Step 2 — product-service (gRPC):
+     Trừ stock từng sản phẩm trong order
+     → fail (hết hàng):
+       Compensate: Hủy Order (status = CANCELLED)
+
+   Step 3 — order-service:
+     Áp dụng voucher / trừ usage count
+     → fail (voucher hết hạn / không hợp lệ):
+       Compensate: Hoàn stock + Hủy Order
+
+   Step 4 — order-service (PayPal, nếu online payment):
+     Tạo PayPal payment order → trả paypalOrderId cho FE
+     → fail (PayPal API lỗi / user hủy / timeout):
+       Compensate: Hoàn voucher + Hoàn stock + Hủy Order
+
++ Flow 2 — Đăng ký tài khoản mới
+Luồng hiện tại phân tán qua Kafka nhưng không có compensate nếu step sau fail.
+   Step 1 — identity-service:
+     Tạo account (username/password)
+     → emit saga command: USER_REGISTER_STARTED
+
+   Step 2 — user-service (Kafka):
+     Tạo Customer Profile
+     → fail:
+       Compensate: Xóa account ở identity-service
+
+   Step 3 — order-service (Kafka):
+     Tạo Cart trống cho user
+     → fail:
+       Compensate: Xóa Customer Profile + Xóa account
+
++ Flow 3 — Manager hủy đơn hàng (status → CANCELLED)
+   Step 1 — order-service:
+     Cập nhật Order status = CANCELLED
+     → emit saga command: ORDER_CANCEL_STARTED
+
+   Step 2 — product-service (gRPC):
+     Hoàn lại stock cho từng sản phẩm trong đơn
+     → fail:
+       Compensate: Rollback Order status về trạng thái trước (DELIVERING, v.v.)
+
+   Step 3 — order-service:
+     Hoàn trả voucher cho khách (isActive = true, trừ usage count)
+     → fail:
+       Compensate: Trừ lại stock + Rollback Order status
+
++ Flow 4 — Cập nhật / xóa sản phẩm khi có đơn PENDING_PAYMENT
+   Step 1 — product-service:
+     Cập nhật stock hoặc xóa sản phẩm
+
+   Step 2 — order-service (Kafka):
+     Kiểm tra các Order đang PENDING_PAYMENT có chứa sản phẩm này
+     → Nếu stock mới < quantity trong order:
+       Tự động hủy các Order bị ảnh hưởng (status = CANCELLED)
+       Push notification cho khách: "Sản phẩm [X] trong đơn hàng của bạn không còn đủ hàng"
+     → Nếu xóa sản phẩm:
+       Tương tự — hủy order + notify khách
++ Lưu ý triển khai:
+
+  Triển khai từng flow một, bắt đầu từ Flow 1 (Checkout) vì ảnh hưởng tiền bạc trực tiếp.
+  Mỗi service cần thêm Kafka consumer lắng nghe compensate command từ orchestrator.
+  Log đầy đủ từng bước saga state để debug khi có lỗi production.
+  Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+5. 
+    Chat — Auto-release conversation khi manager offline quá 5 phút
+  Vấn đề hiện tại: Manager A đang claim conversation với khách, A offline → Manager B online không thể reply vì B không được claim → khách bị bỏ trống vô thời hạn.
+  Giải pháp: Timeout-based auto-release — nếu manager đang claim offline quá 5 phút thì conversation tự động UNASSIGN, tất cả manager online có thể claim lại.
+  BE — chat-service
+
+  Conversation.java: thêm field assignedManagerLastSeenAt: Instant — cập nhật mỗi khi manager gửi tin hoặc heartbeat socket.
+  application.yaml: thêm conversation.auto-release.timeout-minutes: 5.
+  ConversationReleaseScheduler.java (@Scheduled(fixedDelay = 60000)): query tất cả conversation có status = ASSIGNED và assignedManagerLastSeenAt < now - 5 phút và assignedManagerId không tồn tại trong WebSocketSessionRepository → gọi releaseConversation().
+  ConversationService.releaseConversation(conversationId):
+
+  Set assignedManagerId = null, assignedManagerName = null, assignedManagerLastSeenAt = null, status = UNASSIGNED
+  Broadcast socket event conversation_unassigned { conversationId } → tất cả manager online nhận được
+
+
+  SocketHandler: khi manager gửi tin hoặc nhận heartbeat ping → cập nhật assignedManagerLastSeenAt nếu manager đó là assignedManagerId của conversation tương ứng.
+  Điều kiện unassign phải thỏa cả 2: lastSeenAt quá timeout VÀ không có WebSocketSession active — tránh unassign nhầm khi manager vẫn online nhưng không nhắn.
+
+  FE — UI/manager
+
+    ManagerChatSidebar.tsx: lắng nghe socket event conversation_unassigned → dispatch cập nhật Redux (assignedManagerId = null, status = UNASSIGNED), hiện badge "Chưa có người phụ trách" (màu xám), enable claim button cho tất cả manager.
+    Toast thông báo cho tất cả manager online: "Cuộc trò chuyện với [tên khách] chưa có người phụ trách".
+    Manager A quay lại sau khi bị unassign → thấy conversation ở trạng thái UNASSIGNED, claim lại bình thường như mọi manager khác.
+
+  Lưu ý:
+
+    Scheduler chạy mỗi phút — phải re-check status trong releaseConversation() trước khi set để tránh double-release (idempotent).
+  Lịch sử tin nhắn giữ nguyên — khách không bị mất context.
+  Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
 
 ### secondary: Notification — trigger thêm sự kiện
 

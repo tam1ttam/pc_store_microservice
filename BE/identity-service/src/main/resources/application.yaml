@@ -30,6 +30,7 @@ spring:
     serialization:
       write-dates-as-timestamps: false
   kafka:
+    group-id: identity-service-group
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

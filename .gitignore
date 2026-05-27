@@ -13,6 +13,7 @@ UI/**/.output/
 .env.development
 !.env.example
 *.md
+!README.md
 *.claude
 # K8s secrets
 k8s/jenkins/kubeconfig.yaml
