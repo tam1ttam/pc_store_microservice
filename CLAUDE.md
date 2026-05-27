@@ -29,7 +29,7 @@ Hệ thống e-commerce bán PC/linh kiện, gồm **microservices Spring Boot**
 | user-service | 6063 | 6163 | MongoDB |
 | product-service | 6067 | 6167 | MongoDB + Elasticsearch |
 | order-service | 6065 | 6165 | MongoDB |
-| chat-service | 8085 | — | MongoDB (Socket.IO port 8099) |
+| chat-service | 8085 | 8199 | MongoDB (Socket.IO port 8099) |
 | file-service | 8084 | 8184 | MongoDB + S3 + Gemini |
 | notification-service | 6068 | — | MongoDB |
 | saga-orchestrator | 6058 | 6158 | — |
@@ -66,7 +66,7 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ---
 
-## Những gì đã làm (chat feature)
+## Những gì đã làm
 
 ### [DONE] Fix toàn bộ luồng chat client ↔ manager
 
@@ -286,10 +286,6 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ### [DONE] Batch 7 — fix username null + isMe bug (chat-service)
 
-**Root cause username null**: Khi manager gửi tin trong SUPPORT conversation (manager không có trong `participants`), code fallback sang `fetchManagerUsernameById()` — Feign call tới identity-service. Nếu Feign fail intermittently → `sender.username = null` lưu vào MongoDB → không hiện username.
-
-**Root cause isMe**: `ChatMessageResponse` dùng chung 1 object, bị mutate (`setMe()`) trong `forEach` broadcast loop — tiềm ẩn race condition.
-
 **BE — `chat-service`**
 - `WebSocketSession.java`: thêm field `username` để cache manager username khi connect.
 - `WebSocketSessionRepository.java`: thêm `findFirstByUserId(String userId)`.
@@ -299,31 +295,23 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ### [DONE] Batch 6 — fix transfer picker "Đang hoạt động" luôn rỗng
 
-**Root cause**: `ConversationService.getOnlineManagerIds()` gọi `fetchManagerIds()` qua Feign tới identity-service. Nếu Eureka chậm → Feign throw → trả `List.of()` rỗng → tab "Đang hoạt động" luôn empty.
-
 **BE — `chat-service`**
 - `ConversationService.getOnlineManagerIds()`: bỏ Feign, dùng `webSocketSessionRepository.findAll()` lấy tất cả active session userIds trực tiếp từ MongoDB. FE tự lọc ra manager qua `managerList`.
-- Import `WebSocketSession` entity vào `ConversationService`.
 
 **FE Manager — `ManagerChatSidebar.tsx`**
 - `handleShowTransfer`: luôn gọi `getOnlineManagers()` HTTP fresh mỗi lần mở picker (không dùng Redux cache stale). Dùng `Promise.all` song song với fetch manager list.
 - Thêm local state `onlineManagerIds` thay thế `onlineUserIds` từ Redux cho transfer picker.
 
----
-
 ### [DONE] file-service — chuyển upload sang S3
 
 **BE — `file-service`**
 - `FileController`: inject `FileServiceImpl` trực tiếp (bỏ `FileService`), upload gọi `fileServiceImpl.uploadImage(base64, "chat-attachments")`.
-- `FileServiceImpl` (`com.tam.file.service.FileServiceImpl`): class duy nhất xử lý upload — validate ảnh qua Gemini, upload lên S3, lưu metadata vào `UploadedFile` MongoDB collection.
-- `S3FileUploadService`: xử lý tương tác S3 (`upload`, `delete`). URL trả về dạng `https://{bucket}.s3.{region}.amazonaws.com/{key}` — FE dùng URL này trực tiếp, không qua download proxy.
-- `FileService` (local storage cũ): vẫn còn trong codebase nhưng không còn được controller gọi.
-- Download endpoint: hiện **comment out** — S3 file có URL public dùng trực tiếp, không cần proxy.
-- File duplicate `com.tam.file.service.impl.FileServiceImpl` đã bị xóa — chỉ giữ class ở package `com.tam.file.service`.
+- `FileServiceImpl`: validate ảnh qua Gemini, upload lên S3, lưu metadata vào `UploadedFile` MongoDB collection.
+- `S3FileUploadService`: xử lý tương tác S3 (`upload`, `delete`). URL trả về dạng `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
+- Download endpoint: hiện **comment out** — S3 file có URL public dùng trực tiếp.
 
 **Kiến trúc file-service cần nhớ**
 - `UploadedFile` entity lưu: `url` (full S3 URL), `publicId` (S3 key), `format`, `fileSize`, `fileType`, `resourceType`.
-- `app.file.download-prefix` trong yaml chỉ dành cho local storage mode cũ — với S3, FE dùng `url` từ `UploadImageResponse` trực tiếp.
 - `/media/**` đã được thêm vào `permit-all-endpoints` → upload không cần auth token.
 
 ### [DONE] Notification system — lưu thông báo vào DB
@@ -333,12 +321,11 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 **Đã publish:**
 - `identity-service/AuthenticationService.authenticate()` → type `LOGIN`
 - `identity-service/UserService.createUser()` → type `REGISTER`
-- `order-service/OrderServiceImpl.publishOrderCreatedEvent()` → type `ORDER_PLACED` (chỉ COD, dùng `identityUserId` từ request)
+- `order-service/OrderServiceImpl.publishOrderCreatedEvent()` → type `ORDER_PLACED`
 
 **Kiến trúc notification cần nhớ**
 - `notification.store` topic → `NotificationEventConsumer` → `NotificationServiceImpl.create()` → MongoDB `notifications`.
-- `identityUserId` (JWT `sub`) ≠ `customerId` (MongoDB ObjectId của Customer profile) — luôn dùng identity userId khi publish `StoreNotificationEvent`.
-- FE decode JWT bằng `utils/jwtUtils.ts:decodeJwtSub()` để lấy identity userId.
+- `identityUserId` (JWT `sub`) ≠ `customerId` (MongoDB ObjectId của Customer profile).
 - `notification-service` REST: `GET /api/notifications`, `PUT /{id}/read`, `PUT /read-all`, `PUT /{id}/action-done`.
 
 ### [DONE] Profile completion flow
@@ -355,114 +342,94 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 ### [DONE] Product image upload qua gRPC + avatar client qua file-service HTTP
 
 **BE — `product-service/ProductServiceImpl`**
-- `addProduct` + `updateProduct`: `isBase64(img)` check → nếu là base64 thì `fileServiceGrpcClient.uploadFile(base64, "product")` → lưu S3 URL. Tương tự cho `detailReq.getImagesUpload()` (gallery images).
-- Upload TRƯỚC khi ghi DB → tránh duplicate product khi client retry.
+- `addProduct` + `updateProduct`: `isBase64(img)` check → nếu là base64 thì `fileServiceGrpcClient.uploadFile(base64, "product")` → lưu S3 URL.
 
 **FE — `UI/client/Header.tsx`**
-- `handleAvatarChange`: gọi `messageApi.uploadFile(file)` → HTTP POST `/media/upload` lên file-service → S3 URL → `userApi.updateAvatar(url)`. FE không gọi gRPC trực tiếp (gRPC chỉ dành cho BE-to-BE).
+- `handleAvatarChange`: gọi `messageApi.uploadFile(file)` → HTTP POST `/media/upload` lên file-service → S3 URL → `userApi.updateAvatar(url)`.
 
-### [DONE] Flexible product attributes — thay thế fixed spec fields
+### [DONE] Flexible product attributes
 
 **BE — `product-service`**
 - `ProductAttribute.java` (entity embedded): `name`, `value`, `unit`, `description`.
-- `ProductDetail.java`: bỏ 9 field cứng (processor, ram, storage, ...), thay bằng `List<ProductAttribute> attributes`.
-- `ProductAttributeRequest.java` + `ProductAttributeResponse.java`: DTO mới.
-- `ProductDetailCreationRequest.java` + `UpdateProductDetailReq.java`: thay fixed fields bằng `List<ProductAttributeRequest> attributes`.
-- `ProductDetailResponse.java`: thay fixed fields bằng `List<ProductAttributeResponse> attributes`.
-- `ProductDetailMapper.java`: thêm mapping methods `toProductAttribute`, `toProductAttributeResponse`, `toProductAttributeList`, `toProductAttributeResponseList`.
-- `ProductDetailServiceImpl.java`: cập nhật `addProductDetail` + `updateProductDetail` dùng attribute list.
+- `ProductDetail.java`: bỏ 9 field cứng, thay bằng `List<ProductAttribute> attributes`.
+- `ProductDetailMapper.java`: thêm mapping methods cho attribute list.
 
 **FE — `UI/manager`**
-- `product.schema.ts`: thêm `productAttributeSchema` + `ProductAttribute` type; `productDetailSchema` dùng `attributes: z.array(...)`.
-- `Admin/Product.tsx`: bỏ 9 spec input cứng; thêm section "Thông số kỹ thuật" với nút "+ Thêm thuộc tính" → mỗi row gồm Tên | Giá trị | Đơn vị | Mô tả | X. Dữ liệu lưu trong state `attributes` riêng, gửi kèm `detailRequest.attributes` khi submit. Đã bỏ Excel import (không phù hợp với cấu trúc động mới).
+- `product.schema.ts`: thêm `productAttributeSchema` + `ProductAttribute` type.
+- `Admin/Product.tsx`: section "Thông số kỹ thuật" với nút "+ Thêm thuộc tính" → mỗi row gồm Tên | Giá trị | Đơn vị | Mô tả | X.
 
 **FE — `UI/client`**
-- `ProductDetail.tsx`: thay `specs` array cứng bằng `product.attributes ?? []`; `SpecRow` render label + value + unit; description block dùng `attributes.slice(0, 5)` thay vì hardcode field names.
-
-**Lưu ý migration**: Dữ liệu `ProductDetail` cũ trong MongoDB vẫn còn các field cứng — sẽ được bỏ qua (MongoDB schemaless). Sản phẩm mới sẽ dùng `attributes`.
+- `ProductDetail.tsx`: thay `specs` array cứng bằng `product.attributes ?? []`.
 
 ### [DONE] Manager — multi-category filter + category management UI + fix 403
 
 **BE — `product-service`**
-- `ProductRepository`: thêm `findByCategoryIn(List<String> categories, Pageable pageable)` với `@Query("{ 'category': { $in: ?0 } }")`.
-- `ProductService` + `ProductServiceImpl`: thêm `getProductsByCategories(List<String>, int, int)` và `countProductsByCategories(List<String>)` (dùng `mongoTemplate.count` per-category).
-- `ProductController`: thêm `GET /products/by-categories?names=...&page=` và `GET /products/category-counts?names=...`.
-
-**FE — `UI/manager`**
-- `endpoint.ts`: thêm `PRODUCTS_BY_CATEGORIES`, `PRODUCTS_CATEGORY_COUNTS`.
-- `adminApi.ts`: thêm `listProductsByCategories(categories, page)` và `getCategoryCounts(categoryNames)` — build URL thủ công với repeated `names=` params (Spring `@RequestParam List<String>` không nhận `names[0]=`).
-- `Admin/Product.tsx`:
-  - Multi-select dropdown filter theo danh mục (checkbox, click-outside đóng).
-  - Filter chips hiển thị danh mục đang chọn, nút xóa từng chip.
-  - `loadProducts(page, catFilters)`: nếu có filter → `listProductsByCategories`, ngược lại `listProducts`.
-  - Category tab: search input, scrollable list `max-h-[calc(100vh-280px)]`, count badge per item, "X / Y danh mục" footer.
-  - "Thêm danh mục" input chuyển lên header (giống tab sản phẩm), bỏ `pt-24`.
+- `ProductRepository`: thêm `findByCategoryIn(List<String> categories, Pageable pageable)`.
+- `ProductController`: thêm `GET /products/by-categories` và `GET /products/category-counts`.
 
 **BE — `user-service`** — fix 403 MANAGER gọi `GET /api/admin/customers`
-- `CustomerServiceImpl.getAllCustomers`: đổi `@PreAuthorize("hasRole('ADMIN')")` → `@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")`.
-- Root cause: controller cho phép MANAGER nhưng service method chặn lại → `AccessDeniedException` → `GlobalExceptionHandler` trả code 1007.
+- `CustomerServiceImpl.getAllCustomers`: đổi `@PreAuthorize` → cho phép cả MANAGER.
+
+**FE — `UI/manager`**
+- Multi-select dropdown filter theo danh mục, filter chips, category tab với search + count badge.
 
 **FE — `UI/client`**
-- `product.ts` slice: thêm `fetchProductsByCategories` thunk + reducers.
-- `Product.tsx`: dùng `fetchProductsByCategories` khi `selectedCategories.length > 0` (hỗ trợ multi-select thay cho single).
+- `product.ts` slice: thêm `fetchProductsByCategories` thunk (hỗ trợ multi-select).
 
 ### [DONE] Import sản phẩm từ Excel / Google Sheets (UI/manager)
 
-**FE — `UI/manager/src/pages/Admin/ImportProductDialog.tsx`**
-- Thứ tự 8 cột cố định đúng theo `Product` entity: Tên · URL ảnh · Giá · Đơn vị · Số lượng · **Danh mục** · Nhà cung cấp · Địa chỉ NCC (cột category được dịch về đúng vị trí trước supplier).
-- Cột thuộc tính linh hoạt từ cột 8 trở đi, mỗi thuộc tính gồm 4 cột (Tên / Giá trị / Đơn vị / Mô tả), tối đa 20 thuộc tính.
-- Upload file `.xlsx/.xls` trực tiếp hoặc nhập URL Google Drive / Google Sheets.
-- Với Google Sheets: thử CSV pub URL trước (không bị CORS với sheet "Published to the web"), fallback sang xlsx export, có hướng dẫn "Publish to the web".
-- Preview table hiển thị đủ 8 cột cố định gồm cả Danh mục (badge màu xanh).
-- Cảnh báo validation trước khi import: highlight dòng thiếu tên, giá = 0, thiếu ảnh.
-- Progress bar real-time, kết quả chi tiết từng dòng (OK / lỗi), nút "Import thêm" để nhập thêm file khác mà không đóng dialog.
-- Nút tải `product_template.xlsx` vẫn giữ nguyên.
+- 8 cột cố định + cột thuộc tính linh hoạt từ cột 8 trở đi (tối đa 20 thuộc tính × 4 cột).
+- Upload `.xlsx/.xls` trực tiếp hoặc URL Google Drive / Google Sheets.
+- Preview table, validation warnings, progress bar, kết quả chi tiết từng dòng.
 
 ### [DONE] Voucher PUBLIC/PRIVATE + giá sản phẩm sau voucher
 
 **BE — `order-service`**
-- `Voucher` entity: đã có `accessType` (PUBLIC/PRIVATE), `userId` (null = public), `maxUsagePerUser`, `VoucherUsage` per-user tracking.
-- `VoucherServiceImpl.applyVoucher`: sau khi apply PRIVATE voucher → set `isActive=false` (soft-delete, biến mất khỏi danh sách available).
-- `VoucherServiceImpl.unapplyVoucher`: khi unapply PRIVATE voucher → set `isActive=true` (khôi phục nếu đơn hàng bị hủy).
-- `VoucherRepository.findAvailableForUser`: query lọc `isActive=true`, chưa hết hạn, chưa hết lượt, và (PUBLIC hoặc PRIVATE với đúng userId).
+- `VoucherServiceImpl.applyVoucher`: sau khi apply PRIVATE voucher → set `isActive=false`.
+- `VoucherServiceImpl.unapplyVoucher`: khi unapply PRIVATE voucher → set `isActive=true`.
 
 **FE — `UI/client`**
-- `redux/slices/voucher.ts` (mới): `AvailableVoucher` type, `fetchAvailableVouchers` thunk (gọi `GET /vouchers`), `clearVouchers` action, `computeBestDiscount(price, vouchers)` helper.
-- `redux/store.tsx`: thêm `voucherReducer`.
-- `App.tsx`: `useEffect` load voucher khi `isLogin=true`, clear khi logout.
-- `ProductCard.tsx`: dùng `computeBestDiscount` để tính giá sau voucher tốt nhất; hiển thị giá gốc gạch ngang + giá sau giảm màu đỏ + badge "-X%"/"-Yđ" góc trái trên.
-- `ProductSlider.tsx`: tương tự ProductCard — hiển thị giá sau voucher + badge "Có voucher" khi user đăng nhập và có voucher áp dụng được.
-
-**Kiến trúc quan trọng**
-- Voucher PRIVATE: soft-delete (isActive=false) sau khi dùng, không hard-delete để tránh mất FK của OrderVoucher và có thể khôi phục khi unapply.
-- Giá "sau voucher" trên product card là giá ước tính (giả định mua 1 sản phẩm, áp voucher tốt nhất). Giá thực tế vẫn tính ở Checkout với order total.
-- Chỉ hiển thị giá sau voucher khi user đã đăng nhập (voucher list từ `state.voucher.available`).
+- `redux/slices/voucher.ts`: `fetchAvailableVouchers` thunk, `computeBestDiscount(price, vouchers)` helper.
+- `ProductCard.tsx` + `ProductSlider.tsx`: hiển thị giá sau voucher tốt nhất + badge "-X%"/"-Yđ".
 
 ### [DONE] order-service — Cart, Order, Voucher (BE + FE client)
 
-**BE — `order-service`** (migrate MongoDB → MySQL, db `orderservice`)
-- Entity: `Cart 1──* CartItem`, `Order 1──* OrderItem`, `Order *──* Voucher` (qua `OrderVoucher`), tất cả JPA/Hibernate.
-- `CartItem`: thêm `productImage TEXT` để lưu S3 URL ảnh sản phẩm.
-- `CartServiceImpl.upsertItem`: lazy create cart, SET quantity (không ADD).
+**BE — `order-service`** (migrate MongoDB → MySQL)
+- Entity: `Cart 1──* CartItem`, `Order 1──* OrderItem`, `Order *──* Voucher`.
 - API Cart: `GET /cart`, `PUT /cart/items`, `DELETE /cart/items/{id}`, `DELETE /cart/clear`.
 - API Order client: `POST /api/orders/checkout`, `GET /api/orders`, `GET /api/orders/{id}`, `PATCH /api/orders/{id}/cancel`.
 - API Order manager: `PATCH /api/orders/{id}/status`, `DELETE /manager/orders/{id}`.
-- API Voucher manager: CRUD `/manager/vouchers/**`.
-- API Voucher client: `POST /vouchers/apply`, `DELETE /vouchers/unapply`, `GET /vouchers` (public).
-- Kafka: `UserRegistrationConsumer` lắng nghe `user.registered` → tạo Cart mới.
-- `PermissionInitConfig`: thêm đầy đủ quyền cart/order/voucher cho USER và MANAGER role.
+- Kafka: `UserRegistrationConsumer` → tạo Cart mới.
 
 **FE — `UI/client`**
-- Toàn bộ cart/order layer migrate từ service cũ sang order-service mới (không còn dùng port 8282).
-- `cartApi`, `orderApi`, `voucherApi` mới; Redux thunks/slices cập nhật; types mới.
-- `ProductDetail`, `ProductSlider`, `ProductCard`: truyền `productImage` khi add to cart.
-- **Cart page** viết lại kiểu Shopee: checkbox per item, sticky bottom bar, "Mua hàng (N)" → navigate `/checkout`.
-- **Checkout page** (`/checkout`): địa chỉ, danh sách item, voucher picker/input, payment method, tóm tắt + "Đặt hàng".
-- **Order page** + **Order detail page**: hiển thị theo schema mới, nút "Hủy đơn hàng".
+- Cart page (kiểu Shopee), Checkout page, Order page + Order detail page.
+
+### [DONE] i18n — Chuyển đổi ngôn ngữ (VI/EN) cho cả 3 UI app
+
+- Dùng `react-i18next` cho `UI/client`, `UI/manager`, `UI/admin`.
+- Mỗi app có `src/i18n/` riêng với file `locales/vi/*.json` và `locales/en/*.json`.
+- Nút chuyển ngôn ngữ đặt ở Header, lưu lựa chọn vào `localStorage`.
+- Toàn bộ label, button, toast, placeholder dùng `t('key')` — không hardcode text.
+
+### [DONE] Manager UI — attribute tooltip + auto-create category
+
+- Attribute tooltip hiển thị mô tả khi hover.
+- Auto-create category khi nhập tên mới không có trong danh sách.
+
+### [DONE] Manager customer list + Admin user management
+
+- Manager `Customer.tsx`: bỏ "Grant Admin" + cột Role, thêm cột "Xem chi tiết" mở slide-out panel.
+- Admin `UserManagement.tsx`: bỏ cột City, thêm cột STT, nút "Xem chi tiết" → slide-out panel có "Grant Admin" action.
+- Cả hai chỉ lấy data từ user-service.
+
+### [DONE] Fix bug client — token hết hạn và redirect login
+
+- Fix vòng lặp reload khi token hết hạn gây 429.
+- Fix redirect về login nhưng các API vẫn 200 không redirect về homepage.
 
 ---
 
-## Rule for todo: 
+## Rule for todo:
 - Nếu trong 1 job trong primary mà có liên quan đến việc hiện thông báo trong secondary, hãy làm sau khi làm xong cái job primary đó
 - Nếu hiện thực thêm API gì, hãy viết ngay nó vào file PermissionInitConfig để các API đó vào trong db
 - Trong quá trình thực hiện todo, nếu có chỗ nào cần lấy data từ service khác, tức service-to-service thì luôn dùng grpc
@@ -470,96 +437,153 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 ## TODO (ưu tiên từ trên xuống)
 
 ## primary
-1. **i18n — Chuyển đổi ngôn ngữ (VI/EN) cho cả 3 UI app**
-   - Dùng `react-i18next` cho `UI/client`, `UI/manager`, `UI/admin`
-   - Mỗi app có `src/i18n/` riêng với file `locales/vi/*.json` và `locales/en/*.json`
-   - Nút chuyển ngôn ngữ đặt ở Header, lưu lựa chọn vào `localStorage`
-   - Toàn bộ label, button, toast, placeholder đều dùng `t('key')` — không hardcode text
-   - BE không thay đổi gì (chỉ là presentation layer)
 
-2. Ở client UI:
-  - ở client nếu token hết hạn thì nó gọi api refresh rồi tự reload lại UI liên tục xong cuối cùng rơi vào 429 do bị chặn spam.
-  - khi thêm sản phẩm vào giỏ hàng nó báo phải đăng nhập mới thực hiện được hành động này xong redirect về login. Nếu load lại ngay lúc này thì các api fetch profile hay product lên homepage vẫn 200 mà vẫn ở login
-3. [DONE] Ở manager UI — attribute tooltip + auto-create category (đã có sẵn).
+1. **Silent refresh qua socket — tận dụng chat-service emit data changes**
+   - Ý tưởng: khi bất kì user của role nào thực hiện việc mà có thay đổi db (client mua
+     hàng/sửa thông tin/đặt hàng, manager nhập hàng/sửa thông tin khách, admin cập nhật
+     quyền/gỡ quyền) thì chat-service emit xuống socket của user đang online để FE tự
+     fetch lại data mà không reload trang.
+   - Hiện thực:
+     * Business service gọi gRPC tới chat-service sau khi commit DB — chat-service cần
+       thêm gRPC server port 8199. Proto:
+         service NotifyService {
+           rpc Notify (NotifyRequest) returns (NotifyResponse);
+         }
+         message NotifyRequest {
+           string targetUserId = 1;  // emit đúng 1 user (ORDER_UPDATED, FORCE_LOGOUT)
+           string dataType     = 2;
+           string action       = 3;
+           string message      = 4;
+           string targetRole   = 5;  // emit tất cả user thuộc role đang online
+         }
+         message NotifyResponse {
+           bool delivered = 1;
+         }
+     * Chat-service tra WebSocketSessionRepository:
+       — targetUserId có giá trị → emit đúng user đó
+       — targetRole có giá trị → query theo role, emit tất cả đang online
+     * Payload socket: { dataType, action: "SILENT_FETCH" | "FORCE_LOGOUT", message? }
+       — SILENT_FETCH: FE invalidate cache âm thầm khi window focused
+       — FORCE_LOGOUT: FE hiện toast → đếm ngược 10s → logout (dùng cho ROLE_CHANGED)
+     * Tận dụng tối đa code đã có, không thêm infrastructure mới ngoài gRPC port.
+     * Cập nhật bảng port: chat-service 8085 (HTTP) | 8099 (Socket.IO) | 8199 (gRPC mới)
+   - Lưu ý:
+     * Gọi gRPC sau khi DB commit thực sự hoàn tất — nếu dùng @Transactional thì gọi
+       trong TransactionSynchronization.afterCommit(), không gọi trong transaction đang chạy.
+     * gRPC call phải là fire-and-forget — wrap try-catch, log warning nếu thất bại,
+       không throw lên caller. Chat-service down không được làm ảnh hưởng flow nghiệp vụ chính.
+     * Zombie session: WebSocketSession collection phải có TTL index trên field
+       updatedAt (expireAfterSeconds = 90) — MongoDB tự dọn session không được heartbeat refresh.
+       SocketHandler refresh updatedAt mỗi khi nhận ping từ client.
+     * Chỉ invalidate cache khi window đang focused (document.visibilityState === "visible").
+     * FE debounce listener ~500ms theo dataType — chỉ fetch 1 lần sau event cuối cùng.
+     * Polling thưa (~60s) chỉ khởi động khi socket ở trạng thái degraded (missed heartbeat
+       hoặc reconnecting) — dừng ngay khi socket reconnect thành công.
+     * Sau khi socket reconnect, FE fetch lại toàn bộ data một lần vì có thể đã miss event.
+     * Multi-tab: WebSocketSessionRepository trả List theo userId → emit tất cả socket đang mở.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
 
-4. [DONE] Manager customer list + Admin user management:
-  - Manager `Customer.tsx`: bỏ "Grant Admin" + cột Role, thêm cột "Xem chi tiết" mở slide-out panel.
-  - Admin `UserManagement.tsx`: bỏ cột City, thêm cột STT, nút "Xem chi tiết" → slide-out panel có "Grant Admin" action.
-  - Cả hai chỉ lấy data từ user-service (tự nhiên chỉ là client, không có manager/admin).
+2. **Admin — Grouping permissions theo endpoint gốc**
+   - Nhóm các permission có chung endpoint gốc thành 1 card (ví dụ `/api/orders/**` → card "Orders").
+   - Trong card: danh sách permission, mỗi permission 1 checkbox riêng.
+   - Card có 1 checkbox master ở header: tick → tick hết tất cả trong card; bỏ → bỏ hết.
+   - Nút "Lưu" per card (không lưu tổng) — chỉ gửi API những permission thuộc card đó.
+   - Logic nhóm: parse prefix từ endpoint path (ví dụ `/api/orders`, `/api/products`, `/api/admin/users`...) — nhóm theo 2-3 segment đầu.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
 
-5. Tận dụng socket của chat-service để silent refresh data
-  - Ý tưởng: khi bất kì user của role nào thực hiện việc mà có thay đổi db (client mua
-    hàng/sửa thông tin/đặt hàng, manager nhập hàng/sửa thông tin khách, admin cập nhật
-    quyền/gỡ quyền) thì chat-service emit xuống socket của user đang online để FE tự
-    fetch lại data mà không reload trang.
-  - Hiện thực:
-    * Business service gọi gRPC tới chat-service sau khi commit DB — chat-service cần
-      thêm gRPC server port 8199. Proto:
-        service NotifyService {
-          rpc Notify (NotifyRequest) returns (NotifyResponse);
-        }
-        message NotifyRequest {
-          string targetUserId = 1;  // emit đúng 1 user (ORDER_UPDATED, FORCE_LOGOUT)
-          string dataType     = 2;
-          string action       = 3;
-          string message      = 4;
-          string targetRole   = 5;  // emit tất cả user thuộc role đang online
-                                    // (PRODUCT_UPDATED → CLIENT,
-                                    //  ROLE_CHANGED    → để trống, dùng targetUserId)
-        }
-        message NotifyResponse {
-          bool delivered = 1;
-        }
-    * Chat-service tra WebSocketSessionRepository:
-      — targetUserId có giá trị → emit đúng user đó
-      — targetRole có giá trị → query theo role, emit tất cả đang online
-      Business service chỉ gọi gRPC 1 lần duy nhất, không lặp per-user.
-    * Payload socket: { dataType, action: "SILENT_FETCH" | "FORCE_LOGOUT", message? }
-      — SILENT_FETCH: FE invalidate cache âm thầm khi window focused
-      — FORCE_LOGOUT: FE hiện toast → đếm ngược 10s → logout (dùng cho ROLE_CHANGED)
-    * Tận dụng tối đa code đã có, không thêm infrastructure mới ngoài gRPC port.
-    * Cập nhật bảng port: chat-service 8085 (HTTP) | 8099 (Socket.IO) | 8199 (gRPC mới)
-  - Lưu ý:
-    * Gọi gRPC sau khi DB commit thực sự hoàn tất — nếu dùng @Transactional thì gọi
-      trong TransactionSynchronization.afterCommit(), không gọi trong transaction đang
-      chạy. Tránh FE fetch trước khi data visible.
-    * gRPC call phải là fire-and-forget — wrap try-catch, log warning nếu thất bại,
-      không throw lên caller. Chat-service down không được làm ảnh hưởng flow nghiệp
-      vụ chính.
-    * Phân quyền emit: chat-service chỉ emit tới userId đã xác thực khi connect socket
-      — targetUserId trong gRPC request phải khớp với userId trong WebSocketSession,
-      tránh trigger refresh nhầm user.
-    * Zombie session: WebSocketSession collection phải có TTL index trên field
-      updatedAt (expireAfterSeconds = 90) — MongoDB tự dọn session không được
-      heartbeat refresh. SocketHandler refresh updatedAt mỗi khi nhận ping từ
-      client. Không cần xóa thủ công trong disconnect handler.
-    * Chỉ invalidate cache khi window đang focused (document.visibilityState === "visible").
-    * Multi-tab / multi-session: WebSocketSessionRepository trả List<WebSocketSession>
-      theo userId → emit tất cả socket đang mở. Mỗi tab nhận event độc lập, tự
-      invalidate cache — không cần đồng bộ giữa các tab.
-    * Thao tác nhanh liên tiếp (ví dụ cập nhật đơn 3 lần trong 1 giây): FE debounce
-      listener ~500ms theo dataType — chỉ fetch 1 lần sau khi event cuối cùng đến,
-      bỏ qua các event trước đó cùng loại.
-    * Hai phiên cùng thao tác 1 object (ví dụ manager A và manager B cùng sửa product):
-      BE không cần xử lý thêm — cả hai đều nhận SILENT_FETCH, cả hai fetch lại, data
-      cuối cùng trong DB thắng (last-write-wins). Không cần lock hay conflict resolution
-      ở tầng socket.
-    * Nếu emit thất bại (socket đã đóng đúng lúc): log lại, không retry — event đã
-      stale, FE sẽ tự đồng bộ lần sau khi reconnect.
-    * Polling thưa chỉ khởi động khi socket ở trạng thái degraded (missed heartbeat
-      hoặc reconnecting) — dừng ngay khi socket reconnect thành công. Implement bằng
-      cách track socketHealthy state, bật/tắt polling interval (~60s) theo state đó.
-      Không chạy song song khi socket healthy.
-    * Không để chat-service gọi notification-service trong cùng flow này — hai luồng
-      độc lập hoàn toàn.
-    * Sau khi socket reconnect, FE fetch lại toàn bộ data một lần vì có thể đã miss
-      event trong lúc mất kết nối.
+3. **Client — Thanh toán PayPal Sandbox trong modal (không redirect)**
+   - Flow:
+     * Bấm "Đặt hàng" với phương thức VNPay/PayPal
+       → POST `/orders/checkout` → tạo Order `status = PENDING_PAYMENT`
+       → BE gọi PayPal API tạo payment order → trả về `paypalOrderId`
+       → FE mở PaymentModal (UI tự thiết kế, không redirect ra ngoài)
+     * Trong modal nhúng PayPal JS SDK Sandbox vào div do mình chỉ định
+       — PayPal render button trong div, flow auth mở popup nhỏ của PayPal (không redirect toàn trang)
+     * Nút "Thanh toán" (PayPal SDK onApprove callback):
+       → capture payment qua PayPal API
+       → PATCH order `status = PAID`
+       → đóng modal, redirect sang trang đơn hàng
+       → push notification: "Đặt hàng thành công ✓"
+     * Nút "Hủy" (tự làm):
+       → void PayPal order
+       → PATCH order `status = CANCELLED`
+       → đóng modal
+       → push notification: "Đơn hàng đã bị hủy"
+     * Nút "Tạm dừng" (tự làm):
+       → đóng modal, giữ nguyên PayPal order chưa capture
+       → PATCH `/orders/{id}/payment-pause` → set `paymentExpiresAt = now + 30 phút`
+       → FE hiện countdown timer lấy từ `paymentExpiresAt` ở trang checkout
+       → push notification: "Bạn có 30 phút để hoàn tất thanh toán"
+       → Scheduler trong order-service kiểm tra mỗi phút:
+           nếu `status = PENDING_PAYMENT` và `paymentExpiresAt < now`
+           → void PayPal order + PATCH `status = CANCELLED`
+           → push notification: "Đơn hàng đã hết hạn thanh toán"
+   - BE cần thêm (order-service):
+     * `POST /orders/{id}/paypal/create` → tạo PayPal order, trả `paypalOrderId`
+     * `POST /orders/{id}/paypal/capture` → capture sau khi user approve
+     * `POST /orders/{id}/paypal/void` → hủy PayPal order
+     * `PATCH /orders/{id}/payment-pause` → set `paymentExpiresAt`
+     * Scheduler `@Scheduled` check expired PENDING_PAYMENT orders
+   - PayPal Sandbox credentials lưu trong `BE/.env`, không hardcode.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+
+4. **Saga pattern — rollback cho toàn bộ business flow có lỗi**
+   - Hiện tại `saga-orchestrator` service đã có nhưng chưa implement compensating transaction.
+   - Các flow cần áp dụng saga rollback (theo thứ tự ưu tiên):
+
+   **Flow 1 — Checkout (quan trọng nhất)**
+   ```
+   Steps:
+     1. Tạo Order (order-service)
+     2. Trừ stock sản phẩm (product-service) ← gRPC
+     3. Áp voucher / trừ usage (order-service)
+     4. Tạo PayPal payment order (nếu online payment)
+   Compensate nếu fail tại step N:
+     - Step 2 fail → xóa Order
+     - Step 3 fail → hoàn stock + xóa Order
+     - Step 4 fail → hoàn voucher + hoàn stock + xóa Order
+   ```
+
+   **Flow 2 — Tạo user mới**
+   ```
+   Steps:
+     1. Tạo identity account (identity-service)
+     2. Tạo customer profile (user-service) ← Kafka
+     3. Tạo Cart (order-service) ← Kafka
+   Compensate nếu fail:
+     - Step 2 fail → xóa identity account
+     - Step 3 fail → xóa customer profile + xóa identity account
+   ```
+
+   **Flow 3 — Cập nhật trạng thái đơn hàng (manager)**
+   ```
+   Steps:
+     1. Cập nhật Order status (order-service)
+     2. Hoàn stock nếu CANCELLED (product-service) ← gRPC
+     3. Hoàn voucher nếu CANCELLED (order-service)
+   Compensate nếu fail:
+     - Step 2 fail → rollback Order status về trạng thái trước
+     - Step 3 fail → rollback stock + rollback Order status
+   ```
+
+   - Hiện thực qua `saga-orchestrator`:
+     * Orchestrator nhận command từ business service qua Kafka
+     * Orchestrator gọi từng step theo thứ tự, lắng nghe reply
+     * Nếu step nào fail → orchestrator gửi compensate command ngược lại
+     * Mỗi service cần implement cả execute và compensate handler
+     * State của saga lưu trong orchestrator (MongoDB hoặc in-memory với Redis)
+   - Lưu ý:
+     * Idempotency: mỗi step phải idempotent — retry không gây side effect.
+     * Compensate phải luôn thành công (retry with backoff nếu cần).
+     * Không dùng distributed transaction (2PC) — chỉ dùng eventual consistency.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+
 ### secondary: Notification — trigger thêm sự kiện
 
 1. **`CHAT_ASSIGNED`** — `chat-service/ConversationService.claimConversation()`:
    - Publish tới `clientId` của conversation
    - "Yêu cầu hỗ trợ của bạn đã được {manager} tiếp nhận"
-   - publish notification event riêng, không lồng vào socket flow
+   - Publish notification event riêng, không lồng vào socket flow
 
 2. **`PROFILE_COMPLETED`** — `user-service/CustomerServiceImpl.completeProfile()`:
    - Cần thêm KafkaTemplate vào user-service (hiện chưa có)
@@ -567,13 +591,13 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ### Dashboard — UI/admin
 
-6. **Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
+3. **Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
 
 ### Monitoring — Admin UI System Logs
 
-7. **BE — log JSON** (10 service): thêm `logstash-logback-encoder` vào `pom.xml`, thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
-8. **BE — proxy endpoint** `identity-service/AdminLogController.GET /api/admin/logs` → gọi Loki `query_range`
-9. **FE — `UI/admin/SystemLogs.tsx`**: dropdown service, filter level (ERROR/WARN/INFO/DEBUG), date range, bảng log badge màu
+4. **BE — log JSON** (10 service): thêm `logstash-logback-encoder` vào `pom.xml`, thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
+5. **BE — proxy endpoint** `identity-service/AdminLogController.GET /api/admin/logs` → gọi Loki `query_range`
+6. **FE — `UI/admin/SystemLogs.tsx`**: dropdown service, filter level (ERROR/WARN/INFO/DEBUG), date range, bảng log badge màu
 
 ---
 
