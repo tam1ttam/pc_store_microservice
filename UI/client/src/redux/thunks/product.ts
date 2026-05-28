@@ -4,6 +4,25 @@ import { ProductsResponse, Product } from "../slices/product";
 import { get } from "@/services/api.service";
 import { ProductDetail } from "@/types";
 
+interface Category {
+    id: string;
+    name: string;
+    keyword: string;
+}
+
+export const fetchCategories = createAsyncThunk<Category[], void, { rejectValue: string }>(
+    "product/fetchCategories",
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await get<ApiResponse<Category[]>>(ENDPOINT.CATEGORIES);
+            if (response.data.code !== 1000) throw new Error(response.data.message || "API trả về lỗi");
+            return response.data.result;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || error.message || "Không thể tải danh mục sản phẩm");
+        }
+    }
+);
+
 interface FetchProductsParams {
     page?: number;
     size?: number;

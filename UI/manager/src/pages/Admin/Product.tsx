@@ -7,11 +7,12 @@ import { toast } from "@/hooks/use-toast";
 import { RootState } from "@/redux/store";
 import { adminApi } from "@/services/api/adminApi";
 import { Product as ProductType } from "@/types";
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, FileSpreadsheet, Layers, Pencil, Plus, Tag, Trash, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, FileSpreadsheet, Layers, Pencil, Plus, Tag, Trash, X, BarChart3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import ImportProductDialog from "./ImportProductDialog";
+import ProductAnalytics from "@/components/ProductAnalytics";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -22,7 +23,7 @@ type Category = { id: string; keyword: string; name: string };
 
 const Product = () => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<"products" | "categories">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "categories" | "analytics">("products");
     const [products, setProducts] = useState<ProductType[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -480,6 +481,10 @@ const Product = () => {
                     className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${activeTab === "categories" ? "bg-white border border-b-white -mb-px text-primary" : "text-gray-500 hover:text-gray-700"}`}>
                     <Tag className="h-4 w-4 inline mr-1" />{t("product.tab_categories")}
                 </button>
+                <button onClick={() => setActiveTab("analytics")}
+                    className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${activeTab === "analytics" ? "bg-white border border-b-white -mb-px text-primary" : "text-gray-500 hover:text-gray-700"}`}>
+                    <BarChart3 className="h-4 w-4 inline mr-1" />{t("product.tab_analytics", "Thống kê")}
+                </button>
             </div>
 
             {/* Products tab */}
@@ -638,6 +643,9 @@ const Product = () => {
                     </p>
                 </div>
             )}
+
+            {/* Analytics tab */}
+            {activeTab === "analytics" && <ProductAnalytics />}
         </div>
     );
 };

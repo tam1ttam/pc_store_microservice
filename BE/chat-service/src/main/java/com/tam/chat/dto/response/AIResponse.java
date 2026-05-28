@@ -1,23 +1,17 @@
 package com.tam.chat.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Map;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import lombok.*;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AIResponse {
-    String answer;
-    String stats;
-    String status;
-    String error;
+    private boolean success;
+    private String response;
+    private String model;
+    private Map<String, Object> usage;
+    private String error;
 }

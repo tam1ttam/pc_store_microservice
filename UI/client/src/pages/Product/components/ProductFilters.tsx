@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CATEGORIES } from "@/data/categories";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 type Props = {
     searchQuery: string;
@@ -11,6 +12,7 @@ type Props = {
 
 const ProductFilters = ({ searchQuery, setSearchQuery, selectedCategories, setSelectedCategories }: Props) => {
     const { t } = useTranslation();
+    const categories = useSelector((state: RootState) => state.product.categories);
 
     const handleCheck = (category: string) => {
         if (selectedCategories.includes(category)) {
@@ -44,9 +46,9 @@ const ProductFilters = ({ searchQuery, setSearchQuery, selectedCategories, setSe
                         {t('product.categories')}
                     </label>
                     <div className="space-y-2">
-                        {CATEGORIES.map((cat) => (
+                        {categories.map((cat) => (
                             <label
-                                key={cat.keyword}
+                                key={cat.id}
                                 className="flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors"
                             >
                                 <div className="flex items-center gap-2">

@@ -37,7 +37,23 @@ export interface Message {
     me?: boolean;
 }
 
+export interface AIResponse {
+    success: boolean;
+    response: string;
+    model: string;
+    usage?: any;
+    error?: string;
+}
+
 export const messageApi = {
+    askAi: async (message: string, mode: "chat" | "agent"): Promise<AIResponse> => {
+        const res = await post<ApiResponse<AIResponse>>(ENDPOINT.CHAT.AI_CHAT, {
+            message,
+            mode,
+        });
+        return res.data.result;
+    },
+
     startStoreChat: async (): Promise<Conversation> => {
         const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.WITH_STORE, {});
         return res.data.result;

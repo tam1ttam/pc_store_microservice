@@ -44,4 +44,8 @@ public interface ProductService {
     Page<Product> getProductsByCategories(List<String> categories, int page, int size);
 
     java.util.Map<String, Long> countProductsByCategories(List<String> categories);
+
+    void incrementViewCount(String productId);
+
+    List<Product> getAllProductsAnalytics();
 }

@@ -68,8 +68,16 @@ export const adminApi = {
     },
 
     // Roles
-    updateUserRole: (userName: string) => {
-        return post(`${ENDPOINT.ADMIN}/update-role/${userName}`, {});
+    getRoles: () => {
+        return get(`${ENDPOINT.ADMIN}/roles`);
+    },
+
+    updateUserRole: (userName: string, roleName: string) => {
+        return post(`${ENDPOINT.ADMIN}/update-role/${userName}?roleName=${roleName}`, {});
+    },
+
+    updateUserProfile: (userName: string, profileData: any) => {
+        return put(`${ENDPOINT.LIST_CUSTOMER}/${userName}`, profileData);
     },
 
     // Audit history

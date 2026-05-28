@@ -26,6 +26,8 @@ public class Product {
     String name;
     String img;
     double price;
+    double importPrice;
+    int viewCount = 0;
     String unit;
     int inStock;
     String category;

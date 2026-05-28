@@ -17,6 +17,7 @@ import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.dto.response.OrderItemResponse;
 import com.tam.order.dto.response.OrderResponse;
 import com.tam.order.dto.response.OrderStatsResponse;
+import com.tam.order.dto.response.ProductAnalyticsResponse;
 import com.tam.order.entity.Cart;
 import com.tam.order.entity.CartItem;
 import com.tam.order.entity.Order;
@@ -24,6 +25,7 @@ import com.tam.order.entity.OrderItem;
 import com.tam.order.entity.OrderStatus;
 import com.tam.order.event.OrderCreatedEvent;
 import com.tam.order.event.OrderItemEvent;
+import com.tam.order.grpc.ProductGrpcClient;
 import com.tam.order.repository.CartRepository;
 import com.tam.order.repository.OrderRepository;
 import com.tam.order.service.OrderService;
@@ -42,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
     OrderRepository orderRepository;
     CartRepository cartRepository;
     KafkaTemplate<String, Object> kafkaTemplate;
+    ProductGrpcClient productGrpcClient;
 
     @Override
     public OrderResponse checkout(String identityUserId, CheckoutRequest request) {
@@ -184,6 +187,25 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    private void publishOrderStatusNotification(Order order, OrderStatus status) {
+        try {
+            kafkaTemplate.send(
+                    "notification.store",
+                    StoreNotificationEvent.builder()
+                            .userId(order.getIdentityUserId())
+                            .type("ORDER_STATUS_UPDATED")
+                            .title("Cập nhật trạng thái đơn hàng")
+                            .body(String.format("Đơn hàng #%s của bạn hiện có trạng thái: %s", order.getId(), status))
+                            .isSystem(false)
+                            .actionRequired(false)
+                            .referenceId(order.getId().toString())
+                            .referenceType("ORDER")
+                            .build());
+        } catch (Exception e) {
+            log.warn("Failed to publish order status notification for orderId={}: {}", order.getId(), e.getMessage());
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public OrderStatsResponse getStats() {
@@ -214,6 +236,52 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<Order> getAll() {
         return orderRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Order> getAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductAnalyticsResponse> getProductAnalytics() {
+        List<Order> orders = orderRepository.findAll().stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.PAID || o.getOrderStatus() == OrderStatus.DELIVERED)
+                .toList();
+
+        Map<String, Double> revenueMap = new HashMap<>();
+        Map<String, Long> soldMap = new HashMap<>();
+        Map<String, String> nameMap = new HashMap<>();
+
+        for (Order order : orders) {
+            for (OrderItem item : order.getItems()) {
+                String pid = item.getProductId();
+                revenueMap.put(pid, revenueMap.getOrDefault(pid, 0.0) + (item.getProductPrice() * item.getQuantity()));
+                soldMap.put(pid, soldMap.getOrDefault(pid, 0L) + item.getQuantity());
+                nameMap.put(pid, item.getProductName());
+            }
+        }
+
+        return revenueMap.keySet().stream()
+                .map(pid -> {
+                    double revenue = revenueMap.get(pid);
+                    long sold = soldMap.get(pid);
+                    double importPrice = productGrpcClient.getImportPrice(pid);
+
+                    // Lợi nhuận ước tính = Doanh thu - (Giá nhập * Số lượng bán)
+                    double profit = revenue - (importPrice * sold);
+
+                    return ProductAnalyticsResponse.builder()
+                            .productId(pid)
+                            .productName(nameMap.get(pid))
+                            .totalRevenue(revenue)
+                            .totalProfit(profit)
+                            .totalSold(sold)
+                            .build();
+                })
+                .toList();
     }
 
     OrderResponse toResponse(Order order) {
@@ -353,30 +421,23 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private void publishOrderStatusNotification(Order order, OrderStatus status) {
-        if (order.getIdentityUserId() == null || order.getIdentityUserId().isBlank()) return;
-        String body =
-                switch (status) {
-                    case DELIVERING -> String.format("Đơn hàng #%s đang được giao đến bạn.", order.getId());
-                    case DELIVERED -> String.format("Đơn hàng #%s đã được giao thành công.", order.getId());
-                    case CANCELLED -> String.format("Đơn hàng #%s đã bị huỷ.", order.getId());
-                    default -> String.format("Trạng thái đơn hàng #%s đã thay đổi.", order.getId());
-                };
-        try {
-            kafkaTemplate.send(
-                    "notification.store",
-                    StoreNotificationEvent.builder()
-                            .userId(order.getIdentityUserId())
-                            .type("ORDER_STATUS_CHANGED")
-                            .title(status.getStatus())
-                            .body(body)
-                            .isSystem(false)
-                            .actionRequired(false)
-                            .referenceId(order.getId().toString())
-                            .referenceType("ORDER")
-                            .build());
-        } catch (Exception e) {
-            log.warn("Failed to publish ORDER_STATUS_CHANGED for orderId={}", order.getId(), e);
+    @Override
+    public void confirmPayment(Long orderId, double amount) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getTotalPrice() != amount) {
+            log.warn(
+                    "Payment amount mismatch for order {}: expected {}, got {}",
+                    orderId,
+                    order.getTotalPrice(),
+                    amount);
+            throw new RuntimeException("Payment amount does not match order total");
         }
+
+        order.setPaid(true);
+        order.setOrderStatus(OrderStatus.DELIVERING);
+        orderRepository.save(order);
+        publishOrderStatusNotification(order, OrderStatus.DELIVERING);
+        log.info("Order {} marked as PAID via SePay", orderId);
     }
 }

@@ -8,10 +8,14 @@ export interface AIChatResponse {
 }
 
 export const aiApi = {
-    askQuestion: async (question: string): Promise<AIChatResponse> => {
+    askQuestion: async (question: string, mode: string = "chat", role: string = "MANAGER"): Promise<AIChatResponse> => {
         const response = await axios.post<{ code: number; result: AIChatResponse }>(
             '/api-gateway/chat-service/ai/ask',
-            { question }
+            {
+                message: question,
+                mode,
+                role
+            }
         )
         return response.data.result
     },

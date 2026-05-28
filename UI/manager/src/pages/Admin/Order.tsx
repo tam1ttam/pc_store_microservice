@@ -19,9 +19,11 @@ const OrderPage = () => {
     const fetchOrders = async () => {
         try {
             const response = await adminApi.listOrders(page);
-            setOrders(response.data.result?.content ?? []);
-            setTotalPages(response.data.result?.totalPages ?? 0);
+            const result = response.data?.result;
+            setOrders(result?.content ?? []);
+            setTotalPages(result?.totalPages ?? 0);
         } catch (error) {
+            console.error("Fetch orders error:", error);
             toast({
                 variant: "destructive",
                 title: t("order.fetchError"),
@@ -32,7 +34,7 @@ const OrderPage = () => {
 
     const handleUpdatePayment = async (orderId: string) => {
         try {
-            await adminApi.updatePaymentStatus(orderId);
+            await adminApi.updatePaymentStatus(orderId, "PAID");
             toast({
                 title: t("order.updatePaymentSuccess"),
                 description: t("order.updatePaymentSuccessDesc")

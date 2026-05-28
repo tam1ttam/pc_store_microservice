@@ -39,7 +39,9 @@
       "Bash(./mvnw clean *)",
       "Bash(mvn -version)",
       "Bash(git push *)",
-      "Bash(set MAVEN_OPTS=-Xmx512m)"
+      "Bash(set MAVEN_OPTS=-Xmx512m)",
+      "Bash(New-Item -ItemType Directory -Force \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\entity\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\repository\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\service\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\controller\")",
+      "Bash(dir /s /b UI\\\\client\\\\src\\\\components\\\\PaymentModal.tsx)"
     ]
   }
 }

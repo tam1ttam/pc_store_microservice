@@ -7,4 +7,6 @@ export const orderApi = {
     getOrderById: (id: number) => get(`${ENDPOINT.ORDER}/${id}`),
 
     cancelOrder: (id: number) => patch(ENDPOINT.ORDER_CANCEL(id), {}),
+
+    getPaymentStatus: (paymentId: string) => get(`${ENDPOINT.PAYMENT_STATUS}/${paymentId}`),
 };

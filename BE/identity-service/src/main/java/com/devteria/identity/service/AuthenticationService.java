@@ -58,6 +58,7 @@ public class AuthenticationService {
     InvalidatedTokenRepository invalidatedTokenRepository;
     RefreshTokenRepository refreshTokenRepository;
     KafkaTemplate<String, Object> kafkaTemplate;
+    UserVisitService userVisitService;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -103,6 +104,7 @@ public class AuthenticationService {
             AuthenticationRequest request, HttpServletResponse response, String cookieName) {
         User user = verifyCredentials(request);
         issueRefreshCookie(response, cookieName, user.getId());
+        userVisitService.recordVisit(user.getId());
 
         try {
             kafkaTemplate.send(
@@ -131,6 +133,7 @@ public class AuthenticationService {
         if (!hasRequiredRole) throw new AppException(ErrorCode.UNAUTHORIZED_FOR_PORTAL);
 
         issueRefreshCookie(response, cookieName, user.getId());
+        userVisitService.recordVisit(user.getId());
         return buildAuthResponse(user);
     }
 

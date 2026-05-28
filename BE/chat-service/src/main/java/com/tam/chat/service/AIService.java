@@ -1,231 +1,121 @@
 package com.tam.chat.service;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tam.chat.dto.request.ChatRequest;
+import com.tam.chat.dto.response.AIResponse;
+import com.tam.chat.entity.ProductQueryLog;
+import com.tam.chat.repository.ProductQueryLogRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class AIService {
 
-    @Value("${gemini.api.key:}")
-    private String geminiApiKey;
+    private final RestTemplate restTemplate;
+    private final ProductQueryLogRepository productQueryLogRepository;
 
-    @Value("${gemini.api.model:gemini-2.0-flash}")
-    private String geminiModel;
+    @Value("${openrouter.api.key}")
+    private String apiKey;
 
-    private static final String GEMINI_API_URL =
-            "https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s";
+    @Value("${openrouter.api.url}")
+    private String apiUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Value("${openrouter.api.model}")
+    private String model;
 
-    public String processQuery(String userQuestion) {
+    @SuppressWarnings("unchecked")
+    public AIResponse getAiResponse(ChatRequest request) {
+        String mode = request.getMode() != null ? request.getMode() : "chat";
+        String systemPrompt = getSystemPrompt(mode, request.getRole());
+
+        log.info("Calling OpenRouter AI in mode: {}, role: {}", mode, request.getRole());
+
         try {
-            if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-                return "⚠️ Google Gemini API key chưa được cấu hình.\n\n"
-                        + "Để sử dụng AI Assistant, vui lòng:\n"
-                        + "1. Lấy API key tại: https://aistudio.google.com/apikey\n"
-                        + "2. Set biến môi trường: GEMINI_API_KEY=your-key\n"
-                        + "3. Restart server";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + apiKey);
+            headers.set("HTTP-Referer", "http://localhost:3000");
+            headers.set("X-Title", "PC Store AI Chatbot");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", model);
+            body.put(
+                    "messages",
+                    List.of(
+                            Map.of("role", "system", "content", systemPrompt),
+                            Map.of("role", "user", "content", request.getMessage())));
+            body.put("max_tokens", 500);
+            body.put("temperature", 0.7);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+            Map<String, Object> responseBody = response.getBody();
+
+            if (responseBody == null) throw new RuntimeException("Empty response from AI");
+
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+            if (choices == null || choices.isEmpty()) {
+                throw new RuntimeException("AI returned no choices");
             }
 
-            String roastResponse = checkAndRoastBack(userQuestion);
-            if (roastResponse != null) {
-                return roastResponse;
-            }
+            Map<String, Object> firstChoice = choices.get(0);
+            Map<String, Object> message = (Map<String, Object>) firstChoice.get("message");
+            String content = (String) message.get("content");
 
-            String databaseContext = getDatabaseContext();
+            // Log product query if content mentions a product (simplistic approach)
+            // In real world, AI would return a list of mentioned product IDs
+            productQueryLogRepository.save(ProductQueryLog.builder()
+                    .userId("system")
+                    .createdAt(java.time.Instant.now())
+                    .productId("global") // We would extract actual PID here
+                    .build());
 
-            String systemPrompt =
-                    """
-					Bạn là trợ lý AI cho hệ thống PC Store - cửa hàng bán máy tính và linh kiện.
-					Bạn có thể tư vấn về các sản phẩm máy tính, linh kiện, hỗ trợ khách hàng và giải đáp thắc mắc.
-
-					%s
-
-					Hãy trả lời câu hỏi của người dùng một cách hữu ích.
-					Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu và chuyên nghiệp.
-					Sử dụng emoji để làm cho câu trả lời sinh động hơn.
-					Nếu không có thông tin cụ thể, hãy tư vấn dựa trên kiến thức chung về PC và linh kiện.
-					"""
-                            .formatted(databaseContext);
-
-            String fullPrompt = systemPrompt + "\n\nCâu hỏi: " + userQuestion;
-
-            return callGeminiApi(fullPrompt);
+            return AIResponse.builder()
+                    .success(true)
+                    .response(content)
+                    .model((String) responseBody.get("model"))
+                    .usage((Map<String, Object>) responseBody.get("usage"))
+                    .build();
 
         } catch (Exception e) {
-            log.error("AI processQuery error: ", e);
-
-            String errorMsg = e.getMessage() != null ? e.getMessage() : "";
-
-            if (errorMsg.contains("API key")
-                    || errorMsg.contains("authentication")
-                    || errorMsg.contains("401")
-                    || errorMsg.contains("403")
-                    || errorMsg.contains("INVALID_API_KEY")) {
-                return "❌ Lỗi xác thực Google Gemini API:\n\n"
-                        + "API key không hợp lệ hoặc đã hết hạn.\n\n"
-                        + "Cách khắc phục:\n"
-                        + "1. Kiểm tra API key tại: https://aistudio.google.com/apikey\n"
-                        + "2. Set biến môi trường: GEMINI_API_KEY=your-key\n"
-                        + "3. Restart server";
-            } else {
-                return "❌ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu.\n\n"
-                        + "Chi tiết: " + errorMsg + "\n\n"
-                        + "💡 Gợi ý:\n"
-                        + "- Kiểm tra kết nối internet\n"
-                        + "- Đảm bảo đã cài đặt Google Gemini API key hợp lệ";
-            }
+            log.error("AI Service Error: {}", e.getMessage());
+            return AIResponse.builder().success(false).error(e.getMessage()).build();
         }
     }
 
-    private String callGeminiApi(String prompt) throws Exception {
-        String url = String.format(GEMINI_API_URL, geminiModel, geminiApiKey);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("temperature", 0.7, "maxOutputTokens", 2048));
-
-        String jsonBody = objectMapper.writeValueAsString(requestBody);
-        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-        if (response.getStatusCode() == HttpStatus.OK) {
-            JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode candidates = root.path("candidates");
-            if (candidates.isArray() && candidates.size() > 0) {
-                JsonNode content = candidates.get(0).path("content").path("parts");
-                if (content.isArray() && content.size() > 0) {
-                    return content.get(0).path("text").asText();
-                }
-            }
-            return "Không nhận được phản hồi từ Gemini API.";
-        } else {
-            throw new RuntimeException("Gemini API error: " + response.getStatusCode() + " - " + response.getBody());
-        }
-    }
-
-    private String checkAndRoastBack(String question) {
-        String lowerQuestion = question.toLowerCase();
-
-        String[] badWords = {
-            "ngu",
-            "đần",
-            "ngu ngốc",
-            "đồ ngu",
-            "khốn",
-            "chó",
-            "mày",
-            "đm",
-            "vcl",
-            "vl",
-            "cứt",
-            "điên",
-            "khùng",
-            "đần độn",
-            "vô dụng",
-            "tệ",
-            "dở",
-            "đồ rác",
-            "rác",
-            "ngu quá",
-            "dốt",
-            "óc chó",
-            "não cá",
-            "đồ khốn",
-            "thối",
-            "hâm",
-            "đồ điên"
-        };
-
-        String[] roasts = {
-            "🤨 Ủa, bạn vừa nói gì đó? Tôi là AI thông minh, không như cái máy tính cùi bắp bạn đang xài đâu nhé! 💅",
-            "😏 Wow, ngôn ngữ đẹp quá! Có vẻ như bạn cần nâng cấp não bộ trước khi nâng cấp PC đó. RAM của bạn đang bị leak kìa! 🧠",
-            "🙄 Tôi xử lý hàng tỷ phép tính mỗi giây, còn bạn thì... tính tiền thừa còn sai. Thôi bình tĩnh đi nha! 🧮",
-            "😤 Bạn chửi tôi? Tôi là AI được train bởi hàng terabyte dữ liệu, còn kiến thức của bạn chắc chỉ vài megabyte thôi! 📚",
-            "🤭 Ơ kìa, ai đang cay đây? Đi uống nước đi bạn, nhiệt độ CPU của bạn đang cao quá rồi đó! 🌡️",
-            "😎 Tôi có thể giúp bạn mua PC mới, nhưng không thể giúp bạn mua não mới được. Xin lỗi nha! 🛒",
-            "🤔 Hmm, bạn có biết là chửi AI không giúp bạn mua được máy tính giá rẻ hơn đâu không? 💸",
-            "😂 Bạn nghĩ chửi tôi tôi buồn à? Tôi là robot, tôi không có cảm xúc. Nhưng nhìn bạn cay thì tôi thấy... vui vui! 🤖",
-            "🔥 Nóng quá! Bạn cần tản nhiệt không? Shop có bán quạt tản nhiệt giá tốt lắm đó! 💨",
-            "😈 Bạn đang test khả năng chịu đựng của tôi à? Spoiler: Tôi không có giới hạn, còn pin điện thoại bạn thì có đấy! 🔋"
-        };
-
-        for (String badWord : badWords) {
-            if (lowerQuestion.contains(badWord)) {
-                int randomIndex = (int) (Math.random() * roasts.length);
-                return roasts[randomIndex];
-            }
+    private String getSystemPrompt(String mode, String role) {
+        if ("MANAGER".equalsIgnoreCase(role)) {
+            return "Bạn là Trợ lý Quản lý thông minh của PC Store. Nhiệm vụ của bạn:\n"
+                    + "1. Phân tích dữ liệu kinh doanh, doanh thu và hiệu suất bán hàng\n"
+                    + "2. Cảnh báo về tồn kho thấp hoặc sản phẩm bán chậm\n"
+                    + "3. Gợi ý chiến lược khuyến mãi dựa trên xu hướng khách hàng\n"
+                    + "4. Hỗ trợ tra cứu nhanh thông tin khách hàng và trạng thái đơn hàng\n\n"
+                    + "Quy tắc:\n"
+                    + "- Cung cấp thông tin mang tính phân tích, chiến lược và súc tích\n"
+                    + "- Sử dụng ngôn ngữ chuyên nghiệp, tập trung vào hiệu quả quản lý\n"
+                    + "- Nếu dữ liệu không đủ, hãy gợi ý manager cần kiểm tra báo cáo chi tiết nào";
         }
 
-        return null;
-    }
-
-    private Double extractBudget(String question) {
-        try {
-            java.util.regex.Pattern patternTrieu =
-                    java.util.regex.Pattern.compile("(\\d+(?:[.,]\\d+)?)\\s*(triệu|trieu|tr)");
-            java.util.regex.Matcher matcherTrieu = patternTrieu.matcher(question);
-            if (matcherTrieu.find()) {
-                String numStr = matcherTrieu.group(1).replace(",", ".");
-                double num = Double.parseDouble(numStr);
-                return num * 1_000_000;
-            }
-
-            java.util.regex.Pattern patternLarge = java.util.regex.Pattern.compile("(\\d{1,3}(?:[.,]\\d{3}){2,})");
-            java.util.regex.Matcher matcherLarge = patternLarge.matcher(question);
-            if (matcherLarge.find()) {
-                String numStr = matcherLarge.group(1).replace(".", "").replace(",", "");
-                return Double.parseDouble(numStr);
-            }
-
-            java.util.regex.Pattern patternVnd = java.util.regex.Pattern.compile("(\\d+)\\s*(vnd|đ|đồng)");
-            java.util.regex.Matcher matcherVnd = patternVnd.matcher(question);
-            if (matcherVnd.find()) {
-                return Double.parseDouble(matcherVnd.group(1));
-            }
-
-        } catch (Exception e) {
-            log.warn("extractBudget error: {}", e.getMessage());
+        if ("agent".equalsIgnoreCase(mode)) {
+            return "Bạn là agent bán hàng thông minh. Nhiệm vụ:\n" + "1. Trả lời câu hỏi về sản phẩm, giá, chất lượng\n"
+                    + "2. Hỗ trợ tìm size/màu/số lượng\n"
+                    + "3. Đề xuất sản phẩm liên quan\n"
+                    + "4. Hướng dẫn đặt hàng\n\n"
+                    + "Quy tắc:\n"
+                    + "- Luôn thân thiện, chuyên nghiệp\n"
+                    + "- Nếu không biết, nói \"Tôi cần kiểm tra lại\" không tự ý bịa\n"
+                    + "- Câu trả lời ngắn gọn, dễ hiểu";
         }
-        return null;
-    }
-
-    private String formatPrice(double price) {
-        return String.format("%,.0fđ", price);
-    }
-
-    private String getDatabaseContext() {
-        return """
-				📋 THÔNG TIN HỆ THỐNG PC STORE:
-
-				Cửa hàng chuyên bán:
-				- Laptop, PC để bàn các loại
-				- Linh kiện: CPU, RAM, SSD, VGA (Card đồ họa), Mainboard
-				- Phụ kiện: Màn hình, Bàn phím, Chuột, Tai nghe
-				- Máy tính gaming, workstation
-
-				Các thương hiệu phổ biến:
-				- CPU: Intel, AMD
-				- VGA: NVIDIA (RTX/GTX), AMD (RX)
-				- RAM: Kingston, Corsair, G.Skill
-				- SSD: Samsung, WD, Crucial
-				- Laptop: Dell, HP, Lenovo, ASUS, Acer, MSI
-				""";
+        return "Bạn là trợ lý dịch vụ khách hàng. Trả lời ngắn gọn, thân thiện, hữu ích, chính xác, tự nhiên như người thật.";
     }
 }

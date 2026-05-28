@@ -10,11 +10,12 @@ import { clearVouchers, fetchAvailableVouchers } from "./redux/slices/voucher";
 import { RootState } from "./redux/store";
 import { useAppSelector } from "./hooks";
 import SocketClient from "./SocketClient";
-import AIChatModal from "./components/AIChatModal";
 import SellerChatModal from "./components/SellerChatModal";
+import { AiChatBubble } from "./components/ai/AiChatBubble";
 import { clientRoutes } from "./config/routers/routes";
 import { cartApi } from "./services/api/cartApi";
 import { orderApi } from "./services/api/orderApi";
+import PaymentStatusPoller from "./components/PaymentStatusPoller";
 
 function App() {
     const dispatch = useDispatch();
@@ -36,32 +37,9 @@ function App() {
         }
     }, [isLogin]);
 
-    useEffect(() => {
-        const paymentId = localStorage.getItem("paymentId");
-        let timerId: any = null;
-
-        if (paymentId && user?.id) {
-            timerId = setInterval(() => {
-                orderApi.getPaymentStatus(paymentId).then((res) => {
-                    const status = res.data;
-                    if (status && status === "approved") {
-                        clearInterval(timerId);
-
-                        localStorage.removeItem("paymentId");
-                        clearCartApi(user?.id);
-                        dispatch(clearCart());
-                    }
-                });
-            }, 1000);
-        }
-
-        return () => {
-            if (timerId) clearInterval(timerId);
-        };
-    }, [user]);
-
     return (
         <BrowserRouter>
+            <PaymentStatusPoller />
             <ScrollToTop />
             <Header />
             <ProtectedRoutes>
@@ -75,12 +53,7 @@ function App() {
             <Toaster />
 
             <div className="flex">
-                <AIChatModal
-                    isOpen={activeChat === "ai"}
-                    onOpen={() => setActiveChat("ai")}
-                    onClose={() => setActiveChat(null)}
-                    isHidden={activeChat === "seller"}
-                />
+                <AiChatBubble />
                 <SellerChatModal
                     isOpen={activeChat === "seller"}
                     onOpen={() => setActiveChat("seller")}

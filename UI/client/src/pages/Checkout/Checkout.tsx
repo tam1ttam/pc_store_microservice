@@ -1,4 +1,4 @@
-import { PayPal, ShipCOD } from "@/assets/cart";
+import { ShipCOD } from "@/assets/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,11 +17,12 @@ import { voucherApi } from "@/services/api/voucherApi";
 import ENDPOINT from "@/constants/endpoint";
 import { getAccessToken } from "@/config/axios.config";
 import { decodeJwtSub } from "@/utils/jwtUtils";
-import { Box, Loader2, MapPin, Tag, Ticket, X } from "lucide-react";
+import { Box, Loader2, MapPin, Tag, Ticket, X, CreditCard } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import PaymentModal from "@/components/PaymentModal";
 
 interface Voucher {
     id: number;
@@ -61,6 +62,8 @@ function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState<string>("ship");
     const [isOrdering, setIsOrdering] = useState(false);
     const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [currentOrderId, setCurrentOrderId] = useState<number | null>(null);
 
     const [voucherCode, setVoucherCode] = useState("");
     const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
@@ -69,6 +72,9 @@ function Checkout() {
     const [voucherLoading, setVoucherLoading] = useState(false);
 
     useEffect(() => {
+        // Clear any existing paymentId when entering checkout to avoid phantom polling
+        localStorage.removeItem("paymentId");
+
         if (selectedItemIds.length === 0) {
             navigate("/cart");
         }
@@ -166,68 +172,55 @@ function Checkout() {
         const identityUserId = decodeJwtSub(getAccessToken() ?? "");
         const customerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.id || "";
 
-        if (paymentMethod === "ship") {
-            setIsOrdering(true);
-            try {
-                const result = await post<any>(ENDPOINT.CHECKOUT, {
-                    customerId: user?.id,
-                    customerEmail: user?.email,
-                    customerName,
-                    shipAddress: address,
-                    cartItemIds: selectedItemIds,
-                });
+        setIsOrdering(true);
+        try {
+            // All payment methods first create an order in the system
+            const result = await post<any>(ENDPOINT.CHECKOUT, {
+                customerId: user?.id,
+                customerEmail: user?.email,
+                customerName,
+                shipAddress: address,
+                cartItemIds: selectedItemIds,
+                paymentMethod, // Pass payment method to BE to set PENDING_PAYMENT if paypal
+            });
 
-                if (result.data.code === 1000) {
-                    const orderId = result.data.result?.id;
-                    if (appliedVoucher && orderId) {
-                        try {
-                            await voucherApi.apply(orderId, appliedVoucher.code);
-                        } catch {
-                            // voucher apply failure is non-fatal
-                        }
+            if (result.data.code === 1000) {
+                const orderId = result.data.result?.id;
+                if (!orderId) throw new Error("Order ID missing from response");
+
+                if (appliedVoucher) {
+                    try {
+                        await voucherApi.apply(orderId, appliedVoucher.code);
+                    } catch (e) {
+                        console.warn("Voucher apply failed", e);
                     }
+                }
+
+                if (paymentMethod === "ship") {
                     toast({ title: t('checkout.orderSuccess') });
                     dispatch(getCart());
                     dispatch(viewOrder());
                     navigate("/order");
-                } else {
-                    throw new Error(result.data.message || t('checkout.orderFailed'));
+                } else if (paymentMethod === "paypal") {
+                    setCurrentOrderId(orderId);
+                    setIsPaymentModalOpen(true);
                 }
-            } catch (error: any) {
-                if (error.response?.status === 401) {
-                    toast({ variant: "destructive", title: t('checkout.sessionExpired'), description: t('checkout.sessionExpiredDesc') });
-                    setTimeout(() => window.dispatchEvent(new CustomEvent('auth:session-expired')), 2000);
-                } else {
-                    toast({
-                        variant: "destructive",
-                        title: t('checkout.orderFailed'),
-                        description: error.response?.data?.message || error.message || t('auth.unknownError'),
-                    });
-                }
-            } finally {
-                setIsOrdering(false);
+            } else {
+                throw new Error(result.data.message || t('checkout.orderFailed'));
             }
-        } else if (paymentMethod === "paypal") {
-            setIsOrdering(true);
-            try {
-                const response = await post<any>(ENDPOINT.PAYPAL, {
-                    amount: totalPrice,
-                    userId: user?.id,
-                    identityUserId,
-                    shipAddress: address,
-                    items: selectedItems,
+        } catch (error: any) {
+            if (error.response?.status === 401) {
+                toast({ variant: "destructive", title: t('checkout.sessionExpired'), description: t('checkout.sessionExpiredDesc') });
+                setTimeout(() => window.dispatchEvent(new CustomEvent('auth:session-expired')), 2000);
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: t('checkout.orderFailed'),
+                    description: error.response?.data?.message || error.message || t('auth.unknownError'),
                 });
-                if (response.data.code === 1000) {
-                    localStorage.setItem("paymentId", response.data.result.paymentId as string);
-                    window.location.href = response.data.result.url;
-                } else {
-                    toast({ variant: "destructive", title: t('checkout.orderFailed') });
-                }
-            } catch {
-                toast({ variant: "destructive", title: t('common.error') });
-            } finally {
-                setIsOrdering(false);
             }
+        } finally {
+            setIsOrdering(false);
         }
     };
 
@@ -379,12 +372,12 @@ function Checkout() {
                                 </div>
                                 <div>
                                     <Label
-                                        htmlFor="paypal"
+                                        htmlFor="sepay"
                                         className="flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-orange-50 hover:border-orange-500 [&:has([data-state=checked])]:border-orange-500 [&:has([data-state=checked])]:bg-orange-50"
                                     >
-                                        <img src={PayPal} alt="PayPal" className="w-8 h-8" />
-                                        <RadioGroupItem value="paypal" id="paypal" className="sr-only" />
-                                        <span className="text-sm text-center">{t('checkout.paypalLabel')}</span>
+                                        <CreditCard className="w-8 h-8 text-blue-600" />
+                                        <RadioGroupItem value="sepay" id="sepay" className="sr-only" />
+                                        <span className="text-sm text-center">{t('checkout.bankTransferLabel') || "Chuyển khoản"}</span>
                                     </Label>
                                 </div>
                             </RadioGroup>
@@ -433,7 +426,7 @@ function Checkout() {
                                 ) : paymentMethod === "ship" ? (
                                     t('checkout.placeOrder')
                                 ) : (
-                                    t('checkout.payViaPaypal')
+                                    t('checkout.payViaBank') || "Thanh toán chuyển khoản"
                                 )}
                             </Button>
                         </CardContent>
@@ -447,6 +440,19 @@ function Checkout() {
                     prefillAddress={addressFormData}
                 />
             )}
+
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                orderId={currentOrderId ?? 0}
+                totalPrice={totalPrice}
+                onSuccess={() => {
+                    setIsPaymentModalOpen(false);
+                    dispatch(getCart());
+                    dispatch(viewOrder());
+                    navigate("/order");
+                }}
+            />
 
             {/* Address dialog — dùng form có cấu trúc + Google Maps */}
             <AddressDialog

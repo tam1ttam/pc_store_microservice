@@ -280,4 +280,19 @@ public class ProductServiceImpl implements ProductService {
         }
         return result;
     }
+
+    @Override
+    public void incrementViewCount(String productId) {
+        org.springframework.data.mongodb.core.query.Query query = new org.springframework.data.mongodb.core.query.Query(
+                org.springframework.data.mongodb.core.query.Criteria.where("_id")
+                        .is(new ObjectId(productId)));
+        org.springframework.data.mongodb.core.query.Update update =
+                new org.springframework.data.mongodb.core.query.Update().inc("viewCount", 1);
+        mongoTemplate.updateFirst(query, update, Product.class);
+    }
+
+    @Override
+    public List<Product> getAllProductsAnalytics() {
+        return productRepository.findAll();
+    }
 }

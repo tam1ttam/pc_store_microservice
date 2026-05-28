@@ -1,5 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import { fetchCategories } from "@/redux/thunks/product";
 import { Monitor, Keyboard, Mouse, Headphones, MemoryStick, HardDrive, Cpu, CircuitBoard, Layers, Laptop } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ProductSlider from "@/components/ProductSlider";
@@ -17,11 +21,16 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
     Mainboard: CircuitBoard,
 };
 
-const CATEGORIES_HOME = ["PC", "Laptop", "Monitor", "Keyboard", "Mouse", "Headphone", "RAM", "SSD", "VGA", "Mainboard"];
 
 const Home = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const dispatch = useDispatch<AppDispatch>();
+    const categories = useSelector((state: RootState) => state.product.categories);
+
+    useEffect(() => {
+        dispatch(fetchCategories());
+    }, [dispatch]);
 
     const handleCategoryClick = (category: string) => {
         navigate(`/products?category=${encodeURIComponent(category)}`);
@@ -53,17 +62,17 @@ const Home = () => {
             <section className="container py-14 w-full">
                 <h2 className="text-2xl font-bold tracking-tight mb-8 text-center">{t('product.productCategories')}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 px-2">
-                    {CATEGORIES_HOME.map((cat) => {
-                        const Icon = CATEGORY_ICONS[cat];
+                    {categories.map((cat) => {
+                        const Icon = CATEGORY_ICONS[cat.name] || Cpu;
                         return (
                             <button
-                                key={cat}
-                                onClick={() => handleCategoryClick(cat)}
+                                key={cat.id}
+                                onClick={() => handleCategoryClick(cat.keyword)}
                                 className="flex flex-col items-center justify-center p-5 rounded-xl border border-white/10 bg-white/5 hover:border-orange-500 hover:bg-orange-500/10 hover:text-orange-400 transition-all duration-200 group"
                             >
                                 <Icon className="h-9 w-9 mb-3 text-white/70 group-hover:text-orange-400 transition-colors" />
                                 <span className="font-semibold text-sm text-white/80 group-hover:text-orange-400 transition-colors">
-                                    {cat}
+                                    {cat.name}
                                 </span>
                             </button>
                         );

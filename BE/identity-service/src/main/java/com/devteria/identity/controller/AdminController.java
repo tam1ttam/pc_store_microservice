@@ -28,13 +28,21 @@ public class AdminController {
     UserService userService;
     AdminService adminService;
 
+    @GetMapping("/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    ApiResponse<List<com.devteria.identity.entity.Role>> getRoles() {
+        return ApiResponse.<List<com.devteria.identity.entity.Role>>builder()
+                .result(adminService.getAllRoles())
+                .build();
+    }
+
     @PostMapping("/update-role/{userName}")
     @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<Void> updateRoleForUser(@PathVariable String userName) {
-        log.info("Update role for user: {}", userName);
-        userService.assignRoleToUser(userName, "ADMIN");
+    ApiResponse<Void> updateRoleForUser(@PathVariable String userName, @RequestParam String roleName) {
+        log.info("Update role for user: {} to {}", userName, roleName);
+        userService.assignRoleToUser(userName, roleName);
         adminService.createHistory(
-                "Update Role", "Role ADMIN has been assigned to user " + userName, "SUCCESS", null, "");
+                "Update Role", "Role " + roleName + " has been assigned to user " + userName, "SUCCESS", null, "");
 
         return ApiResponse.<Void>builder().build();
     }

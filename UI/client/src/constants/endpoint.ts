@@ -34,6 +34,7 @@ const ENDPOINT = {
 
     // ── Product-service ──────────────────────────────────────────────────────
     PRODUCTS:          `${PRODUCT_SVC}/products`,
+    CATEGORIES:          `${PRODUCT_SVC}/categories`,
     PRODUCTS_CATEGORY: `${PRODUCT_SVC}/products/category`,
     PRODUCTS_BY_CATEGORIES: `${PRODUCT_SVC}/products/by-categories`,
     PRODUCT_DETAIL:    `${PRODUCT_SVC}/product-detail`,
@@ -44,8 +45,8 @@ const ENDPOINT = {
 
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER:                `${ORDER_SVC}/api/orders`,
+    ORDER_STATUS:        (id: number) => `${ORDER_SVC}/api/orders/${id}`,
     ORDER_CANCEL:         (id: number) => `${ORDER_SVC}/api/orders/${id}/cancel`,
-    PAYPAL:               `${ORDER_SVC}/api/payment/create_payment`,
     PAYMENT_STATUS:       `${ORDER_SVC}/api/payment`, // append /{paymentId}
 
     // ── Chat-service ─────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ const ENDPOINT = {
             `${CHAT_SVC}/messages?conversationId=${conversationId}`,
         MANAGERS_ONLINE: `${CHAT_SVC}/conversations/managers/online`,
         USER_ONLINE: (userId: string) => `${CHAT_SVC}/conversations/users/${userId}/online`,
+        AI_CHAT: `${CHAT_SVC}/api/chat`,
     },
 
     // ── Notification-service ─────────────────────────────────────────────────

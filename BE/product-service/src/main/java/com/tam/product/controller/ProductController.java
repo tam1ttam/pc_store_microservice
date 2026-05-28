@@ -131,4 +131,17 @@ public class ProductController {
                 .result(productService.countProductsByCategories(names))
                 .build();
     }
+
+    @PatchMapping("/view/{productId}")
+    public ApiResponse<Void> incrementView(@PathVariable String productId) {
+        productService.incrementViewCount(productId);
+        return ApiResponse.<Void>builder().build();
+    }
+
+    @GetMapping("/analytics")
+    public ApiResponse<List<Product>> getProductsAnalytics() {
+        return ApiResponse.<List<Product>>builder()
+                .result(productService.getAllProductsAnalytics())
+                .build();
+    }
 }

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.tam.chat.dto.ApiResponse;
 import com.tam.chat.dto.request.AIRequest;
+import com.tam.chat.dto.request.ChatRequest;
 import com.tam.chat.dto.response.AIResponse;
 import com.tam.chat.service.AIService;
 
@@ -22,17 +23,19 @@ public class AIController {
 
     @PostMapping("/ask")
     ApiResponse<AIResponse> ask(@RequestBody @Valid AIRequest request) {
-        String answer = aiService.processQuery(request.getQuestion());
-        return ApiResponse.<AIResponse>builder()
-                .result(AIResponse.builder().answer(answer).status("success").build())
-                .build();
+        AIResponse response = aiService.getAiResponse(ChatRequest.builder()
+                .message(request.getQuestion())
+                .mode("chat")
+                .build());
+        return ApiResponse.<AIResponse>builder().result(response).build();
     }
 
     @GetMapping("/stats")
     ApiResponse<AIResponse> getStats() {
-        String stats = aiService.processQuery("Cho tôi biết thống kê tổng quan về hệ thống PC Store");
-        return ApiResponse.<AIResponse>builder()
-                .result(AIResponse.builder().stats(stats).status("success").build())
-                .build();
+        AIResponse response = aiService.getAiResponse(ChatRequest.builder()
+                .message("Cho tôi biết thống kê tổng quan về hệ thống PC Store")
+                .mode("chat")
+                .build());
+        return ApiResponse.<AIResponse>builder().result(response).build();
     }
 }

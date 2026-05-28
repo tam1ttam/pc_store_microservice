@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { fetchProducts, fetchProductsByCategories } from "@/redux/thunks/product";
+import { fetchProducts, fetchProductsByCategories, fetchCategories } from "@/redux/thunks/product";
 import { AppDispatch, RootState } from "@/redux/store";
 import ProductCard from "./components/ProductCard";
 import ProductSkeleton from "./components/ProductSkeleton";
@@ -25,6 +25,10 @@ const ProductsPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [showFilters, setShowFilters] = useState(false);
     const [sortBy, setSortBy] = useState("newest");
+
+    useEffect(() => {
+        dispatch(fetchCategories());
+    }, [dispatch]);
 
     useEffect(() => {
         if (selectedCategories.length > 0) {

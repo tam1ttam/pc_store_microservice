@@ -5,11 +5,11 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.tam.order.dto.request.ApiResponse;
 import com.tam.order.dto.request.CheckoutRequest;
@@ -43,7 +43,7 @@ public class OrderController {
     }
 
     @GetMapping("/api/orders/stats")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ApiResponse<OrderStatsResponse> getStats() {
         return ApiResponse.<OrderStatsResponse>builder()
                 .result(orderService.getStats())
@@ -51,9 +51,18 @@ public class OrderController {
     }
 
     @GetMapping("/api/orders/all")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MANAGER')")
     public ApiResponse<List<Order>> getAllOrders() {
         return ApiResponse.<List<Order>>builder().result(orderService.getAll()).build();
+    }
+
+    @GetMapping("/api/orders/admin/all")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MANAGER')")
+    public ApiResponse<Page<Order>> getAllOrdersPaginated(
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.<Page<Order>>builder()
+                .result(orderService.getAllOrders(PageRequest.of(page, size)))
+                .build();
     }
 
     @GetMapping("/api/orders/{id}")
@@ -89,7 +98,7 @@ public class OrderController {
     // ── Manager endpoints ──────────────────────────────────────────────────────
 
     @PatchMapping("/api/orders/{id}/status")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ADMIN')")
     public ApiResponse<Order> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
         return ApiResponse.<Order>builder()
                 .result(orderService.updateOrderStatus(id, status))
@@ -97,7 +106,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/manager/orders/{id}")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ADMIN')")
     public ApiResponse<Boolean> deleteOrder(@PathVariable Long id) {
         return ApiResponse.<Boolean>builder()
                 .result(orderService.deleteOrder(id))

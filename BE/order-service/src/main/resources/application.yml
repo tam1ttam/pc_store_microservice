@@ -78,6 +78,13 @@ logging:
     name: logs/order-service.log
     max-size: 10MB
     max-history: 7
+
+sepay:
+  api-key: ${SEPAY_API_KEY}
+  account-number: ${BANK_ACCOUNT_NUMBER}
+#  bank-code: ${BANK_CODE}
+  order-prefix: PCSTORE
+
 management:
   endpoints:
     web:

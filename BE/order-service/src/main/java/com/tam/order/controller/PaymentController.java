@@ -1,110 +1,64 @@
 package com.tam.order.controller;
 
-import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import jakarta.servlet.http.HttpServletRequest;
-
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.tam.order.dto.request.ApiResponse;
-import com.tam.order.dto.request.PaymentRequest;
-import com.tam.order.dto.response.PaymentResponse;
-import com.tam.order.service.PaymentService;
+import com.tam.order.dto.request.SePayWebhookRequest;
+import com.tam.order.service.OrderService;
 
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
-@RequiredArgsConstructor
 @Slf4j
 @RequestMapping("/api/payment")
 public class PaymentController {
-    PaymentService paymentService;
+    private final OrderService orderService;
+    private final String apiKey;
 
-    @PostMapping("/create_payment")
-    public ApiResponse<?> createPayment(HttpServletRequest request, @RequestBody PaymentRequest paymentRequest)
-            throws Exception {
-        // TODO: Tích hợp PayPal SDK
-        // Double totalAmount = Double.parseDouble(paymentRequest.getAmount()) / 26000;
-        // String currency = "USD";
-        // Payment payment = new Payment();
-        // payment.create(apiContext);
-
-        PaymentResponse payment = paymentService.createPayment(paymentRequest);
-        String redirectUrl =
-                String.format(Locale.US, "https://www.sandbox.paypal.com/checkoutnow?token=%s", payment.getPaymentId());
-
-        return ApiResponse.builder()
-                .code(1000)
-                .message("Payment created successfully")
-                .result(payment)
-                .build();
+    public PaymentController(OrderService orderService, @Value("${sepay.api-key}") String apiKey) {
+        this.orderService = orderService;
+        this.apiKey = apiKey;
     }
 
-    @GetMapping("/return/{id}")
-    public ApiResponse<?> returnPayment(@PathVariable String id) {
-        try {
-            // TODO: Xử lý return từ PayPal - cập nhật order status thành PAID
-            // PayPal sẽ redirect tới đây với token
-            // Gọi PayPal execute payment API
+    @PostMapping("/webhook/sepay")
+    public ResponseEntity<?> sePayWebhook(
+            @RequestHeader("Authorization") String auth, @RequestBody SePayWebhookRequest payload) {
 
-            paymentService.executePayment(id);
-            return ApiResponse.builder()
-                    .code(1000)
-                    .message("Payment executed successfully")
-                    .result(true)
-                    .build();
-        } catch (Exception e) {
-            log.error("Error executing payment: {}", e.getMessage());
-            return ApiResponse.builder()
-                    .code(9999)
-                    .message("Payment execution failed: " + e.getMessage())
-                    .result(false)
-                    .build();
+        log.info("Received SePay webhook: payload={}", payload);
+
+        // 1. Xác thực API key
+        if (!auth.equals("Apikey " + apiKey)) {
+            log.warn("Unauthorized SePay webhook attempt: auth={}", auth);
+            return ResponseEntity.status(401).build();
         }
-    }
 
-    @GetMapping("/cancel/{id}")
-    public ApiResponse<?> cancelPayment(@PathVariable String id) {
-        try {
-            // TODO: Xử lý cancel từ PayPal - cập nhật payment status thành CANCELLED
-            paymentService.cancelPayment(id);
-            return ApiResponse.builder()
-                    .code(1000)
-                    .message("Payment cancelled successfully")
-                    .result(true)
-                    .build();
-        } catch (Exception e) {
-            log.error("Error cancelling payment: {}", e.getMessage());
-            return ApiResponse.builder()
-                    .code(9999)
-                    .message("Payment cancellation failed: " + e.getMessage())
-                    .result(false)
-                    .build();
+        // 2. Chỉ xử lý tiền VÀO
+        if (!"in".equals(payload.getTransferType())) {
+            return ResponseEntity.ok(Map.of("success", true));
         }
-    }
 
-    @GetMapping("/{paymentId}")
-    public ApiResponse<?> getPayment(@PathVariable String paymentId) {
-        return paymentService
-                .getPaymentByPaymentId(paymentId)
-                .map(payment -> ApiResponse.builder().code(1000).result(payment).build())
-                .orElseGet(() -> ApiResponse.builder()
-                        .code(404)
-                        .message("Payment not found")
-                        .build());
-    }
+        // 3. Bóc tách mã đơn hàng từ nội dung
+        // content: "PCSTORE123" -> orderId = 123
+        Pattern pattern = Pattern.compile("PCSTORE(\\d+)");
+        Matcher matcher = pattern.matcher(payload.getContent());
+        if (!matcher.find()) {
+            log.warn("SePay webhook: Could not find order ID in content: {}", payload.getContent());
+            return ResponseEntity.ok(Map.of("success", false, "message", "Không tìm thấy mã đơn hàng"));
+        }
 
-    @GetMapping("/order/{orderId}")
-    public ApiResponse<?> getPaymentByOrder(@PathVariable String orderId) {
-        return paymentService
-                .getPaymentByOrderId(orderId)
-                .map(payment -> ApiResponse.builder().code(1000).result(payment).build())
-                .orElseGet(() -> ApiResponse.builder()
-                        .code(404)
-                        .message("Payment not found for this order")
-                        .build());
+        try {
+            Long orderId = Long.parseLong(matcher.group(1));
+            // 4. Kiểm tra order + số tiền khớp -> cập nhật PAID
+            orderService.confirmPayment(orderId, payload.getTransferAmount());
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            log.error("Error confirming payment via SePay for content {}: {}", payload.getContent(), e.getMessage());
+            return ResponseEntity.ok(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 }

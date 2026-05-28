@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchProducts, fetchProductDetail, fetchProductsByCategory, fetchProductsByCategories } from "../thunks/product";
+import { fetchProducts, fetchProductDetail, fetchProductsByCategory, fetchProductsByCategories, fetchCategories } from "../thunks/product";
 
 export interface Supplier {
     name: string;
@@ -11,6 +11,12 @@ export interface ProductAttribute {
     value: string;
     unit?: string;
     description?: string;
+}
+
+export interface Category {
+    id: string;
+    name: string;
+    keyword: string;
 }
 
 export interface Product {
@@ -64,6 +70,8 @@ export interface ProductsResponse {
 
 export interface ProductState {
     products: Product[];
+    categories: Category[];
+    categoriesLoading: boolean;
     currentProduct: Product | null;
     pagination: {
         currentPage: number;
@@ -81,6 +89,8 @@ export interface ProductState {
 
 const initialState: ProductState = {
     products: [],
+    categories: [],
+    categoriesLoading: false,
     currentProduct: null,
     pagination: {
         currentPage: 0,
@@ -115,6 +125,16 @@ const productSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+            .addCase(fetchCategories.pending, (state) => {
+                state.categoriesLoading = true;
+            })
+            .addCase(fetchCategories.fulfilled, (state, action: PayloadAction<Category[]>) => {
+                state.categoriesLoading = false;
+                state.categories = action.payload;
+            })
+            .addCase(fetchCategories.rejected, (state) => {
+                state.categoriesLoading = false;
+            })
             .addCase(fetchProducts.pending, (state) => {
                 state.loading = true;
                 state.error = null;

@@ -53,6 +53,7 @@ const ENDPOINT = {
     // ── Order-service ────────────────────────────────────────────────────────
     ORDER: `${ORDER_SVC}/api/orders`,
     LIST_ORDER: `${ORDER_SVC}/api/orders`,
+    LIST_ORDERS_ADMIN: `${ORDER_SVC}/api/orders/admin/all`,
     UPDATE_PAYMENT_STATUS: `${ORDER_SVC}/api/orders`, // PUT /{orderId}?status=...
     PAYPAL: `${ORDER_SVC}/api/payment/create_payment`,
     PAYMENT_STATUS: `${ORDER_SVC}/api/payment`, // append /{paymentId}

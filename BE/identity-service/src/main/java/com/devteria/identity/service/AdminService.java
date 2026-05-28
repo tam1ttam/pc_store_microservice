@@ -22,6 +22,11 @@ import lombok.experimental.FieldDefaults;
 public class AdminService {
     HistoryActionRepository historyActionRepository;
     UserRepository userRepository;
+    RoleRepository roleRepository;
+
+    public List<Role> getAllRoles() {
+        return roleRepository.findAll();
+    }
 
     public List<HistoryAction> getAllHistory() {
         return historyActionRepository.findAll();

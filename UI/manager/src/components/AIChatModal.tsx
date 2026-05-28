@@ -23,11 +23,12 @@ interface AIChatModalProps {
 }
 
 const suggestedQuestions = [
-    "Có bao nhiêu sản phẩm trong hệ thống?",
-    "Cho tôi biết thống kê tổng quan",
-    "Đơn hàng gần đây như thế nào?",
-    "Có bao nhiêu khách hàng?",
-    "Tìm laptop gaming"
+    "Phân tích doanh thu tháng này",
+    "Những sản phẩm nào đang bán chậm?",
+    "Cảnh báo tồn kho thấp",
+    "Xu hướng mua hàng của khách hiện nay",
+    "Gợi ý chiến lược khuyến mãi cho laptop gaming",
+    "Thống kê đơn hàng bị hủy nhiều nhất"
 ];
 
 const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) => {
@@ -36,7 +37,7 @@ const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) =>
             id: 0,
             type: "bot",
             content:
-                "👋 Xin chào! Tôi là trợ lý AI của PC Store. Tôi có thể giúp bạn tra cứu thông tin sản phẩm, đơn hàng và thống kê hệ thống. Hãy hỏi tôi bất cứ điều gì!",
+                "👋 Xin chào Quản lý! Tôi là Trợ lý Quản trị AI. Tôi có thể giúp bạn phân tích doanh thu, theo dõi tồn kho và tối ưu hóa vận hành cửa hàng. Bạn cần tôi hỗ trợ gì hôm nay?",
             timestamp: new Date()
         }
     ]);
@@ -70,7 +71,7 @@ const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) =>
         setIsLoading(true);
 
         try {
-            const response = await aiApi.askQuestion(userMessage.content);
+            const response = await aiApi.askQuestion(userMessage.content, "chat", "MANAGER");
 
             const botMessage: Message = {
                 id: messages.length + 1,

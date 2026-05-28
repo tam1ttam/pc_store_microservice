@@ -8,6 +8,7 @@ import com.tam.order.dto.request.CheckoutRequest;
 import com.tam.order.dto.request.OrderCreationRequest;
 import com.tam.order.dto.response.OrderResponse;
 import com.tam.order.dto.response.OrderStatsResponse;
+import com.tam.order.dto.response.ProductAnalyticsResponse;
 import com.tam.order.entity.Order;
 import com.tam.order.entity.OrderStatus;
 
@@ -30,4 +31,10 @@ public interface OrderService {
     Order saveOrder(OrderCreationRequest request);
 
     List<Order> getAll();
+
+    Page<Order> getAllOrders(Pageable pageable);
+
+    List<ProductAnalyticsResponse> getProductAnalytics();
+
+    void confirmPayment(Long orderId, double amount);
 }
