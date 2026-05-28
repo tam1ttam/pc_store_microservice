@@ -8,8 +8,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.devteria.identity.entity.HistoryAction;
+import com.devteria.identity.entity.Role;
 import com.devteria.identity.entity.User;
 import com.devteria.identity.repository.HistoryActionRepository;
+import com.devteria.identity.repository.RoleRepository;
 import com.devteria.identity.repository.UserRepository;
 
 import lombok.AccessLevel;

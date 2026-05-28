@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 
 export default function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const isVi = i18n.language === 'vi' || i18n.language?.startsWith('vi');
 
   const toggle = () => {
@@ -13,10 +13,10 @@ export default function LanguageSwitcher() {
     <button
       onClick={toggle}
       title={isVi ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}
-      className="flex items-center gap-1 px-2 py-1 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
     >
-      <Globe className="w-3.5 h-3.5" />
-      <span>{isVi ? 'EN' : 'VI'}</span>
+      <Globe className="w-4 h-4" />
+      <span>{t('lang.current', { defaultValue: isVi ? 'VI' : 'EN' })}</span>
     </button>
   );
 }

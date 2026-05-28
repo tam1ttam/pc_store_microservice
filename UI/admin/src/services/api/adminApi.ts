@@ -80,6 +80,10 @@ export const adminApi = {
         return put(`${ENDPOINT.LIST_CUSTOMER}/${userName}`, profileData);
     },
 
+    logout: () => {
+        return post(`${ENDPOINT.ADMIN}/auth/logout`, {});
+    },
+
     // Audit history
     getAuditHistory: (params?: { search?: string; from?: string; to?: string }) => {
         const query = new URLSearchParams();

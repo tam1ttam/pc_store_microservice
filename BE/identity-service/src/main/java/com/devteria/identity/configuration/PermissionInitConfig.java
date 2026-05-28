@@ -51,6 +51,7 @@ public class PermissionInitConfig {
                     "admin",
                     "POST /identity-service/api/admin/update-role/{userName}",
                     "Admin grant ADMIN role to user"),
+            p("ADMIN_ROLE_LIST", "admin", "GET /identity-service/api/admin/roles", "Admin list all roles"),
             p("ADMIN_HISTORY", "admin", "GET /identity-service/api/admin/history", "Admin view action history"),
             p(
                     "INTERNAL_MANAGER_LIST",
@@ -74,7 +75,9 @@ public class PermissionInitConfig {
                     "customer",
                     "PUT /api/customers/complete-profile",
                     "Complete customer profile (activate account)"),
+            p("CUSTOMER_AVATAR_UPDATE", "customer", "PUT /api/customers/avatar", "Update customer avatar"),
             p("ADMIN_CUSTOMER_LIST", "customer", "GET /api/admin/customers", "Admin list all customers"),
+            p("ADMIN_CUSTOMER_SEARCH", "customer", "GET /api/admin/customers/search", "Admin search customers"),
             p("ADMIN_CUSTOMER_COUNT", "customer", "GET /api/admin/customers/count", "Admin count customers"),
             p("ADMIN_CUSTOMER_DETAIL", "customer", "GET /api/admin/customers/{id}", "Admin get customer detail"),
             p("ADMIN_CUSTOMER_UPDATE", "customer", "PUT /api/admin/customers/{id}", "Admin update customer"),
@@ -97,6 +100,7 @@ public class PermissionInitConfig {
             p("PRODUCT_CATEGORY_COUNTS", "product", "GET /products/category-counts", "Count products per category"),
             p("PRODUCT_DETAIL_GET", "product", "GET /product-details/{id}", "Get product detail entity"),
             p("PRODUCT_DETAIL_UPDATE", "product", "PUT /product-details/{id}", "Update product detail entity"),
+            p("PRODUCT_ANALYTICS", "product", "GET /products/analytics", "Product analytics stats"),
             p("CATEGORY_LIST", "category", "GET /categories", "List product categories"),
             p("CATEGORY_CREATE", "category", "POST /categories", "Create a product category"),
             p("CATEGORY_DELETE", "category", "DELETE /categories/{name}", "Delete a product category"));
@@ -111,6 +115,8 @@ public class PermissionInitConfig {
             p("ORDER_CHECKOUT", "order", "POST /api/orders/checkout", "Create order from cart"),
             p("ORDER_CREATE", "order", "POST /api/orders", "Create an order (legacy)"),
             p("ORDER_LIST", "order", "GET /api/orders", "List own orders"),
+            p("ORDER_LIST_ALL", "order", "GET /api/orders/all", "List all orders"),
+            p("ORDER_LIST_ADMIN", "order", "GET /api/orders/admin/all", "List all orders for admin"),
             p("ORDER_DETAIL", "order", "GET /api/orders/{id}", "Get order detail"),
             p("ORDER_CANCEL", "order", "PATCH /api/orders/{id}/cancel", "Cancel own order"),
             p("ORDER_UPDATE_STATUS", "order", "PATCH /api/orders/{id}/status", "Update order status (manager)"),
@@ -154,6 +160,11 @@ public class PermissionInitConfig {
                     "List managers available for transfer"),
             p("CONVERSATION_ONLINE_USERS", "conversation", "GET /conversations/online-users", "Get online user IDs"),
             p(
+                    "CONVERSATION_MANAGER_ONLINE",
+                    "conversation",
+                    "GET /conversations/managers/online",
+                    "Get online manager IDs"),
+            p(
                     "CONVERSATION_USER_ONLINE",
                     "conversation",
                     "GET /conversations/users/{userId}/online",
@@ -163,7 +174,9 @@ public class PermissionInitConfig {
             p("MESSAGE_MARK_READ", "message", "POST /messages/read", "Mark messages as read"),
             p("AI_CHAT", "ai", "POST /ai/chat", "Send message to AI assistant"),
             p("AI_HISTORY", "ai", "GET /ai/history", "Get AI chat history"),
-            p("AI_CLEAR", "ai", "DELETE /ai/history", "Clear AI chat history"));
+            p("AI_CLEAR", "ai", "DELETE /ai/history", "Clear AI chat history"),
+            p("AI_STATS", "ai", "GET /ai/stats", "Get AI chat statistics"),
+            p("CHAT_ANALYTICS_TOP", "ai", "GET /analytics/top-asked", "Get top asked questions analytics"));
 
     // ── file-service ──────────────────────────────────────────────────────────
 
@@ -189,7 +202,8 @@ public class PermissionInitConfig {
                     "NOTIFICATION_ACTION_DONE",
                     "notification",
                     "PUT /api/notifications/{id}/action-done",
-                    "Mark notification action as done"));
+                    "Mark notification action as done"),
+            p("NOTIFICATION_COUNT", "notification", "GET /api/notifications/count", "Get notification count"));
 
     // ── role → permission mapping ─────────────────────────────────────────────
 
@@ -198,6 +212,7 @@ public class PermissionInitConfig {
             "CUSTOMER_DETAIL",
             "CUSTOMER_UPDATE",
             "CUSTOMER_COMPLETE_PROFILE",
+            "CUSTOMER_AVATAR_UPDATE",
             "PRODUCT_LIST",
             "PRODUCT_DETAIL",
             "PRODUCT_DETAIL_GET",
@@ -232,7 +247,8 @@ public class PermissionInitConfig {
             "NOTIFICATION_LIST",
             "NOTIFICATION_MARK_READ",
             "NOTIFICATION_MARK_ALL_READ",
-            "NOTIFICATION_ACTION_DONE");
+            "NOTIFICATION_ACTION_DONE",
+            "NOTIFICATION_COUNT");
 
     static final Set<String> MANAGER_ROLE_PERMISSIONS = Set.of(
             "MY_INFO",
@@ -246,6 +262,7 @@ public class PermissionInitConfig {
             "PRODUCT_COUNT",
             "PRODUCT_BY_CATEGORIES",
             "PRODUCT_CATEGORY_COUNTS",
+            "PRODUCT_ANALYTICS",
             "ORDER_LIST",
             "ORDER_DETAIL",
             "ORDER_UPDATE_STATUS",
@@ -256,6 +273,7 @@ public class PermissionInitConfig {
             "VOUCHER_UPDATE",
             "VOUCHER_DELETE",
             "ADMIN_CUSTOMER_LIST",
+            "ADMIN_CUSTOMER_SEARCH",
             "ADMIN_CUSTOMER_COUNT",
             "CONVERSATION_CREATE",
             "CONVERSATION_LIST",
@@ -263,6 +281,7 @@ public class PermissionInitConfig {
             "CONVERSATION_CLAIM",
             "CONVERSATION_TRANSFER",
             "CONVERSATION_MANAGER_LIST",
+            "CONVERSATION_MANAGER_ONLINE",
             "CONVERSATION_ONLINE_USERS",
             "CONVERSATION_USER_ONLINE",
             "MESSAGE_SEND",
@@ -271,6 +290,8 @@ public class PermissionInitConfig {
             "AI_CHAT",
             "AI_HISTORY",
             "AI_CLEAR",
+            "AI_STATS",
+            "CHAT_ANALYTICS_TOP",
             "FILE_UPLOAD",
             "INTERNAL_MANAGER_LIST",
             "INTERNAL_MANAGER_DETAILS",
@@ -280,7 +301,8 @@ public class PermissionInitConfig {
             "NOTIFICATION_LIST",
             "NOTIFICATION_MARK_READ",
             "NOTIFICATION_MARK_ALL_READ",
-            "NOTIFICATION_ACTION_DONE");
+            "NOTIFICATION_ACTION_DONE",
+            "NOTIFICATION_COUNT");
 
     // ADMIN gets everything — built dynamically from all permission lists
 
