@@ -23,6 +23,13 @@ function App() {
 
     const { info: user } = useSelector((state: RootState) => state.user);
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
+    const pendingProductCard = useAppSelector((state: RootState) => state.chat.pendingProductCard);
+
+    useEffect(() => {
+        if (pendingProductCard) {
+            setActiveChat("seller");
+        }
+    }, [pendingProductCard]);
 
     const clearCartApi = async (customerId: string) => {
         await cartApi.deleteAllCart(customerId);

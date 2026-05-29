@@ -81,7 +81,7 @@ export const adminApi = {
     },
 
     logout: () => {
-        return post(`${ENDPOINT.ADMIN}/auth/logout`, {});
+        return post(ENDPOINT.LOGOUT, {});
     },
 
     // Audit history

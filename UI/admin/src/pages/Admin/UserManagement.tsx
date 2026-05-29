@@ -86,6 +86,16 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ customer, onClose, onUpdateUs
     });
 
     useEffect(() => {
+        const fetchRole = async () => {
+            try {
+                const res = await userApi.getUserRole(customer.userName);
+                const role = res.data?.result || "USER";
+                setFormData(prev => ({ ...prev, role }));
+            } catch (e) {
+                console.error("Failed to fetch user role", e);
+            }
+        };
+
         setFormData({
             firstName: customer.firstName || "",
             lastName: customer.lastName || "",
@@ -95,6 +105,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ customer, onClose, onUpdateUs
             dob: customer.dob || "",
             role: "USER",
         });
+        fetchRole();
     }, [customer]);
 
     const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || "—";

@@ -436,7 +436,61 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ## TODO (ưu tiên từ trên xuống)
 
-## primary
+---
+
+## 🟢 PRIMARY — Đang làm
+
+### Client (`UI/client`)
+
+1. **Gửi sản phẩm vào chat từ trang /product**
+   - Thêm nút "Gửi vào chat" trên mỗi `ProductCard`.
+   - Khi bấm → hiện dropdown 2 tùy chọn: **"Gửi cho người bán"** và **"Gửi cho AI"**.
+   - Sản phẩm gửi vào chat dưới dạng **card** (ảnh + tên + giá + nút "Xem chi tiết").
+   - Nếu modal chat chưa mở → tự động mở modal tương ứng (SellerChatModal hoặc AI chat).
+   - Nếu đã mở → focus vào ô input và append card sản phẩm vào message draft.
+   - Card sản phẩm trong chat render khác với text message thông thường — dùng `messageType: "PRODUCT_CARD"` với payload `{ productId, name, price, image, slug }`.
+   - BE — `chat-service`: `ChatMessage.java` thêm `messageType` enum (`TEXT`, `PRODUCT_CARD`); `ChatMessageRequest` thêm `productCard?: ProductCardPayload`.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+
+2. **AI chat — gộp ask/agent, card sản phẩm + thêm giỏ**
+   - Gộp chung ask và agent thành 1 flow duy nhất — không phân biệt mode ở UI.
+   - **BE — `chat-service` hoặc service AI riêng:**
+     * Nhận message từ client → query product-service (gRPC) lấy sản phẩm phù hợp (theo keyword, category, budget).
+     * Gọi OpenRouter API với prompt + danh sách sản phẩm từ DB.
+     * Parse response: nếu AI đề cập sản phẩm cụ thể → đính kèm `productCards[]` vào response.
+     * Trả về `{ message: string, productCards?: ProductCardPayload[] }`.
+   - **FE:**
+     * AI response có `productCards` → render từng card sản phẩm inline trong bubble.
+     * Mỗi card có nút **"Thêm vào giỏ"** → gọi `cartApi.addItem()` trực tiếp, hiện toast xác nhận.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+
+3. **AI agent — tự động thêm giỏ khi user nói "mua giùm"**
+   - Detect intent "mua giùm" / "thêm vào giỏ" / "order giùm" trong message gửi lên.
+   - Nếu user đề cập **rõ ràng 1 sản phẩm** → AI tự gọi `cartApi.addItem()` + confirm "Đã thêm [tên SP] vào giỏ hàng của bạn".
+   - Nếu **mơ hồ / nhiều lựa chọn** → AI hỏi lại "Bạn muốn mua cái nào?" + render card các lựa chọn để user chọn.
+   - Sau khi user chọn → AI thêm đúng sản phẩm đó vào giỏ.
+   - Không tự thêm nhiều sản phẩm cùng lúc nếu user chưa confirm.
+   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+
+---
+
+### Manager (`UI/manager`)
+
+_(Trống — chờ task mới)_
+
+---
+
+### Admin (`UI/admin`)
+
+_(Trống — chờ task mới)_
+1. các api ở admin http://localhost:6060/api-gateway/order-service/api/orders/stats,  gọi ở admin đang bị 403. Hãy xem thử các endpoint bị 403 có trong file PermissionInitConfig (đoạn Permission với RolePermission) chưa, nếu chưa thì thêm vào
+
+2. khi vào trang  http://localhost:3005/user-management của admin, phần sửa thông tin user đoạn select role thì sửa thành đang chọn role mà họ đang được gán
+---
+
+## 🟡 CHỜ TEST — Đã implement, chưa verify
+
+### Primary (chờ test)
 
 1. **Silent refresh qua socket — tận dụng chat-service emit data changes**
    - Ý tưởng: khi bất kì user của role nào thực hiện việc mà có thay đổi db (client mua
@@ -450,217 +504,49 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
            rpc Notify (NotifyRequest) returns (NotifyResponse);
          }
          message NotifyRequest {
-           string targetUserId = 1;  // emit đúng 1 user (ORDER_UPDATED, FORCE_LOGOUT)
+           string targetUserId = 1;
            string dataType     = 2;
            string action       = 3;
            string message      = 4;
-           string targetRole   = 5;  // emit tất cả user thuộc role đang online
+           string targetRole   = 5;
          }
          message NotifyResponse {
            bool delivered = 1;
          }
-     * Chat-service tra WebSocketSessionRepository:
-       — targetUserId có giá trị → emit đúng user đó
-       — targetRole có giá trị → query theo role, emit tất cả đang online
      * Payload socket: { dataType, action: "SILENT_FETCH" | "FORCE_LOGOUT", message? }
-       — SILENT_FETCH: FE invalidate cache âm thầm khi window focused
-       — FORCE_LOGOUT: FE hiện toast → đếm ngược 10s → logout (dùng cho ROLE_CHANGED)
-     * Tận dụng tối đa code đã có, không thêm infrastructure mới ngoài gRPC port.
      * Cập nhật bảng port: chat-service 8085 (HTTP) | 8099 (Socket.IO) | 8199 (gRPC mới)
-   - Lưu ý:
-     * Gọi gRPC sau khi DB commit thực sự hoàn tất — nếu dùng @Transactional thì gọi
-       trong TransactionSynchronization.afterCommit(), không gọi trong transaction đang chạy.
-     * gRPC call phải là fire-and-forget — wrap try-catch, log warning nếu thất bại,
-       không throw lên caller. Chat-service down không được làm ảnh hưởng flow nghiệp vụ chính.
-     * Zombie session: WebSocketSession collection phải có TTL index trên field
-       updatedAt (expireAfterSeconds = 90) — MongoDB tự dọn session không được heartbeat refresh.
-       SocketHandler refresh updatedAt mỗi khi nhận ping từ client.
-     * Chỉ invalidate cache khi window đang focused (document.visibilityState === "visible").
-     * FE debounce listener ~500ms theo dataType — chỉ fetch 1 lần sau event cuối cùng.
-     * Polling thưa (~60s) chỉ khởi động khi socket ở trạng thái degraded (missed heartbeat
-       hoặc reconnecting) — dừng ngay khi socket reconnect thành công.
-     * Sau khi socket reconnect, FE fetch lại toàn bộ data một lần vì có thể đã miss event.
-     * Multi-tab: WebSocketSessionRepository trả List theo userId → emit tất cả socket đang mở.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+   - Lưu ý: gRPC fire-and-forget, TTL index updatedAt=90s, debounce 500ms, polling khi degraded.
 
 2. **Admin — Grouping permissions theo endpoint gốc**
-   - Nhóm các permission có chung endpoint gốc thành 1 card (ví dụ `/api/orders/**` → card "Orders").
-   - Trong card: danh sách permission, mỗi permission 1 checkbox riêng.
-   - Card có 1 checkbox master ở header: tick → tick hết tất cả trong card; bỏ → bỏ hết.
-   - Nút "Lưu" per card (không lưu tổng) — chỉ gửi API những permission thuộc card đó.
-   - Logic nhóm: parse prefix từ endpoint path (ví dụ `/api/orders`, `/api/products`, `/api/admin/users`...) — nhóm theo 2-3 segment đầu.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+   - Nhóm permission chung endpoint gốc → 1 card, checkbox master per card, nút Lưu per card.
 
 3. **Client — Thanh toán PayPal Sandbox trong modal (không redirect)**
-   - Flow:
-     * Bấm "Đặt hàng" với phương thức VNPay/PayPal
-       → POST `/orders/checkout` → tạo Order `status = PENDING_PAYMENT`
-       → BE gọi PayPal API tạo payment order → trả về `paypalOrderId`
-       → FE mở PaymentModal (UI tự thiết kế, không redirect ra ngoài)
-     * Trong modal nhúng PayPal JS SDK Sandbox vào div do mình chỉ định
-       — PayPal render button trong div, flow auth mở popup nhỏ của PayPal (không redirect toàn trang)
-     * Nút "Thanh toán" (PayPal SDK onApprove callback):
-       → capture payment qua PayPal API
-       → PATCH order `status = PAID`
-       → đóng modal, redirect sang trang đơn hàng
-       → push notification: "Đặt hàng thành công ✓"
-     * Nút "Hủy" (tự làm):
-       → void PayPal order
-       → PATCH order `status = CANCELLED`
-       → đóng modal
-       → push notification: "Đơn hàng đã bị hủy"
-     * Nút "Tạm dừng" (tự làm):
-       → đóng modal, giữ nguyên PayPal order chưa capture
-       → PATCH `/orders/{id}/payment-pause` → set `paymentExpiresAt = now + 30 phút`
-       → FE hiện countdown timer lấy từ `paymentExpiresAt` ở trang checkout
-       → push notification: "Bạn có 30 phút để hoàn tất thanh toán"
-       → Scheduler trong order-service kiểm tra mỗi phút:
-           nếu `status = PENDING_PAYMENT` và `paymentExpiresAt < now`
-           → void PayPal order + PATCH `status = CANCELLED`
-           → push notification: "Đơn hàng đã hết hạn thanh toán"
-   - BE cần thêm (order-service):
-     * `POST /orders/{id}/paypal/create` → tạo PayPal order, trả `paypalOrderId`
-     * `POST /orders/{id}/paypal/capture` → capture sau khi user approve
-     * `POST /orders/{id}/paypal/void` → hủy PayPal order
-     * `PATCH /orders/{id}/payment-pause` → set `paymentExpiresAt`
-     * Scheduler `@Scheduled` check expired PENDING_PAYMENT orders
-   - PayPal Sandbox credentials lưu trong `BE/.env`, không hardcode.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+   - Tạo Order PENDING_PAYMENT → mở PaymentModal → PayPal JS SDK trong div tự chỉ định.
+   - 3 nút: Thanh toán / Hủy / Tạm dừng (30 phút, lưu DB).
+   - Scheduler hủy order hết hạn. Push notification cho từng trường hợp.
 
-4. Saga pattern — rollback cho toàn bộ business flow có lỗi
-- Hiện tại saga-orchestrator service đã có nhưng chưa implement compensating transaction. Cần áp dụng cho 4 flow theo thứ tự ưu tiên dưới đây.
-- Kiến trúc chung:
+4. **Saga pattern — rollback cho toàn bộ business flow có lỗi**
+   - 4 flow: Checkout, Đăng ký user, Manager hủy đơn, Cập nhật sản phẩm khi có PENDING_PAYMENT.
+   - Orchestrator qua Kafka, compensating transaction, idempotent steps.
 
-* Orchestrator nhận command từ business service qua Kafka
-* Orchestrator gọi từng step theo thứ tự, lắng nghe reply topic
-* Nếu step nào fail → orchestrator gửi compensate command ngược lại từng bước
-* Mỗi service implement cả execute handler và compensate handler
-* State của saga lưu trong saga-orchestrator (MongoDB)
-* Mỗi step phải idempotent — retry không gây side effect
-* Compensate phải luôn thành công — retry with exponential backoff nếu cần
-* Không dùng distributed transaction (2PC) — chỉ dùng eventual consistency
+5. **Chat — Auto-release conversation khi manager offline quá 5 phút**
+   - `assignedManagerLastSeenAt` + scheduler mỗi phút + socket event `conversation_unassigned`.
+   - Điều kiện: timeout VÀ không có WebSocketSession active.
 
+### Secondary (chờ test)
 
-+ Flow 1 — Checkout (ưu tiên cao nhất)
-Hiện tại OrderServiceImpl.checkout chỉ lưu Order và bắn event order.created — chưa có rollback nếu các step sau fail.
+1. **`CHAT_ASSIGNED`** — notify client khi manager claim conversation.
+2. **`PROFILE_COMPLETED`** — notify client khi hoàn thiện hồ sơ (cần thêm KafkaTemplate vào user-service).
 
-   Step 1 — order-service:
-     Tạo Order status = PENDING
-     → emit saga command: CHECKOUT_STARTED
+### Dashboard — UI/admin (chờ test)
 
-   Step 2 — product-service (gRPC):
-     Trừ stock từng sản phẩm trong order
-     → fail (hết hàng):
-       Compensate: Hủy Order (status = CANCELLED)
+3. **Request/min chart** — Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus.
 
-   Step 3 — order-service:
-     Áp dụng voucher / trừ usage count
-     → fail (voucher hết hạn / không hợp lệ):
-       Compensate: Hoàn stock + Hủy Order
+### Monitoring — Admin UI System Logs (chờ test)
 
-   Step 4 — order-service (PayPal, nếu online payment):
-     Tạo PayPal payment order → trả paypalOrderId cho FE
-     → fail (PayPal API lỗi / user hủy / timeout):
-       Compensate: Hoàn voucher + Hoàn stock + Hủy Order
-
-+ Flow 2 — Đăng ký tài khoản mới
-Luồng hiện tại phân tán qua Kafka nhưng không có compensate nếu step sau fail.
-   Step 1 — identity-service:
-     Tạo account (username/password)
-     → emit saga command: USER_REGISTER_STARTED
-
-   Step 2 — user-service (Kafka):
-     Tạo Customer Profile
-     → fail:
-       Compensate: Xóa account ở identity-service
-
-   Step 3 — order-service (Kafka):
-     Tạo Cart trống cho user
-     → fail:
-       Compensate: Xóa Customer Profile + Xóa account
-
-+ Flow 3 — Manager hủy đơn hàng (status → CANCELLED)
-   Step 1 — order-service:
-     Cập nhật Order status = CANCELLED
-     → emit saga command: ORDER_CANCEL_STARTED
-
-   Step 2 — product-service (gRPC):
-     Hoàn lại stock cho từng sản phẩm trong đơn
-     → fail:
-       Compensate: Rollback Order status về trạng thái trước (DELIVERING, v.v.)
-
-   Step 3 — order-service:
-     Hoàn trả voucher cho khách (isActive = true, trừ usage count)
-     → fail:
-       Compensate: Trừ lại stock + Rollback Order status
-
-+ Flow 4 — Cập nhật / xóa sản phẩm khi có đơn PENDING_PAYMENT
-   Step 1 — product-service:
-     Cập nhật stock hoặc xóa sản phẩm
-
-   Step 2 — order-service (Kafka):
-     Kiểm tra các Order đang PENDING_PAYMENT có chứa sản phẩm này
-     → Nếu stock mới < quantity trong order:
-       Tự động hủy các Order bị ảnh hưởng (status = CANCELLED)
-       Push notification cho khách: "Sản phẩm [X] trong đơn hàng của bạn không còn đủ hàng"
-     → Nếu xóa sản phẩm:
-       Tương tự — hủy order + notify khách
-+ Lưu ý triển khai:
-
-  Triển khai từng flow một, bắt đầu từ Flow 1 (Checkout) vì ảnh hưởng tiền bạc trực tiếp.
-  Mỗi service cần thêm Kafka consumer lắng nghe compensate command từ orchestrator.
-  Log đầy đủ từng bước saga state để debug khi có lỗi production.
-  Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
-5. 
-    Chat — Auto-release conversation khi manager offline quá 5 phút
-  Vấn đề hiện tại: Manager A đang claim conversation với khách, A offline → Manager B online không thể reply vì B không được claim → khách bị bỏ trống vô thời hạn.
-  Giải pháp: Timeout-based auto-release — nếu manager đang claim offline quá 5 phút thì conversation tự động UNASSIGN, tất cả manager online có thể claim lại.
-  BE — chat-service
-
-  Conversation.java: thêm field assignedManagerLastSeenAt: Instant — cập nhật mỗi khi manager gửi tin hoặc heartbeat socket.
-  application.yaml: thêm conversation.auto-release.timeout-minutes: 5.
-  ConversationReleaseScheduler.java (@Scheduled(fixedDelay = 60000)): query tất cả conversation có status = ASSIGNED và assignedManagerLastSeenAt < now - 5 phút và assignedManagerId không tồn tại trong WebSocketSessionRepository → gọi releaseConversation().
-  ConversationService.releaseConversation(conversationId):
-
-  Set assignedManagerId = null, assignedManagerName = null, assignedManagerLastSeenAt = null, status = UNASSIGNED
-  Broadcast socket event conversation_unassigned { conversationId } → tất cả manager online nhận được
-
-
-  SocketHandler: khi manager gửi tin hoặc nhận heartbeat ping → cập nhật assignedManagerLastSeenAt nếu manager đó là assignedManagerId của conversation tương ứng.
-  Điều kiện unassign phải thỏa cả 2: lastSeenAt quá timeout VÀ không có WebSocketSession active — tránh unassign nhầm khi manager vẫn online nhưng không nhắn.
-
-  FE — UI/manager
-
-    ManagerChatSidebar.tsx: lắng nghe socket event conversation_unassigned → dispatch cập nhật Redux (assignedManagerId = null, status = UNASSIGNED), hiện badge "Chưa có người phụ trách" (màu xám), enable claim button cho tất cả manager.
-    Toast thông báo cho tất cả manager online: "Cuộc trò chuyện với [tên khách] chưa có người phụ trách".
-    Manager A quay lại sau khi bị unassign → thấy conversation ở trạng thái UNASSIGNED, claim lại bình thường như mọi manager khác.
-
-  Lưu ý:
-
-    Scheduler chạy mỗi phút — phải re-check status trong releaseConversation() trước khi set để tránh double-release (idempotent).
-  Lịch sử tin nhắn giữ nguyên — khách không bị mất context.
-  Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
-
-### secondary: Notification — trigger thêm sự kiện
-
-1. **`CHAT_ASSIGNED`** — `chat-service/ConversationService.claimConversation()`:
-   - Publish tới `clientId` của conversation
-   - "Yêu cầu hỗ trợ của bạn đã được {manager} tiếp nhận"
-   - Publish notification event riêng, không lồng vào socket flow
-
-2. **`PROFILE_COMPLETED`** — `user-service/CustomerServiceImpl.completeProfile()`:
-   - Cần thêm KafkaTemplate vào user-service (hiện chưa có)
-   - "Hồ sơ của bạn đã được hoàn thiện"
-
-### Dashboard — UI/admin
-
-3. **Request/min chart** — dùng Actuator `/actuator/metrics/http.server.requests` hoặc Prometheus
-
-### Monitoring — Admin UI System Logs
-
-4. **BE — log JSON** (10 service): thêm `logstash-logback-encoder` vào `pom.xml`, thêm `logback-spring.xml` output JSON với field `level`, `service`, `message`, `@timestamp`
-5. **BE — proxy endpoint** `identity-service/AdminLogController.GET /api/admin/logs` → gọi Loki `query_range`
-6. **FE — `UI/admin/SystemLogs.tsx`**: dropdown service, filter level (ERROR/WARN/INFO/DEBUG), date range, bảng log badge màu
+4. **BE — log JSON** (10 service): `logstash-logback-encoder` + `logback-spring.xml`.
+5. **BE — proxy endpoint** `GET /api/admin/logs` → Loki `query_range`.
+6. **FE — `UI/admin/SystemLogs.tsx`**: dropdown service, filter level, date range, badge màu.
 
 ---
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ShoppingCart, Heart, Star, Check, Loader2, Tag } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Check, Loader2, Tag, MessageCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,8 @@ import { RootState } from '@/redux/store';
 import { getCart, upsertCartItem } from '@/redux/thunks/cart';
 import { useToast } from '@/hooks/use-toast';
 import { findBestVoucher } from '@/redux/slices/voucher';
+import { triggerSellerChat } from '@/redux/slices/chat';
+import { aiChatBus, AI_EVENTS } from '@/utils/aiChatBus';
 
 interface Supplier {
     id?: string;
@@ -39,6 +41,7 @@ export default function ProductCard({ product }: Props) {
     const { toast } = useToast();
     const navigate = useNavigate();
     const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
+    const [showChatMenu, setShowChatMenu] = useState(false);
 
     const bestResult = useMemo(() => {
         if (!isLogin || !availableVouchers.length) return null;
@@ -93,6 +96,33 @@ export default function ProductCard({ product }: Props) {
         }
     };
 
+    const handleSendToChat = (target: 'seller' | 'ai', e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isLogin) {
+            toast({ title: t('common.loginRequired'), description: t('common.pleaseLoginFirst') });
+            navigate('/login');
+            return;
+        }
+
+        const productPayload = {
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.img,
+            slug: product.id, // using id as slug for now
+        };
+
+        if (target === 'seller') {
+            dispatch(triggerSellerChat({ product: productPayload }));
+        } else {
+            aiChatBus.emit(AI_EVENTS.OPEN_AND_SEND_PRODUCT, {
+                product: productPayload,
+                message: `${product.name}`,
+            });
+        }
+    };
+
     return (
         <Link to={`/products/${product.id}`} className="block">
             <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-orange-500/50">
@@ -116,13 +146,53 @@ export default function ProductCard({ product }: Props) {
                 </div>
 
                 <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                            {product.supplier?.name ?? t('product.supplier')}
-                        </span>
-                        <div className="flex items-center gap-0.5">
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs text-gray-600 dark:text-gray-400">4.8</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                                {product.supplier?.name ?? t('product.supplier')}
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400">4.8</span>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowChatMenu(!showChatMenu);
+                                }}
+                                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500"
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                            </button>
+
+                            {showChatMenu && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                    <button
+                                        onClick={(e) => {
+                                            handleSendToChat('seller', e);
+                                            setShowChatMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                                    >
+                                        <MessageCircle className="w-3.5 h-3.5 text-orange-500" />
+                                        Gửi cho người bán
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            handleSendToChat('ai', e);
+                                            setShowChatMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                                    >
+                                        <MessageCircle className="w-3.5 h-3.5 text-indigo-500" />
+                                        Gửi cho trợ lý AI
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

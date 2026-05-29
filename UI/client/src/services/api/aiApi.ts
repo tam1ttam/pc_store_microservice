@@ -16,6 +16,13 @@ export const aiApi = {
         return response.data.result
     },
 
+    getHistory: async (): Promise<any[]> => {
+        const response = await axios.get<{ code: number; result: any[] }>(
+            '/api-gateway/chat-service/ai/history'
+        )
+        return response.data.result
+    },
+
     getStats: async (): Promise<AIChatResponse> => {
         const response = await axios.get<{ code: number; result: AIChatResponse }>(
             '/api-gateway/chat-service/ai/stats'

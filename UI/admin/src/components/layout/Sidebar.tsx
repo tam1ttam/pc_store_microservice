@@ -130,7 +130,7 @@ export default function Sidebar() {
                             className="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 group"
                         >
                             <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
-                            <span className="text-sm font-medium">{t('sidebar.logout') || 'Đăng xuất'}</span>
+                            <span className="text-sm font-medium">ĐĂNG XUẤT</span>
                         </button>
                         <p className="text-xs text-slate-500 text-center">{t('sidebar.footer')}</p>
                     </div>

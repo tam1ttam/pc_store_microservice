@@ -4,22 +4,24 @@ import java.time.Instant;
 import java.util.List;
 
 import com.tam.chat.entity.Attachment;
+import com.tam.chat.entity.MessageType;
 import com.tam.chat.entity.ParticipantInfo;
+import com.tam.chat.entity.ProductCardPayload;
 
 import lombok.*;
-import lombok.experimental.FieldDefaults;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@AllArgsConstructor
 public class ChatMessageResponse {
     String id;
+    Instant createdDate;
     String conversationId;
-    boolean me;
+    MessageType messageType;
+    ProductCardPayload productCard;
     String message;
     ParticipantInfo sender;
+    boolean me;
     List<Attachment> attachments;
-    Instant createdDate;
 }

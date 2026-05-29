@@ -1,0 +1,243 @@
+version: '3.8'
+
+services:
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:latest
+    container_name: pc-mongodb
+    ports:
+      - "6000:27017"
+    volumes:
+      - mongodb_data:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  mysql:
+    image: mysql:8.0
+    container_name: pc-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: identity_db
+    ports:
+      - "6001:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:alpine
+    container_name: pc-redis
+    ports:
+      - "6002:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: pc-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ports:
+      - "9200:9200"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: pc-kafka
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    ports:
+      - "9094:9092"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Backend Services ───────────────────────────────────────────────────────
+  # Tất cả BE services dùng chung JAVA_TOOL_OPTIONS để tối ưu RAM
+
+  discovery-service:
+    build:
+      context: ./BE/discovery-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-discovery
+    ports:
+      - "6059:6059"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+
+  api-gateway:
+    build:
+      context: ./BE/api-gateway
+      dockerfile: ../Dockerfile.template
+    container_name: pc-gateway
+    ports:
+      - "6060:6060"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - discovery-service
+
+  identity-service:
+    build:
+      context: ./BE/identity-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-identity
+    ports:
+      - "6062:6062"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mysql
+      - kafka
+
+  user-service:
+    build:
+      context: ./BE/user-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-user
+    ports:
+      - "6063:6063"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+      - discovery-service
+
+  product-service:
+    build:
+      context: ./BE/product-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-product
+    ports:
+      - "6067:6067"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+      - elasticsearch
+      - discovery-service
+
+  order-service:
+    build:
+      context: ./BE/order-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-order
+    ports:
+      - "6065:6065"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mysql
+      - mongodb
+      - kafka
+      - discovery-service
+
+  chat-service:
+    build:
+      context: ./BE/chat-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-chat
+    ports:
+      - "8085:8085"
+      - "8099:8099"
+      - "8199:8199"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+      - discovery-service
+
+  file-service:
+    build:
+      context: ./BE/file-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-file
+    ports:
+      - "8084:8084"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+      - discovery-service
+
+  notification-service:
+    build:
+      context: ./BE/notification-service
+      dockerfile: ../Dockerfile.template
+    container_name: pc-notification
+    ports:
+      - "6068:6068"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - mongodb
+      - kafka
+      - discovery-service
+
+  saga-orchestrator:
+    build:
+      context: ./BE/saga-orchestrator
+      dockerfile: ../Dockerfile.template
+    container_name: pc-saga
+    ports:
+      - "6058:6058"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    depends_on:
+      - kafka
+      - discovery-service
+
+# ── Frontend Apps ────────────────────────────────────────────────────────────
+# Sử dụng Nginx Alpine để serve static files tối ưu RAM
+  ui-client:
+    build:
+      context: ./UI/client
+      dockerfile: Dockerfile.prod
+    container_name: pc-client
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+  ui-manager:
+    build:
+      context: ./UI/manager
+      dockerfile: Dockerfile.prod
+    container_name: pc-manager
+    ports:
+      - "3004:80"
+    depends_on:
+      - api-gateway
+
+  ui-admin:
+    build:
+      context: ./UI/admin
+      dockerfile: Dockerfile.prod
+    container_name: pc-admin
+    ports:
+      - "3003:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  mongodb_data:
+  mysql_data:

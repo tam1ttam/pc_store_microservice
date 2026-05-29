@@ -11,18 +11,18 @@ const FILE_SVC = `${BASE_URL}/api-gateway/file-service`;
 
 const ENDPOINT = {
     // ── Auth (identity-service) ──────────────────────────────────────────────
-    LOGIN: `${IDENTITY}/auth/token`,
+    LOGIN: `${IDENTITY}/admin/auth/token`,
     REGISTER: `${IDENTITY}/users/registration`,
-    LOGOUT: `${IDENTITY}/auth/logout`,
-    REFRESH_TOKEN: `${IDENTITY}/auth/refresh`,
-    INTROSPECT: `${IDENTITY}/auth/introspect`,
+    LOGOUT: `${IDENTITY}/admin/auth/logout`,
+    REFRESH_TOKEN: `${IDENTITY}/admin/auth/refresh`,
+    INTROSPECT: `${IDENTITY}/admin/auth/introspect`,
     MY_INFO: `${IDENTITY}/users/my-info`,
 
     // Identity-admin base (append e.g. /update-role/{userName})
     ADMIN: `${IDENTITY}/api/admin`,
 
     // ── User-service ─────────────────────────────────────────────────────────
-    CUSTOMERS: `${USER_SVC}/api/customers`,
+    CUSTOMERS: `${USER_SVC}/api/admin/customers`,
     USER_INFO: `${USER_SVC}/api/customers/info`,
     USER_PROFILE: `${USER_SVC}/users`,           // /my-profile or /{profileId}
     UPDATE_PROFILE: `${USER_SVC}/users/my-profile`,

@@ -31,6 +31,14 @@ export interface Message {
     id: string;
     conversationId: string;
     sender: any;
+    messageType?: "TEXT" | "PRODUCT_CARD";
+    productCard?: {
+        productId: string;
+        name: string;
+        price: number;
+        image: string;
+        slug: string;
+    };
     message: string;
     attachments?: Attachment[];
     createdDate: string;
@@ -73,10 +81,20 @@ export const messageApi = {
         conversationId: string,
         message: string,
         attachments?: Attachment[],
+        messageType: "TEXT" | "PRODUCT_CARD" = "TEXT",
+        productCard?: {
+            productId: string;
+            name: string;
+            price: number;
+            image: string;
+            slug: string;
+        },
     ): Promise<Message> => {
         const res = await post<ApiResponse<Message>>(ENDPOINT.CHAT.CREATE_MESSAGE, {
             conversationId,
             message,
+            messageType,
+            productCard,
             ...(attachments && attachments.length > 0 ? { attachments } : {}),
         });
         return res.data.result;

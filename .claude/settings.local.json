@@ -41,7 +41,10 @@
       "Bash(git push *)",
       "Bash(set MAVEN_OPTS=-Xmx512m)",
       "Bash(New-Item -ItemType Directory -Force \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\entity\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\repository\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\service\", \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\identity-service\\\\src\\\\main\\\\java\\\\com\\\\devteria\\\\identity\\\\controller\")",
-      "Bash(dir /s /b UI\\\\client\\\\src\\\\components\\\\PaymentModal.tsx)"
+      "Bash(dir /s /b UI\\\\client\\\\src\\\\components\\\\PaymentModal.tsx)",
+      "Bash(curl -i http://localhost:6065/api/orders/stats)",
+      "Bash(curl -i http://localhost:6065/order-service/api/orders/stats)",
+      "Bash(curl -i http://localhost:6059/eureka/apps)"
     ]
   }
 }

@@ -18,10 +18,7 @@ import com.tam.chat.dto.request.ChatMessageRequest;
 import com.tam.chat.dto.response.ChatMessageResponse;
 import com.tam.chat.dto.response.ConversationResponse;
 import com.tam.chat.dto.response.ManagerInfoResponse;
-import com.tam.chat.entity.ChatMessage;
-import com.tam.chat.entity.Conversation;
-import com.tam.chat.entity.ParticipantInfo;
-import com.tam.chat.entity.WebSocketSession;
+import com.tam.chat.entity.*;
 import com.tam.chat.exception.AppException;
 import com.tam.chat.exception.ErrorCode;
 import com.tam.chat.mapper.ChatMessageMapper;
@@ -91,11 +88,12 @@ public class ChatMessageService {
                 .findById(request.getConversationId())
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
 
-        // Validate: must have message text or at least one attachment
+        // Validate: must have message text, a product card, or at least one attachment
         boolean hasText = request.getMessage() != null && !request.getMessage().isBlank();
         boolean hasAttachments =
                 request.getAttachments() != null && !request.getAttachments().isEmpty();
-        if (!hasText && !hasAttachments) {
+        boolean hasProductCard = request.getProductCard() != null;
+        if (!hasText && !hasAttachments && !hasProductCard) {
             throw new AppException(ErrorCode.SEND_NOT_ALLOWED);
         }
 
@@ -154,13 +152,15 @@ public class ChatMessageService {
         chatMessage = chatMessageRepository.save(chatMessage);
         final ChatMessage savedMessage = chatMessage;
         // Update lastMessage preview on conversation
-        String lastMsgPreview =
-                (chatMessage.getMessage() != null && !chatMessage.getMessage().isBlank())
-                        ? chatMessage.getMessage()
-                        : (chatMessage.getAttachments() != null
-                                        && !chatMessage.getAttachments().isEmpty())
-                                ? "📎 " + chatMessage.getAttachments().get(0).getOriginalFileName()
-                                : "";
+        String lastMsgPreview = "";
+        if (chatMessage.getMessageType() == MessageType.PRODUCT_CARD && chatMessage.getProductCard() != null) {
+            lastMsgPreview = "📦 " + chatMessage.getProductCard().getName();
+        } else if (chatMessage.getMessage() != null && !chatMessage.getMessage().isBlank()) {
+            lastMsgPreview = chatMessage.getMessage();
+        } else if (chatMessage.getAttachments() != null
+                && !chatMessage.getAttachments().isEmpty()) {
+            lastMsgPreview = "📎 " + chatMessage.getAttachments().get(0).getOriginalFileName();
+        }
         conversation.setLastMessage(lastMsgPreview);
         conversation.setLastMessageAt(chatMessage.getCreatedDate());
         conversation.setModifiedDate(chatMessage.getCreatedDate());
@@ -286,5 +286,44 @@ public class ChatMessageService {
             log.warn("Could not fetch manager username: {}", e.getMessage());
         }
         return null;
+    }
+
+    public void saveAiMessage(String userId, String message, String senderId, String senderName) {
+        var conversation = conversationRepository.findAll().stream()
+                .filter(c -> "AI".equals(c.getType()) && userId.equals(c.getClientId()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Conversation conv = Conversation.builder()
+                            .type("AI")
+                            .clientId(userId)
+                            .participants(List.of(
+                                    ParticipantInfo.builder().userId(userId).build()))
+                            .build();
+                    return conversationRepository.save(conv);
+                });
+
+        ChatMessage chatMessage = ChatMessage.builder()
+                .conversationId(conversation.getId())
+                .message(message)
+                .sender(ParticipantInfo.builder()
+                        .userId(senderId)
+                        .username(senderName)
+                        .build())
+                .createdDate(Instant.now())
+                .build();
+        chatMessageRepository.save(chatMessage);
+    }
+
+    public List<ChatMessageResponse> getAiHistory(String userId) {
+        var conversation = conversationRepository.findAll().stream()
+                .filter(c -> "AI".equals(c.getType()) && userId.equals(c.getClientId()))
+                .findFirst()
+                .orElse(null);
+
+        if (conversation == null) return List.of();
+
+        return chatMessageRepository.findAllByConversationIdOrderByCreatedDateDesc(conversation.getId()).stream()
+                .map(this::toChatMessageResponse)
+                .toList();
     }
 }

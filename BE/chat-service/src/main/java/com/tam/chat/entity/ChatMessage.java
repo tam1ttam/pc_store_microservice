@@ -24,6 +24,10 @@ public class ChatMessage {
     @Indexed
     String conversationId;
 
+    MessageType messageType = MessageType.TEXT;
+
+    ProductCardPayload productCard;
+
     String message;
 
     ParticipantInfo sender;

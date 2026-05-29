@@ -59,7 +59,8 @@ const ENDPOINT = {
             `${CHAT_SVC}/messages?conversationId=${conversationId}`,
         MANAGERS_ONLINE: `${CHAT_SVC}/conversations/managers/online`,
         USER_ONLINE: (userId: string) => `${CHAT_SVC}/conversations/users/${userId}/online`,
-        AI_CHAT: `${CHAT_SVC}/api/chat`,
+        AI_CHAT: `${CHAT_SVC}/ai/ask`,
+        AI_HISTORY: `${CHAT_SVC}/ai/history`,
     },
 
     // ── Notification-service ─────────────────────────────────────────────────

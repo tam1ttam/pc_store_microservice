@@ -155,6 +155,12 @@ public class UserService {
                 userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 
+    public String getUserRole(String userName) {
+        User user =
+                userRepository.findByUsername(userName).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        return user.getRoles().stream().findFirst().map(Role::getName).orElse(PredefinedRole.USER_ROLE);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     public void assignRoleToUser(String userName, String roleName) {
         User user =

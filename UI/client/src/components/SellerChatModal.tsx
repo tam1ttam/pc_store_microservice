@@ -6,7 +6,8 @@ import { RootState } from "@/redux/store";
 import { MessageCircle, X, Send, User, Loader2, Paperclip, FileText, Music, Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { messageApi, Attachment } from "@/services/api/messageApi";
-import { setMessages, addMessage } from "@/redux/slices/chat";
+import { setMessages, addMessage, clearPendingProduct } from "@/redux/slices/chat";
+import { ProductCardBubble } from "./chat/ProductCardBubble";
 import { Seller } from "../assets/logo";
 
 function detectFileType(fileName: string): Attachment["fileType"] {
@@ -73,6 +74,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
     const dispatch = useAppDispatch();
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
     const onlineUserIds = useAppSelector((state: RootState) => state.presence.onlineUserIds);
+    const pendingProductCard = useAppSelector((state: RootState) => state.chat.pendingProductCard);
     const hasOnlineManager = onlineUserIds.length > 0;
 
     const messagesFromRedux = useAppSelector((state: RootState) =>
@@ -98,6 +100,8 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                     content: msg.message || msg.content,
                     message: msg.message || msg.content,
                     attachments: msg.attachments,
+                    messageType: msg.messageType,
+                    productCard: msg.productCard,
                     createdDate: typeof msg.createdDate === "number"
                         ? (msg.createdDate > 1e12 ? msg.createdDate : msg.createdDate * 1000)
                         : new Date(msg.createdDate).getTime(),
@@ -117,6 +121,12 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
         handleFetchConversation();
     }, [isOpen]);
 
+    useEffect(() => {
+        if (isOpen && pendingProductCard) {
+            handleSendMessage();
+        }
+    }, [isOpen, pendingProductCard]);
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -134,13 +144,26 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
     };
 
     const handleSendMessage = async () => {
-        if ((!inputValue.trim() && !pendingAttachment) || isLoading || !conversation) return;
+        if ((!inputValue.trim() && !pendingAttachment && !pendingProductCard) || isLoading || !conversation) return;
         setIsLoading(true);
         try {
             const attachments = pendingAttachment ? [pendingAttachment] : undefined;
-            const response = await messageApi.sendMessage(conversation.id, inputValue.trim(), attachments);
+
+            const messageType = pendingProductCard ? "PRODUCT_CARD" : "TEXT";
+            const productCard = pendingProductCard;
+
+            const response = await messageApi.sendMessage(
+                conversation.id,
+                inputValue.trim(),
+                attachments,
+                messageType,
+                productCard
+            );
+
             setInputValue("");
             setPendingAttachment(null);
+            dispatch(clearPendingProduct());
+
             if (response) {
                 const createdDate = typeof response.createdDate === "number"
                     ? response.createdDate
@@ -156,6 +179,8 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                         attachments: response.attachments,
                         createdDate,
                         me: true,
+                        messageType: response.messageType,
+                        productCard: response.productCard,
                     },
                 }));
             }
@@ -229,6 +254,9 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                                         </div>
                                     )}
                                     <div className={`max-w-[78%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
+                                        {msg.productCard && (
+                                            <ProductCardBubble product={msg.productCard} isMe={isMe} />
+                                        )}
                                         <div className={`px-3 py-2 rounded-2xl ${isMe
                                             ? "bg-orange-500 text-white rounded-br-md"
                                             : "bg-white text-gray-800 rounded-bl-md shadow-sm border"}`}>
@@ -275,20 +303,6 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                         </div>
                     )}
 
-                    {/* Pending attachment preview */}
-                    {pendingAttachment && (
-                        <div className="px-4 py-2 bg-orange-50 border-t flex items-center gap-2">
-                            {pendingAttachment.fileType === "image" ? <User className="w-4 h-4 text-orange-500" />
-                                : pendingAttachment.fileType === "video" ? <Video className="w-4 h-4 text-orange-500" />
-                                : pendingAttachment.fileType === "audio" ? <Music className="w-4 h-4 text-orange-500" />
-                                : <FileText className="w-4 h-4 text-orange-500" />}
-                            <span className="text-xs text-gray-700 truncate flex-1">{pendingAttachment.originalFileName}</span>
-                            <button onClick={() => setPendingAttachment(null)} className="text-gray-400 hover:text-red-500">
-                                <X className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    )}
-
                     {/* Input area */}
                     <div className="p-4 bg-white border-t">
                         <div className="flex gap-2 items-center">
@@ -307,7 +321,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                                 className="flex-1 rounded-full border-gray-300 focus:border-orange-500"
                                 disabled={isLoading} />
                             <Button onClick={handleSendMessage}
-                                disabled={(!inputValue.trim() && !pendingAttachment) || isLoading}
+                                disabled={(!inputValue.trim() && !pendingAttachment && !pendingProductCard) || isLoading}
                                 className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:opacity-90 p-0 flex-shrink-0">
                                 <Send className="w-4 h-4" />
                             </Button>

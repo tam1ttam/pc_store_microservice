@@ -16,6 +16,14 @@ export interface ChatMessage {
         lastName?: string;
         avatar?: string;
     };
+    messageType?: "TEXT" | "PRODUCT_CARD";
+    productCard?: {
+        productId: string;
+        name: string;
+        price: number;
+        image: string;
+        slug: string;
+    };
     content: string;
     message?: string;
     attachments?: Attachment[];
@@ -26,17 +34,31 @@ export interface ChatMessage {
 export interface ChatState {
     messages: Record<string, ChatMessage[]>;
     notifications: any[];
+    pendingProductCard: {
+        productId: string;
+        name: string;
+        price: number;
+        image: string;
+        slug: string;
+    } | null;
 }
 
 const initialState: ChatState = {
     messages: {},
     notifications: [],
+    pendingProductCard: null,
 };
 
 const chatSlice = createSlice({
     name: "chat",
     initialState,
     reducers: {
+        triggerSellerChat: (state, action: PayloadAction<{ product: any }>) => {
+            state.pendingProductCard = action.payload.product;
+        },
+        clearPendingProduct: (state) => {
+            state.pendingProductCard = null;
+        },
         addMessage: (state, action: PayloadAction<{ conversationId: string; message: ChatMessage }>) => {
             const { conversationId, message } = action.payload;
             if (!state.messages[conversationId]) {
@@ -75,5 +97,5 @@ const chatSlice = createSlice({
     },
 });
 
-export const { addMessage, setMessages, clearMessages, addNotification, clearNotifications } = chatSlice.actions;
+export const { addMessage, setMessages, clearMessages, addNotification, clearNotifications, triggerSellerChat, clearPendingProduct } = chatSlice.actions;
 export default chatSlice.reducer;

@@ -76,12 +76,13 @@ public class PermissionInitConfig {
                     "PUT /api/customers/complete-profile",
                     "Complete customer profile (activate account)"),
             p("CUSTOMER_AVATAR_UPDATE", "customer", "PUT /api/customers/avatar", "Update customer avatar"),
+            p("ADMIN_USER_INFO", "user", "GET /api/customers/info", "Admin get own info"),
             p("ADMIN_CUSTOMER_LIST", "customer", "GET /api/admin/customers", "Admin list all customers"),
             p("ADMIN_CUSTOMER_SEARCH", "customer", "GET /api/admin/customers/search", "Admin search customers"),
             p("ADMIN_CUSTOMER_COUNT", "customer", "GET /api/admin/customers/count", "Admin count customers"),
-            p("ADMIN_CUSTOMER_DETAIL", "customer", "GET /api/admin/customers/{id}", "Admin get customer detail"),
-            p("ADMIN_CUSTOMER_UPDATE", "customer", "PUT /api/admin/customers/{id}", "Admin update customer"),
-            p("ADMIN_CUSTOMER_DELETE", "customer", "DELETE /api/admin/customers/{id}", "Admin delete customer"));
+            p("ADMIN_CUSTOMER_DETAIL", "customer", "GET /api/admin/customers/{userName}", "Admin get customer detail"),
+            p("ADMIN_CUSTOMER_UPDATE", "customer", "PUT /api/admin/customers/{userName}", "Admin update customer"),
+            p("ADMIN_CUSTOMER_DELETE", "customer", "DELETE /api/admin/customers/{userName}", "Admin delete customer"));
 
     // ── product-service ───────────────────────────────────────────────────────
 
@@ -108,29 +109,33 @@ public class PermissionInitConfig {
     // ── order-service ─────────────────────────────────────────────────────────
 
     static final List<Permission> ORDER_PERMISSIONS = List.of(
-            p("CART_VIEW", "cart", "GET /cart", "View own cart"),
-            p("CART_UPDATE", "cart", "PUT /cart/items", "Add or update cart items"),
-            p("CART_DELETE_ITEM", "cart", "DELETE /cart/items/{id}", "Remove a cart item"),
-            p("CART_CLEAR", "cart", "DELETE /cart/clear", "Clear own cart"),
-            p("ORDER_CHECKOUT", "order", "POST /api/orders/checkout", "Create order from cart"),
-            p("ORDER_CREATE", "order", "POST /api/orders", "Create an order (legacy)"),
-            p("ORDER_LIST", "order", "GET /api/orders", "List own orders"),
-            p("ORDER_LIST_ALL", "order", "GET /api/orders/all", "List all orders"),
-            p("ORDER_LIST_ADMIN", "order", "GET /api/orders/admin/all", "List all orders for admin"),
-            p("ORDER_DETAIL", "order", "GET /api/orders/{id}", "Get order detail"),
-            p("ORDER_CANCEL", "order", "PATCH /api/orders/{id}/cancel", "Cancel own order"),
-            p("ORDER_UPDATE_STATUS", "order", "PATCH /api/orders/{id}/status", "Update order status (manager)"),
-            p("ORDER_DELETE", "order", "DELETE /manager/orders/{id}", "Delete an order (manager)"),
-            p("ORDER_STATS", "order", "GET /api/orders/stats", "Admin order statistics"),
-            p("VOUCHER_LIST", "voucher", "GET /vouchers", "List available vouchers"),
-            p("VOUCHER_CREATE", "voucher", "POST /manager/vouchers", "Create a voucher"),
-            p("VOUCHER_UPDATE", "voucher", "PUT /manager/vouchers/{id}", "Update a voucher"),
-            p("VOUCHER_DELETE", "voucher", "DELETE /manager/vouchers/{id}", "Delete a voucher"),
-            p("VOUCHER_APPLY", "voucher", "POST /vouchers/apply", "Apply voucher to order"),
-            p("VOUCHER_UNAPPLY", "voucher", "DELETE /vouchers/unapply", "Remove voucher from order"),
-            p("PAYMENT_CREATE", "payment", "POST /payments", "Create a payment"),
-            p("PAYMENT_CALLBACK", "payment", "GET /payments/callback", "Payment provider callback"),
-            p("PAYMENT_STATUS", "payment", "GET /payments/status", "Check payment status"));
+            p("CART_VIEW", "cart", "GET /order-service/cart", "View own cart"),
+            p("CART_UPDATE", "cart", "PUT /order-service/cart/items", "Add or update cart items"),
+            p("CART_DELETE_ITEM", "cart", "DELETE /order-service/cart/items/{id}", "Remove a cart item"),
+            p("CART_CLEAR", "cart", "DELETE /order-service/cart/clear", "Clear own cart"),
+            p("ORDER_CHECKOUT", "order", "POST /order-service/api/orders/checkout", "Create order from cart"),
+            p("ORDER_CREATE", "order", "POST /order-service/api/orders", "Create an order (legacy)"),
+            p("ORDER_LIST", "order", "GET /order-service/api/orders", "List own orders"),
+            p("ORDER_LIST_ALL", "order", "GET /order-service/api/orders/all", "List all orders"),
+            p("ORDER_LIST_ADMIN", "order", "GET /order-service/api/orders/admin/all", "List all orders for admin"),
+            p("ORDER_DETAIL", "order", "GET /order-service/api/orders/{id}", "Get order detail"),
+            p("ORDER_CANCEL", "order", "PATCH /order-service/api/orders/{id}/cancel", "Cancel own order"),
+            p(
+                    "ORDER_UPDATE_STATUS",
+                    "order",
+                    "PATCH /order-service/api/orders/{id}/status",
+                    "Update order status (manager)"),
+            p("ORDER_DELETE", "order", "DELETE /order-service/manager/orders/{id}", "Delete an order (manager)"),
+            p("ORDER_STATS", "order", "GET /order-service/api/orders/stats", "Admin order statistics"),
+            p("VOUCHER_LIST", "voucher", "GET /order-service/vouchers", "List available vouchers"),
+            p("VOUCHER_CREATE", "voucher", "POST /order-service/manager/vouchers", "Create a voucher"),
+            p("VOUCHER_UPDATE", "voucher", "PUT /order-service/manager/vouchers/{id", "Update a voucher"),
+            p("VOUCHER_DELETE", "voucher", "DELETE /order-service/manager/vouchers/{id}", "Delete a voucher"),
+            p("VOUCHER_APPLY", "voucher", "POST /order-service/vouchers/apply", "Apply voucher to order"),
+            p("VOUCHER_UNAPPLY", "voucher", "DELETE /order-service/vouchers/unapply", "Remove voucher from order"),
+            p("PAYMENT_CREATE", "payment", "POST /order-service/payments", "Create a payment"),
+            p("PAYMENT_CALLBACK", "payment", "GET /order-service/payments/callback", "Payment provider callback"),
+            p("PAYMENT_STATUS", "payment", "GET /order-service/payments/status", "Check payment status"));
 
     // ── chat-service ──────────────────────────────────────────────────────────
 

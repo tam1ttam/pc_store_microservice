@@ -18,6 +18,10 @@ export const userApi = {
         return get(`${ENDPOINTS.USER_PROFILE}/${profileId}`);
     },
 
+    getUserRole: (userName: string) => {
+        return get(`/api-gateway/identity-service/users/role/${userName}`);
+    },
+
     // PUT /api-gateway/user-service/users/my-profile
     updateMyProfile: (data: any) => {
         return put(ENDPOINTS.UPDATE_PROFILE, data);

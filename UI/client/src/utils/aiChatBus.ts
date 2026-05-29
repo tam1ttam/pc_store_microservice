@@ -21,4 +21,5 @@ export const aiChatBus = new EventEmitter();
 
 export const AI_EVENTS = {
     OPEN_AND_SEND: 'OPEN_AND_SEND',
+    OPEN_AND_SEND_PRODUCT: 'OPEN_AND_SEND_PRODUCT',
 };
