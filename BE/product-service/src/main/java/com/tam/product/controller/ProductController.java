@@ -3,6 +3,7 @@ package com.tam.product.controller;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.tam.product.dto.request.ApiResponse;
@@ -74,6 +75,7 @@ public class ProductController {
     }
 
     @PostMapping("/add")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<ProductResponse> addProduct(@RequestBody ProductCreationRequest request) {
         var product = productService.addProduct(request);
         return ApiResponse.<ProductResponse>builder()
@@ -88,6 +90,7 @@ public class ProductController {
     }
 
     @PutMapping("/update/{productId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<ProductResponse> updateProduct(
             @PathVariable String productId, @RequestBody ProductCreationRequest request) {
         var product = productService.updateProduct(productId, request);
@@ -97,6 +100,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/delete/{productId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Boolean> deleteProduct(@PathVariable String productId) {
         var result = productService.deleteProductById(productId);
         return ApiResponse.<Boolean>builder().result(result).build();

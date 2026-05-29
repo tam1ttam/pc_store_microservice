@@ -23,6 +23,7 @@ export const ProductCardBubble = ({ product, isMe }: ProductCardBubbleProps) => 
     return (
         <div className={cn(
             "flex flex-col gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-w-[200px] shadow-sm",
+            isMe ? "ml-auto" : "mr-auto"
         )}>
             <Link to={`/products/${product.slug}`} className="block overflow-hidden rounded-md">
                 <img src={product.image} alt={product.name} className="w-full h-32 object-cover hover:scale-105 transition-transform" />

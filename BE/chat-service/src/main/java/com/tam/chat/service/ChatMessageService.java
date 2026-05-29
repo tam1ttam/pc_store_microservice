@@ -147,6 +147,7 @@ public class ChatMessageService {
         }
 
         ChatMessage chatMessage = chatMessageMapper.toChatMessage(request);
+        chatMessage.setProductCard(request.getProductCard());
         chatMessage.setSender(senderBuilder.build());
         chatMessage.setCreatedDate(Instant.now());
         chatMessage = chatMessageRepository.save(chatMessage);
@@ -256,6 +257,7 @@ public class ChatMessageService {
     private ChatMessageResponse toChatMessageResponse(ChatMessage chatMessage) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         var response = chatMessageMapper.toChatMessageResponse(chatMessage);
+        response.setProductCard(chatMessage.getProductCard());
         response.setMe(userId.equals(chatMessage.getSender().getUserId()));
         return response;
     }

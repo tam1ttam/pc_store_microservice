@@ -120,12 +120,12 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
         if (!isOpen) { hasFetchedRef.current = false; return; }
         handleFetchConversation();
     }, [isOpen]);
-
     useEffect(() => {
-        if (isOpen && pendingProductCard) {
+        if (isOpen && pendingProductCard && conversation) {
             handleSendMessage();
         }
-    }, [isOpen, pendingProductCard]);
+    }, [isOpen, pendingProductCard, conversation]);
+
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -209,7 +209,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
             </button>
 
             {isOpen && (
-                <div className="fixed bottom-8 right-2 z-50 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+                <div className="fixed bottom-8 right-[400px] z-50 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -240,6 +240,7 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                             const isMe = msg.me ?? false;
                             const text = msg.message || msg.content || "";
                             const time = new Date(msg.createdDate).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                            console.log("=== SellerChat msg ===", JSON.stringify(msg, null, 2));
                             return (
                                 <div key={msg.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
                                     {isMe ? (
@@ -253,18 +254,33 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                                                 : <img src={Seller} alt="seller" />}
                                         </div>
                                     )}
-                                    <div className={`max-w-[78%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
-                                        {msg.productCard && (
-                                            <ProductCardBubble product={msg.productCard} isMe={isMe} />
-                                        )}
-                                        <div className={`px-3 py-2 rounded-2xl ${isMe
-                                            ? "bg-orange-500 text-white rounded-br-md"
-                                            : "bg-white text-gray-800 rounded-bl-md shadow-sm border"}`}>
-                                            {text && <p className="text-sm whitespace-pre-wrap">{text}</p>}
-                                            {(msg.attachments ?? []).map((att, i) => (
-                                                <AttachmentPreview key={i} att={att} isMe={isMe} />
-                                            ))}
-                                        </div>
+                                    <div className={`max-w-[78%] flex flex-col gap-2 ${isMe ? "items-end" : "items-start"}`}>
+                                        {(msg.productCard || (msg as any).product_card) ? (
+                                            <div className={`rounded-2xl overflow-hidden ${isMe
+                                                ? "rounded-br-md"
+                                                : "rounded-bl-md shadow-sm border"}`}>
+                                                <ProductCardBubble
+                                                    product={msg.productCard || (msg as any).product_card}
+                                                    isMe={isMe}
+                                                />
+                                                {text && (
+                                                    <div className={`px-3 py-2 text-sm whitespace-pre-wrap ${isMe
+                                                        ? "bg-orange-500 text-white"
+                                                        : "bg-white text-gray-800 border-t"}`}>
+                                                        {text}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (text || (msg.attachments ?? []).length > 0) ? (
+                                            <div className={`px-3 py-2 rounded-2xl ${isMe
+                                                ? "bg-orange-500 text-white rounded-br-md"
+                                                : "bg-white text-gray-800 rounded-bl-md shadow-sm border"}`}>
+                                                {text && <p className="text-sm whitespace-pre-wrap">{text}</p>}
+                                                {(msg.attachments ?? []).map((att, i) => (
+                                                    <AttachmentPreview key={i} att={att} isMe={isMe} />
+                                                ))}
+                                            </div>
+                                        ) : null}
                                         <div className={`flex items-center gap-1 px-1 ${isMe ? "flex-row-reverse" : ""}`}>
                                             {!isMe && msg.sender?.username && (
                                                 <span className="text-[10px] text-gray-500 font-medium">{msg.sender.username}</span>
@@ -276,12 +292,12 @@ const SellerChatModal = ({ isOpen, onOpen, onClose, isHidden }: SellerChatModalP
                             );
                         })}
                         {isLoading && (
-                            <div className="flex items-end gap-2">
-                                <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                    <img src={Seller} alt="seller" />
+                            <div className="flex items-end gap-2 flex-row-reverse">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-orange-500 text-white">
+                                    <User className="w-4 h-4" />
                                 </div>
-                                <div className="bg-white p-3 rounded-2xl rounded-bl-md shadow-sm border">
-                                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                                <div className="bg-orange-500 p-3 rounded-2xl rounded-br-md shadow-sm text-white">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 </div>
                             </div>
                         )}

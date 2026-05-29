@@ -22,11 +22,11 @@ const ProductAnalytics = () => {
         try {
             // Fetch revenue and sales from order-service
             const orderRes = await axios.get("/api-gateway/order-service/analytics/products");
-            const orderData = orderRes.data.result;
+            const orderData = orderRes.data?.result || [];
 
             // Fetch view counts from product-service
             const productRes = await axios.get("/api-gateway/product-service/products/analytics");
-            const productData = productRes.data.result;
+            const productData = productRes.data?.result || [];
 
             // Merge data
             const mergedStats = orderData.map((item: any) => {

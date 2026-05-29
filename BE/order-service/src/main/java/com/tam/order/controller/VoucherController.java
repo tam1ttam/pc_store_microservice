@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,7 @@ public class VoucherController {
     // ── Manager CRUD (/manager/vouchers) ──────────────────────────────────────
 
     @PostMapping("/manager/vouchers")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<VoucherResponse> create(@RequestBody @Valid VoucherRequest request) {
         return ApiResponse.<VoucherResponse>builder()
                 .result(voucherService.create(request))
@@ -35,6 +37,7 @@ public class VoucherController {
     }
 
     @GetMapping("/manager/vouchers")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<List<VoucherResponse>> getAll() {
         return ApiResponse.<List<VoucherResponse>>builder()
                 .result(voucherService.getAll())
@@ -42,6 +45,7 @@ public class VoucherController {
     }
 
     @GetMapping("/manager/vouchers/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<VoucherResponse> getById(@PathVariable Long id) {
         return ApiResponse.<VoucherResponse>builder()
                 .result(voucherService.getById(id))
@@ -49,6 +53,7 @@ public class VoucherController {
     }
 
     @PutMapping("/manager/vouchers/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<VoucherResponse> update(@PathVariable Long id, @RequestBody @Valid VoucherRequest request) {
         return ApiResponse.<VoucherResponse>builder()
                 .result(voucherService.update(id, request))
@@ -56,6 +61,7 @@ public class VoucherController {
     }
 
     @DeleteMapping("/manager/vouchers/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Boolean> delete(@PathVariable Long id) {
         voucherService.delete(id);
         return ApiResponse.<Boolean>builder().result(true).build();

@@ -2,6 +2,7 @@ package com.tam.product.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.tam.product.dto.request.ApiResponse;
@@ -28,6 +29,7 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<CategoryResponse> create(@RequestBody CategoryRequest request) {
         return ApiResponse.<CategoryResponse>builder()
                 .result(categoryService.createCategory(request))
@@ -35,6 +37,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Void> delete(@PathVariable String id) {
         categoryService.deleteCategory(id);
         return ApiResponse.<Void>builder().build();

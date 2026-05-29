@@ -7,6 +7,7 @@ import { useAppSelector, useAppDispatch } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { getAccessToken } from "@/config/axios.config";
 import { setMessages, addMessage, ChatMessage, setConversations, updateConversation, clearUnread, SupportConversation } from "@/redux/slices/chat";
+import { ProductCardBubble } from "@/components/chat/ProductCardBubble";
 import { AILogo } from "@/assets/logo";
 import { Send, X, Loader2, User, Shield, ArrowRightLeft, Plus, MessageSquare, Search, Paperclip, FileText, Music, Video } from "lucide-react";
 
@@ -261,7 +262,7 @@ const CustomerChatWindow = ({
                     conversationId: conversation.id,
                     sender: msg.sender,
                     content: msg.message || msg.content || "",
-                    message: msg.message || msg.content || "",
+                    message: msg.message || msg.content || "",  messageType: msg.messageType,  productCard: msg.productCard,
                     attachments: msg.attachments,
                     createdDate: typeof msg.createdDate === "number"
                         ? (msg.createdDate > 1e12 ? msg.createdDate : msg.createdDate * 1000)
@@ -495,6 +496,7 @@ const CustomerChatWindow = ({
                         const time = msg.createdDate
                             ? new Date(msg.createdDate).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
                             : "";
+                        console.log("=== CustomerChat msg ===", JSON.stringify(msg, null, 2));
                         return (
                             <div key={msg.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
                                 {isMe ? (
@@ -507,16 +509,31 @@ const CustomerChatWindow = ({
                                     </div>
                                 )}
                                 <div className={`max-w-[72%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
-                                    <div className={`px-3 py-2 rounded-2xl text-sm break-words ${isMe
-                                        ? isDirect
-                                            ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-sm"
-                                            : "bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-br-sm"
-                                        : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"}`}>
-                                        {content && <span className="whitespace-pre-wrap">{content}</span>}
-                                        {(msg.attachments ?? []).map((att, i) => (
-                                            <AttachmentBubble key={i} att={att} isMe={isMe} isDirect={isDirect} />
-                                        ))}
-                                    </div>
+                                    {msg.productCard ? (
+                                        <div className={`rounded-2xl overflow-hidden ${isMe ? "rounded-br-sm" : "rounded-bl-sm shadow-sm border"}`}>
+                                            <ProductCardBubble product={msg.productCard} isMe={isMe} />
+                                            {content && (
+                                                <div className={`px-3 py-2 text-sm whitespace-pre-wrap ${isMe
+                                                    ? isDirect
+                                                        ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
+                                                        : "bg-gradient-to-r from-orange-400 to-red-500 text-white"
+                                                    : "bg-white text-gray-800 border-t"}`}>
+                                                    {content}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (content || (msg.attachments ?? []).length > 0) ? (
+                                        <div className={`px-3 py-2 rounded-2xl text-sm break-words ${isMe
+                                            ? isDirect
+                                                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-sm"
+                                                : "bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-br-sm"
+                                            : "bg-white text-gray-800 border rounded-bl-sm shadow-sm"}`}>
+                                            {content && <span className="whitespace-pre-wrap">{content}</span>}
+                                            {(msg.attachments ?? []).map((att, i) => (
+                                                <AttachmentBubble key={i} att={att} isMe={isMe} isDirect={isDirect} />
+                                            ))}
+                                        </div>
+                                    ) : null}
                                     <div className={`flex items-center gap-1.5 px-1 ${isMe ? "flex-row-reverse" : ""}`}>
                                         {senderName && <span className="text-[10px] text-gray-500 font-medium">{senderName}</span>}
                                         {time && <span className="text-[10px] text-gray-400">{time}</span>}
@@ -892,3 +909,4 @@ const ManagerChatSidebar = () => {
 };
 
 export default ManagerChatSidebar;
+

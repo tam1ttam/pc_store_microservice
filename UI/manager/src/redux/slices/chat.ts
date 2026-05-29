@@ -16,7 +16,7 @@ export interface ChatMessage {
         lastName?: string;
         avatar?: string;
     };
-    content: string;
+    content: string;  messageType?: "TEXT" | "PRODUCT_CARD";  productCard?: {    productId: string;    name: string;    price: number;    image: string;    slug: string;  };
     message?: string;
     attachments?: Attachment[];
     createdDate: number;

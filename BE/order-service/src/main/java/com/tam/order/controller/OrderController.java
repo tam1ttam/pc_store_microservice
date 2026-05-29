@@ -54,13 +54,13 @@ public class OrderController {
     }
 
     @GetMapping("/api/orders/all")
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<List<Order>> getAllOrders() {
         return ApiResponse.<List<Order>>builder().result(orderService.getAll()).build();
     }
 
     @GetMapping("/api/orders/admin/all")
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Page<Order>> getAllOrdersPaginated(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.<Page<Order>>builder()
@@ -101,7 +101,7 @@ public class OrderController {
     // ── Manager endpoints ──────────────────────────────────────────────────────
 
     @PatchMapping("/api/orders/{id}/status")
-    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Order> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
         return ApiResponse.<Order>builder()
                 .result(orderService.updateOrderStatus(id, status))
@@ -109,7 +109,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/manager/orders/{id}")
-    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Boolean> deleteOrder(@PathVariable Long id) {
         return ApiResponse.<Boolean>builder()
                 .result(orderService.deleteOrder(id))

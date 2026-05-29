@@ -4,12 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
 import tam.common.constants.dto.IntrospectRequest;
+import tam.common.exception.TokenExpiredException;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +19,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 
 @Slf4j
 @Component("customJwtDecoder")
@@ -43,7 +46,7 @@ public class CustomJwtDecoder implements JwtDecoder {
         String cached = redisTemplate.opsForValue().get(cacheKey);
 
         if (INVALID.equals(cached)) {
-            throw new JwtException("Token has been revoked");
+            throw new BadJwtException("Token has been revoked");
         }
 
         if (cached == null) {
@@ -67,7 +70,7 @@ public class CustomJwtDecoder implements JwtDecoder {
 
                 if (response.getResult() == null || !response.getResult().isValid()) {
                     redisTemplate.opsForValue().set(cacheKey, INVALID, 5, TimeUnit.MINUTES);
-                    throw new JwtException("Token is invalid or revoked");
+                    throw new BadJwtException("Token has been revoked");
                 }
 
                 com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(token);
@@ -81,7 +84,7 @@ public class CustomJwtDecoder implements JwtDecoder {
                 return;
 
             } catch (JwtException e) {
-                throw e;
+                throw new BadJwtException("Token is invalid");
             } catch (Exception e) {
                 lastException = e;
                 log.warn("Introspect attempt {}/{} failed: {}", attempt, maxRetries, e.getMessage());
@@ -97,7 +100,7 @@ public class CustomJwtDecoder implements JwtDecoder {
         }
 
         log.error("Cannot reach identity-service for introspect after {} attempts", maxRetries, lastException);
-        throw new JwtException("Cannot validate token: identity-service unavailable");
+        throw new BadJwtException("Cannot validate token: identity-service unavailable");
     }
 
     private NimbusJwtDecoder getNimbusDecoder() {
