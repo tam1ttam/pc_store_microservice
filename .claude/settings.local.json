@@ -50,7 +50,9 @@
       "Bash(powershell -Command \"\\(Get-Content 'UI\\\\manager\\\\src\\\\components\\\\ManagerChatSidebar.tsx'\\) -replace '  content: msg.message \\\\|\\\\| msg.content \\\\|\\\\| \\\\\"\\\\\",\\\\r?\\\\n  message: msg.message \\\\|\\\\| msg.content \\\\|\\\\| \\\\\"\\\\\",\\\\r?\\\\n  attachments: msg.attachments,', '  content: msg.message || msg.content || \\\\\"\\\\\",`r`n  message: msg.message || msg.content || \\\\\"\\\\\",`r`n  messageType: msg.messageType,`r`n  productCard: msg.productCard,`r`n  attachments: msg.attachments,' | Set-Content 'UI\\\\manager\\\\src\\\\components\\\\ManagerChatSidebar.tsx'\")",
       "PowerShell(cd \"d:\\\\nhap\\\\nhap_iluttmab\"; $c = Get-Content \"UI\\\\manager\\\\src\\\\components\\\\ManagerChatSidebar.tsx\" -Raw; $c = $c -replace [regex]::Escape\\(\"  content: msg.message || msg.content || `\"`\",`r`n  message: msg.message || msg.content || `\"`\",`r`n  attachments: msg.attachments,\"\\), \"  content: msg.message || msg.content || `\"`\",`r`n  message: msg.message || msg.content || `\"`\",`r`n  messageType: msg.messageType,`r`n  productCard: msg.productCard,`r`n  attachments: msg.attachments,\"; Set-Content \"UI\\\\manager\\\\src\\\\components\\\\ManagerChatSidebar.tsx\" $c)",
       "Bash(sed -i 's/  content: string;$/  content: string;\\\\r  messageType?: \"TEXT\" | \"PRODUCT_CARD\";\\\\r  productCard?: {\\\\r    productId: string;\\\\r    name: string;\\\\r    price: number;\\\\r    image: string;\\\\r    slug: string;\\\\r  };/' UI/manager/src/redux/slices/chat.ts)",
-      "Bash(sed -n '1,30p' UI/manager/src/redux/slices/chat.ts)"
+      "Bash(sed -n '1,30p' UI/manager/src/redux/slices/chat.ts)",
+      "Bash(Get-Content \"d:\\\\nhap\\\\nhap_iluttmab\\\\BE\\\\chat-service\\\\src\\\\main\\\\java\\\\com\\\\tam\\\\chat\\\\controller\\\\AIController.java\" -Raw)",
+      "Bash(mvn -pl chat-service compile -q)"
     ]
   }
 }

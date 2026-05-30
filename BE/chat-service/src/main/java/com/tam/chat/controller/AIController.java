@@ -31,18 +31,22 @@ public class AIController {
     ApiResponse<AIResponse> ask(@RequestBody @Valid AIRequest request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // 1. Save User message to DB
-        chatMessageService.saveAiMessage(userId, request.getQuestion(), userId, "You");
-
-        AIResponse response = aiService.getAiResponse(ChatRequest.builder()
-                .message(request.getQuestion())
-                .mode("chat")
-                .build());
-
-        // 2. Save AI response message to DB if successful
-        if (response.isSuccess()) {
-            chatMessageService.saveAiMessage(userId, response.getResponse(), "AI_ASSISTANT", "AI Assistant");
+        String userMessage = request.getMessage();
+        if (userMessage == null || userMessage.isBlank()) {
+            return ApiResponse.<AIResponse>builder()
+                    .result(AIResponse.builder()
+                            .success(false)
+                            .error("Tin nhắn không được để trống")
+                            .build())
+                    .build();
         }
+
+        String mode = request.getMode() != null ? request.getMode() : "chat";
+
+        chatMessageService.saveAiMessage(userId, userMessage, userId, "You");
+
+        AIResponse response = aiService.getAiResponse(
+                ChatRequest.builder().message(userMessage).mode(mode).build());
 
         return ApiResponse.<AIResponse>builder().result(response).build();
     }

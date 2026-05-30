@@ -442,35 +442,53 @@ Stack: React 18 + TypeScript + Vite + Redux Toolkit + Tailwind CSS + Radix UI + 
 
 ### Client (`UI/client`)
 
-1. **Gửi sản phẩm vào chat từ trang /product**
-   - Thêm nút "Gửi vào chat" trên mỗi `ProductCard`.
-   - Khi bấm → hiện dropdown 2 tùy chọn: **"Gửi cho người bán"** và **"Gửi cho AI"**.
-   - Sản phẩm gửi vào chat dưới dạng **card** (ảnh + tên + giá + nút "Xem chi tiết").
-   - Nếu modal chat chưa mở → tự động mở modal tương ứng (SellerChatModal hoặc AI chat).
-   - Nếu đã mở → focus vào ô input và append card sản phẩm vào message draft.
-   - Card sản phẩm trong chat render khác với text message thông thường — dùng `messageType: "PRODUCT_CARD"` với payload `{ productId, name, price, image, slug }`.
-   - BE — `chat-service`: `ChatMessage.java` thêm `messageType` enum (`TEXT`, `PRODUCT_CARD`); `ChatMessageRequest` thêm `productCard?: ProductCardPayload`.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+1. AI Agent mua hàng / tự động trả lời khi ko có manager nào online
+đã làm xong phần chat-service (đã có khung giao diện, kết nối WebSocket/API để Client và Manager chat với nhau), việc tích hợp thêm một AI Agent tự động đóng vai trò như một "Manager ảo" thực ra rất thuận tiện. Con Agent này sẽ cắm trực tiếp vào hệ thống chat hiện tại của bạn như một User hoặc một Webhook.Để biến hệ thống chat thông thường thành hệ thống có AI Agent tự động, bạn có thể triển khai theo 4 bước dưới đây:Bước 1: Tạo một "Tài khoản AI" trong DatabaseĐầu tiên, hãy coi AI Agent như một Manager đặc biệt trong hệ thống của bạn.Tạo một User trong DB với role: "AI_AGENT" hoặc id: "ai_agent_manager".Khi có phòng chat mới (hoặc áp dụng theo đúng logic claim chat bạn vừa thiết kế ở câu hỏi trước): AI Agent có thể là người tự động claim phòng chat đầu tiên khi chưa có manager người thật nào online.Bước 2: Xây dựng Bộ não (AI Service) bằng LangChain/LangGraphBạn nên tách riêng một Microservice gọi là ai-service (như bạn đã quy hoạch trong file app.yml của Gateway: uri: lb://AI-SERVICE). Service này tốt nhất nên viết bằng Python vì hệ sinh thái AI của Python mạnh hơn Java rất nhiều.Tại ai-service, bạn sử dụng LangChain hoặc LangGraph để định nghĩa Agent:Pythonfrom langchain_openai import ChatOpenAI # Hoặc dùng Llama qua Ollama/Groq
+from langchain_core.tools import tool
+from langgraph.prebuilt import create_react_agent
 
-2. **AI chat — gộp ask/agent, card sản phẩm + thêm giỏ**
-   - Gộp chung ask và agent thành 1 flow duy nhất — không phân biệt mode ở UI.
-   - **BE — `chat-service` hoặc service AI riêng:**
-     * Nhận message từ client → query product-service (gRPC) lấy sản phẩm phù hợp (theo keyword, category, budget).
-     * Gọi OpenRouter API với prompt + danh sách sản phẩm từ DB.
-     * Parse response: nếu AI đề cập sản phẩm cụ thể → đính kèm `productCards[]` vào response.
-     * Trả về `{ message: string, productCards?: ProductCardPayload[] }`.
-   - **FE:**
-     * AI response có `productCards` → render từng card sản phẩm inline trong bubble.
-     * Mỗi card có nút **"Thêm vào giỏ"** → gọi `cartApi.addItem()` trực tiếp, hiện toast xác nhận.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+# 1. Định nghĩa các "đôi tay" (Tools) cho AI
+@tool
+def search_product(keyword: str):
+    """Tìm kiếm sản phẩm trong kho theo từ khóa."""
+    # Gọi gRPC hoặc REST sang product-service để lấy data
+    return product_service.search(keyword)
 
-3. **AI agent — tự động thêm giỏ khi user nói "mua giùm"**
-   - Detect intent "mua giùm" / "thêm vào giỏ" / "order giùm" trong message gửi lên.
-   - Nếu user đề cập **rõ ràng 1 sản phẩm** → AI tự gọi `cartApi.addItem()` + confirm "Đã thêm [tên SP] vào giỏ hàng của bạn".
-   - Nếu **mơ hồ / nhiều lựa chọn** → AI hỏi lại "Bạn muốn mua cái nào?" + render card các lựa chọn để user chọn.
-   - Sau khi user chọn → AI thêm đúng sản phẩm đó vào giỏ.
-   - Không tự thêm nhiều sản phẩm cùng lúc nếu user chưa confirm.
-   - Hoàn thành từng subtask một. Tự kiểm thử trước khi hoàn thành sau đó clear cache để làm subtask tiếp theo.
+@tool
+def add_to_cart(user_id: str, product_id: str, quantity: int):
+    """Thêm sản phẩm vào giỏ hàng của người dùng."""
+    # Gọi sang cart/order-service
+    return order_service.add_to_cart(user_id, product_id, quantity)
+
+# 2. Khởi tạo bộ não (LLM)
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+# 3. Kết hợp lại thành Agent
+tools = [search_product, add_to_cart]
+ai_agent = create_react_agent(model, tools, state_modifier="Bạn là trợ lý ảo hỗ trợ mua sắm bán hàng của PCStore...")
+Bước 3: Cơ chế bắt sự kiện (Event-Driven) bằng KafkaVì hệ thống của bạn đã có Kafka (cấu hình trong order-service), hãy tận dụng nó để kết nối chat-service và ai-service một cách mượt mà, không làm nghẽn hệ thống.Luồng đi của một tin nhắn tự động sẽ như sau:Client nhắn tin: Tin nhắn gửi lên chat-service qua WebSocket.Bắn Event: chat-service kiểm tra thấy phòng chat này đang do AI quản lý $\rightarrow$ Bắn một event vào Kafka topic chat-messages-topic với nội dung dạng:JSON{"conversation_id": "123", "user_id": "client_A", "message": "Tìm cho tôi chuột Logitech dưới 500k"}
+3.  **AI xử lý:** `ai-service` listen topic đó, lấy tin nhắn ra đưa vào bộ não LangChain. 
+    *   AI đọc chữ *"chuột Logitech dưới 500k"*.
+    *   AI tự động kích hoạt Tool `search_product(keyword="chuột Logitech")`.
+    *   Lọc các kết quả dưới 500k và tự rặn ra câu trả lời bằng tiếng Việt.
+4.  **Trả kết quả:** `ai-service` gọi một API REST (hoặc bắn ngược lại một topic Kafka khác) về `chat-service` để lưu tin nhắn của AI vào DB và đẩy qua WebSocket cho Client hiển thị.
+
+---
+
+## Bước 4: Tích hợp thiết kế "Claim Chat" (Manager nhảy vào cướp quyền)
+
+Để đồng bộ với logic chat của bạn: khi AI đang tư vấn, nếu khách hàng gõ *"Gặp nhân viên"* hoặc AI nhận thấy ca này khó (hết hàng, khách khiếu nại dữ dội), hệ thống sẽ tự động chuyển giao.
+
+*   **AI tự nhả chat:** Trong `ai-service`, bạn viết một Tool tên là `transfer_to_human()`. Khi AI thấy khách giận dữ hoặc yêu cầu gặp người thật, nó sẽ tự kích hoạt Tool này $\rightarrow$ Gọi sang Redis/DB xóa `assigned_manager_id: "ai_agent"` $\rightarrow$ Đẩy trạng thái phòng chat về "Đang đợi" để Manager người thật nhảy vào claim.
+*   **Người thật cướp quyền:** Bất kỳ lúc nào Manager B bấm nút `Claim Chat` trên giao diện, hệ thống sẽ update `assigned_manager_id: "manager_B"`. Kể từ giây phút đó, `chat-service` sẽ **không** bắn tin nhắn vào Kafka cho `ai-service` nữa $\rightarrow$ AI chính thức im lặng và chỉ đứng xem.
+
+## 🚀 Lời khuyên cho bạn lúc này
+
+Vì bạn đã có sẵn nền tảng Microservices rất chuẩn (Gateway, Eureka, Kafka, Redis), bạn hãy:
+1.  Dựng một source code **Python (FastAPI)** làm `ai-service`.
+2.  Đăng ký nó lên **Eureka** (trong Python có thư viện `py_eureka_client`).
+3.  Dùng thư viện `confluent-kafka` trong Python để cấu hình Consumer nghe các tin nhắn từ `chat-service`.
+4.  Bắt đầu với các Tool đơn giản là **Đọc thông tin sản phẩm** trước, sau đó mới nâng cấp lên Tool *
 
 ---
 
