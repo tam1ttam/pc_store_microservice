@@ -6,20 +6,6 @@ server:
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
-  kafka:
-    consumer:
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
-      group-id: chat-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    topics:
-      chat-messages: chat-messages
-      ai-replies: ai-replies
   application:
     name: chat-service
   jmx:
@@ -67,8 +53,6 @@ app:
       grpc-port: ${USER_SERVICE_GRPC_PORT:6163}
     identity:
       url: lb://IDENTITY-SERVICE
-order:
-      url: lb://ORDER-SERVICE
 
 eureka:
   client:

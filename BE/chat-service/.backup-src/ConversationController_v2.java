@@ -80,12 +80,6 @@ public class ConversationController {
                 .build();
     }
 
-    @PostMapping("/internal/ai/release")
-    ApiResponse<Boolean> releaseAi(@PathVariable String id, @RequestParam(required = false) String reason) {
-        boolean ok = conversationService.releaseAi(id, reason);
-        return ApiResponse.<Boolean>builder().result(ok).build();
-    }
-
     @GetMapping("/users/{userId}/online")
     ApiResponse<Boolean> isUserOnline(@PathVariable String userId) {
         return ApiResponse.<Boolean>builder()

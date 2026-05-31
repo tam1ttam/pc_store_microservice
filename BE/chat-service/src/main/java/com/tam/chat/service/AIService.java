@@ -1,15 +1,14 @@
 package com.tam.chat.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -18,8 +17,10 @@ import com.tam.chat.dto.response.AIResponse;
 import com.tam.chat.entity.ProductCardPayload;
 import com.tam.chat.repository.ProductQueryLogRepository;
 import com.tam.chat.repository.grpc.ProductGrpcClient;
-import com.tam.chat.repository.httpclient.VoucherClient;
+import com.tam.chat.repository.grpc.VoucherGrpcClient;
+import com.tam.proto.product.v1.GetProductResponse;
 import com.tam.proto.product.v1.ProductAttributeProto;
+import com.tam.proto.voucher.v1.VoucherResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,7 @@ public class AIService {
     private final ProductQueryLogRepository productQueryLogRepository;
     private final GeminiAiService geminiAiService;
     private final ProductGrpcClient productGrpcClient;
-    private final VoucherClient voucherClient;
+    private final VoucherGrpcClient voucherGrpcClient;
 
     @Value("${openrouter.api.key:}")
     private String apiKey;
@@ -54,6 +55,10 @@ public class AIService {
                     .success(false)
                     .error("Tin nhắn không được để trống")
                     .build();
+        }
+
+        if ("productSent".equalsIgnoreCase(mode)) {
+            return handleProductSent(request);
         }
 
         if (request.getProductCard() != null) {
@@ -86,6 +91,149 @@ public class AIService {
         }
     }
 
+    private AIResponse handleProductSent(ChatRequest request) {
+        String productId = null;
+        String productName = request.getMessage();
+
+        if (request.getProductCard() != null && request.getProductCard().getProductId() != null) {
+            productId = request.getProductCard().getProductId();
+        }
+
+        String userId = getCurrentUserId();
+        log.info("ProductSent mode: productId={}, productName={}, userId={}", productId, productName, userId);
+
+        try {
+            GetProductResponse product = null;
+            if (productId != null) {
+                product = productGrpcClient.getProduct(productId);
+            }
+            if (product == null && productName != null && !productName.isBlank()) {
+                product = productGrpcClient.getProductByName(productName);
+            }
+            if (product == null) {
+                return AIResponse.builder()
+                        .success(true)
+                        .response(
+                                "Sản phẩm này hiện không còn trong hệ thống. Bạn vui lòng liên hệ cửa hàng để biết thêm thông tin nhé!")
+                        .model("template")
+                        .build();
+            }
+
+            int stock = productGrpcClient.getRemainingStock(product.getId());
+            List<ProductAttributeProto> attributes = productGrpcClient.getProductDetail(product.getId());
+
+            List<VoucherResponse> vouchers = List.of();
+            if (userId != null) {
+                vouchers = voucherGrpcClient.getActiveVouchers(userId);
+            }
+
+            String response = buildProductSentResponse(product, stock, attributes, vouchers);
+            return AIResponse.builder()
+                    .success(true)
+                    .response(response)
+                    .model("template")
+                    .build();
+
+        } catch (Exception e) {
+            log.error("handleProductSent failed", e);
+            return AIResponse.builder()
+                    .success(false)
+                    .error("Không thể lấy thông tin sản phẩm lúc này. Vui lòng thử lại sau.")
+                    .build();
+        }
+    }
+
+    private String buildProductSentResponse(
+            GetProductResponse product,
+            int stock,
+            List<ProductAttributeProto> attributes,
+            List<VoucherResponse> vouchers) {
+
+        double basePrice = product.getPrice();
+        double bestFinalPrice = basePrice;
+        VoucherResponse bestVoucher = null;
+
+        for (VoucherResponse v : vouchers) {
+            if (!v.getIsActive()) continue;
+            double discount = 0;
+            if (v.getDiscountAmount() > 0) {
+                discount = v.getDiscountAmount();
+            } else if (v.getDiscountPercent() > 0) {
+                discount = basePrice * v.getDiscountPercent() / 100.0;
+            }
+            double finalPrice = Math.max(0, basePrice - discount);
+            if (finalPrice < bestFinalPrice || bestVoucher == null) {
+                bestFinalPrice = finalPrice;
+                bestVoucher = v;
+            }
+        }
+
+        String stockStatus;
+        if (stock < 0) {
+            stockStatus = "Không kiểm tra được";
+        } else if (stock == 0) {
+            stockStatus = "Hết hàng";
+        } else if (stock <= 5) {
+            stockStatus = "Còn ít (chỉ còn " + stock + " sản phẩm)";
+        } else {
+            stockStatus = "Còn hàng (kho: " + stock + ")";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📦 **").append(product.getName()).append("**\n\n");
+
+        sb.append("💰 **Giá gốc:** ").append(String.format("%,.0f₫", basePrice)).append("\n");
+        if (bestVoucher != null && bestFinalPrice < basePrice) {
+            sb.append("🏷️ **Giá sau voucher:** ")
+                    .append(String.format("%,.0f₫", bestFinalPrice))
+                    .append("\n");
+            String voucherLabel = bestVoucher.getCode();
+            sb.append(" (Áp dụng: ").append(voucherLabel);
+            if (bestVoucher.getDiscountPercent() > 0) {
+                sb.append(" -").append(bestVoucher.getDiscountPercent()).append("%");
+            } else if (bestVoucher.getDiscountAmount() > 0) {
+                sb.append(" -").append(String.format("%,.0f₫", bestVoucher.getDiscountAmount()));
+            }
+            sb.append(")\n");
+        } else {
+            sb.append("💵 **Giá bán:** ")
+                    .append(String.format("%,.0f₫", basePrice))
+                    .append("\n");
+        }
+
+        if (product.getUnit() != null && !product.getUnit().isBlank()) {
+            sb.append("📐 **Đơn vị:** ").append(product.getUnit()).append("\n");
+        }
+        if (product.getSupplier() != null
+                && product.getSupplier().getName() != null
+                && !product.getSupplier().getName().isBlank()) {
+            sb.append("🏭 **Nhà cung cấp:** ")
+                    .append(product.getSupplier().getName())
+                    .append("\n");
+        }
+        sb.append("📊 **Tồn kho:** ").append(stockStatus).append("\n\n");
+
+        if (attributes != null && !attributes.isEmpty()) {
+            sb.append("🔧 **Thông số kỹ thuật:**\n");
+            attributes.stream()
+                    .filter(a -> a.getName() != null && !a.getName().isBlank())
+                    .forEach(a -> {
+                        String line = "- **" + a.getName() + ":** " + (a.getValue() != null ? a.getValue() : "—");
+                        if (a.getUnit() != null && !a.getUnit().isBlank()) {
+                            line += " " + a.getUnit();
+                        }
+                        sb.append(line).append("\n");
+                    });
+            sb.append("\n");
+        }
+
+        if (bestFinalPrice < basePrice) {
+            sb.append("🎉 Bạn đang có voucher giảm giá cho sản phẩm này! ");
+        }
+        sb.append("Bạn có muốn đặt hàng hoặc cần thêm thông tin gì không? 😊");
+        return sb.toString();
+    }
+
     private AIResponse handleProductCard(ProductCardPayload card) {
         String productId = card.getProductId();
         log.info("Product card AI request for productId={}", productId);
@@ -102,27 +250,7 @@ public class AIService {
 
             int stock = productGrpcClient.getRemainingStock(productId);
             List<ProductAttributeProto> attributes = productGrpcClient.getProductDetail(productId);
-
-            var vouchers = voucherClient.getAllActiveVouchers();
-            List<Map<String, Object>> applicable = List.of();
-            if (vouchers != null && vouchers.getResult() != null) {
-                LocalDateTime now = LocalDateTime.now();
-                applicable = vouchers.getResult().stream()
-                        .filter(v -> Boolean.TRUE.equals(v.getIsActive())
-                                && (v.getExpiredAt() == null
-                                        || !LocalDateTime.parse(v.getExpiredAt())
-                                                .isBefore(now)))
-                        .map(v -> Map.<String, Object>of(
-                                "code", v.getCode(),
-                                "description", v.getDescription() != null ? v.getDescription() : "",
-                                "type", v.getAccessType() != null ? v.getAccessType() : "PUBLIC",
-                                "discountAmount", v.getDiscountAmount(),
-                                "discountPercent", v.getDiscountPercent(),
-                                "expiredAt", v.getExpiredAt()))
-                        .collect(Collectors.toList());
-            }
-
-            String response = buildProductCardResponse(product, stock, attributes, applicable);
+            String response = buildProductCardResponse(product, stock, attributes);
             return AIResponse.builder()
                     .success(true)
                     .response(response)
@@ -138,10 +266,7 @@ public class AIService {
     }
 
     private String buildProductCardResponse(
-            com.tam.proto.product.v1.GetProductResponse product,
-            int stock,
-            List<ProductAttributeProto> attributes,
-            List<Map<String, Object>> vouchers) {
+            GetProductResponse product, int stock, List<ProductAttributeProto> attributes) {
 
         String stockStatus;
         if (stock < 0) {
@@ -186,21 +311,6 @@ public class AIService {
                         }
                         sb.append(line).append("\n");
                     });
-            sb.append("\n");
-        }
-
-        if (vouchers != null && !vouchers.isEmpty()) {
-            sb.append("🎟️ **Voucher khuyến mãi hiện có (")
-                    .append(vouchers.size())
-                    .append("):**\n");
-            vouchers.stream().limit(5).forEach(v -> {
-                String desc = (String) v.get("description");
-                String code = (String) v.get("code");
-                String type = (String) v.get("type");
-                sb.append("- `").append(code).append("` (");
-                if (desc != null && !desc.isBlank()) sb.append(desc).append(" — ");
-                sb.append(type.equals("PRIVATE") ? "Cá nhân" : "Công khai").append(")\n");
-            });
             sb.append("\n");
         }
 
@@ -286,5 +396,17 @@ public class AIService {
         }
 
         return "Bạn là trợ lý dịch vụ khách hàng. Trả lời ngắn gọn, thân thiện, hữu ích, chính xác, tự nhiên như người thật.";
+    }
+
+    private String getCurrentUserId() {
+        try {
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getName() != null) {
+                return auth.getName();
+            }
+        } catch (Exception e) {
+            log.debug("Cannot get current user id: {}", e.getMessage());
+        }
+        return null;
     }
 }

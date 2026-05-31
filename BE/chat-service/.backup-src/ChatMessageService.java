@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.corundumstudio.socketio.SocketIOServer;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -328,23 +327,5 @@ public class ChatMessageService {
         return chatMessageRepository.findAllByConversationIdOrderByCreatedDateDesc(conversation.getId()).stream()
                 .map(this::toChatMessageResponse)
                 .toList();
-    }
-
-    @Transactional
-    public ChatMessage createAiMessage(String conversationId, String senderId, String text, String messageType) {
-        Conversation c = conversationRepository
-                .findById(conversationId)
-                .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
-        ParticipantInfo sender = ParticipantInfo.builder()
-                .userId(senderId)
-                .username("AI Assistant")
-                .build();
-        ChatMessage m = new ChatMessage();
-        m.setConversationId(conversationId);
-        m.setSender(sender);
-        m.setMessage(text);
-        m.setMessageType(MessageType.valueOf(messageType != null ? messageType : "TEXT"));
-        m.setCreatedDate(Instant.now());
-        return chatMessageRepository.save(m);
     }
 }

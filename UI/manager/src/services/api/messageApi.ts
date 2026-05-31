@@ -118,4 +118,11 @@ export const messageApi = {
         const res = await post<ApiResponse<Conversation>>(ENDPOINT.CHAT.TRANSFER(conversationId), { toManagerId });
         return res.data.result;
     },
+    askAi: async (message: string, mode: 'chat' | 'agent' | 'productSent'): Promise<{ success: boolean; response: string; error?: string }> => {
+        const res = await post<ApiResponse<{ success: boolean; response: string; error?: string }>>(
+            '/api-gateway/chat-service/ai/ask',
+            { message, mode }
+        );
+        return res.data.result;
+    },
 };

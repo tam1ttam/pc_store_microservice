@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.corundumstudio.socketio.SocketIOServer;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -368,18 +367,6 @@ public class ConversationService {
         ids.forEach(joiner::add);
         return joiner.toString();
     }
-
-    @Transactional
-    public boolean releaseAi(String conversationId, String reason) {
-        Conversation conv = conversationRepository
-                .findById(conversationId)
-                .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
-        conv.setAssignedManagerId(null);
-        if (conv.getParticipants() != null) {
-            conv.getParticipants().removeIf(p -> "ai_agent_manager".equals(p.getUserId()));
-        }
-        conversationRepository.save(conv);
-        log.info("AI_RELEASE conv={} reason={}", conversationId, reason != null ? reason : "-");
-        return true;
-    }
 }
+
+    boolean releaseAi(String conversationId, String reason);

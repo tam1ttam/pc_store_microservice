@@ -14,7 +14,10 @@ import com.tam.proto.product.v1.GetProductDetailResponse;
 import com.tam.proto.product.v1.GetProductRequest;
 import com.tam.proto.product.v1.GetProductResponse;
 import com.tam.proto.product.v1.ProductAttributeProto;
+import com.tam.proto.product.v1.ProductInfo;
 import com.tam.proto.product.v1.ProductServiceGrpc;
+import com.tam.proto.product.v1.SearchProductsRequest;
+import com.tam.proto.product.v1.SearchProductsResponse;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -49,6 +52,33 @@ public class ProductGrpcClient {
         } catch (StatusRuntimeException e) {
             log.warn("gRPC getProduct failed for id={}: {}", productId, e.getMessage());
             return null;
+        }
+    }
+
+    public GetProductResponse getProductByName(String name) {
+        try {
+            SearchProductsRequest req =
+                    SearchProductsRequest.newBuilder().setKeyword(name).build();
+            SearchProductsResponse resp = stub.searchProducts(req);
+            List<ProductInfo> list = resp.getProductsList();
+            if (list.isEmpty()) return null;
+            String bestId = list.get(0).getId();
+            return getProduct(bestId);
+        } catch (StatusRuntimeException e) {
+            log.warn("gRPC searchProducts failed for keyword={}: {}", name, e.getMessage());
+            return null;
+        }
+    }
+
+    public List<ProductInfo> searchProducts(String keyword, int limit) {
+        try {
+            SearchProductsRequest req =
+                    SearchProductsRequest.newBuilder().setKeyword(keyword).build();
+            SearchProductsResponse resp = stub.searchProducts(req);
+            return resp.getProductsList().stream().limit(limit).toList();
+        } catch (StatusRuntimeException e) {
+            log.warn("gRPC searchProducts failed for keyword={}: {}", keyword, e.getMessage());
+            return List.of();
         }
     }
 

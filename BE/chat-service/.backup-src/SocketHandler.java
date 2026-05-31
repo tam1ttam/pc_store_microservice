@@ -11,10 +11,7 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.annotation.OnConnect;
 import com.corundumstudio.socketio.annotation.OnDisconnect;
-import com.tam.chat.entity.Conversation;
 import com.tam.chat.entity.WebSocketSession;
-import com.tam.chat.kafka.AiEventProducer;
-import com.tam.chat.repository.ConversationRepository;
 import com.tam.chat.repository.httpclient.IdentityClient;
 import com.tam.chat.service.JwtService;
 import com.tam.chat.service.WebSocketSessionService;
@@ -34,8 +31,6 @@ public class SocketHandler {
     JwtService jwtService;
     WebSocketSessionService webSocketSessionService;
     IdentityClient identityClient;
-    ConversationRepository conversationRepository;
-    AiEventProducer aiEventProducer;
 
     @OnConnect
     public void clientConnected(SocketIOClient client) {
@@ -99,17 +94,5 @@ public class SocketHandler {
             log.warn("Could not fetch manager username at connect for userId={}: {}", userId, e.getMessage());
         }
         return null;
-    }
-
-    private void routeToAiIfNeeded(String cid, String uid, String msg, String mtype) {
-        try {
-            Conversation c = conversationRepository.findById(cid).orElse(null);
-            if (c == null) return;
-            if ("ai_agent_manager".equals(c.getAssignedManagerId())) {
-                aiEventProducer.sendToAi(cid, uid, msg, mtype != null ? mtype : "TEXT");
-            }
-        } catch (Exception e) {
-            log.warn("routeToAi failed: {}", e.toString());
-        }
     }
 }
