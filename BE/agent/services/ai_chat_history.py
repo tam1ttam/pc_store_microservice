@@ -1,6 +1,7 @@
 """ai_chat_history.py — CRUD over MongoDB collection `ai_chat_histories`.
 
-One document per conversation_id.
+One document per conversation_id.  Persists to chat-service MongoDB so
+ai-service history survives restarts and can be queried by user_id.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from services.mongo import get_db
 logger = logging.getLogger("ai-agent.chat_history")
 
 _COLLECTION = "ai_chat_histories"
-_LIMIT = 100
+_HISTORY_LIMIT = 100
 
 
 def _now() -> float:
@@ -33,71 +34,89 @@ def save_message(
     db = get_db()
     coll = db[_COLLECTION]
     now = _now()
+
+    # Move user_id into $set so it always gets refreshed (handles the case
+    # where the doc was first upserted with an empty user_id from the Kafka path).
     update: dict[str, Any] = {
         "$setOnInsert": {
-            "conversation_id": conversation_id,
-            "user_id": user_id,
-            "created_at": now,
+            "conversationId": conversation_id,
+            "createdAt": now,
         },
-        "$set": {"updated_at": now},
+        "$set": {
+            "userId": user_id,
+            "updatedAt": now,
+        },
         "$push": {
             "messages": {
                 "role": role,
                 "content": content,
-                "created_at": now,
+                "createdAt": now,
             }
         },
     }
     if metadata:
         update["$set"]["metadata"] = metadata
-    if model:
-        update["$set"]["metadata.model"] = model
+    elif model:
+        update["$set"]["metadata"] = {"model": model}
+
     try:
         coll.update_one(
-            {"conversation_id": conversation_id},
+            {"conversationId": conversation_id},
             update,
             upsert=True,
         )
-        logger.debug("Saved message: conv=%s role=%s src=%s", conversation_id, role, source)
+        logger.debug(
+            "Saved message: conv=%s role=%s user=%s src=%s",
+            conversation_id,
+            role,
+            user_id,
+            source,
+        )
     except Exception:
         logger.exception("save_message failed: conv=%s", conversation_id)
 
 
 def get_history(
     conversation_id: str,
-    limit: int = _LIMIT,
-) -> list[dict[str, Any]]:
+    limit: int = _HISTORY_LIMIT,
+) -> list[dict[str, str]]:
     db = get_db()
     coll = db[_COLLECTION]
     doc = coll.find_one(
-        {"conversation_id": conversation_id},
+        {"conversationId": conversation_id},
         {"messages": {"$slice": -limit}},
     )
     if not doc:
         return []
-    return [{"role": m["role"], "content": m["content"]} for m in doc.get("messages", [])]
+    return [
+        {"role": m["role"], "content": m["content"]}
+        for m in doc.get("messages", [])
+    ]
 
 
-def get_recent(conversation_id: str, limit: int = 20) -> list[dict[str, Any]]:
+def get_recent(conversation_id: str, limit: int = 20) -> list[dict[str, str]]:
     return get_history(conversation_id, limit=limit)
 
 
-def list_conversations(user_id: str, *, limit: int = 50) -> list[dict[str, Any]]:
+def list_conversations(
+    user_id: str,
+    *,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
     db = get_db()
     coll = db[_COLLECTION]
-    cursor = (
-        coll.find({"user_id": user_id})
-        .sort("updated_at", -1)
-        .limit(limit)
-        .projection(
-            {
-                "conversation_id": 1,
-                "updated_at": 1,
-                "created_at": 1,
-                "messages": {"$slice": -1},
-            }
-        )
-    )
+    # NOTE: pymongo Cursor does NOT have .projection(); pass projection into find().
+    cursor = coll.find(
+        {"userId": user_id},
+        {
+            "conversationId": 1,
+            "userId": 1,
+            "updatedAt": 1,
+            "createdAt": 1,
+            "messages": {"$slice": -1},
+        },
+    ).sort("updatedAt", -1).limit(limit)
+
     results: list[dict[str, Any]] = []
     for doc in cursor:
         preview = ""
@@ -106,11 +125,11 @@ def list_conversations(user_id: str, *, limit: int = 50) -> list[dict[str, Any]]
             preview = (last.get("content") or "")[:120]
         results.append(
             {
-                "conversationId": doc["conversation_id"],
-                "userId": doc["user_id"],
+                "conversationId": doc["conversationId"],
+                "userId": doc.get("userId"),
                 "lastMessage": preview,
-                "updatedAt": doc.get("updated_at"),
-                "createdAt": doc.get("created_at"),
+                "updatedAt": doc.get("updatedAt"),
+                "createdAt": doc.get("createdAt"),
             }
         )
     return results

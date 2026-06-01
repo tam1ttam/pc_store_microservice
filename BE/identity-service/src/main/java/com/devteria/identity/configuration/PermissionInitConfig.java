@@ -177,12 +177,9 @@ public class PermissionInitConfig {
             p("MESSAGE_SEND", "message", "POST /messages", "Send a chat message"),
             p("MESSAGE_LIST", "message", "GET /messages", "List messages in a conversation"),
             p("MESSAGE_MARK_READ", "message", "POST /messages/read", "Mark messages as read"),
-            p("AI_CHAT", "ai", "POST /ai/chat", "Send message to AI assistant"),
-            p("AI_HISTORY", "ai", "GET /ai/history", "Get AI chat history"),
-            p("AI_CLEAR", "ai", "DELETE /ai/history", "Clear AI chat history"),
-            p("AI_STATS", "ai", "GET /ai/stats", "Get AI chat statistics"),
-            p("CHAT_ANALYTICS_TOP", "ai", "GET /analytics/top-asked", "Get top asked questions analytics"));
-
+            p("AI_CHAT", "ai", "POST /ai-service/ai/chat", "Send message to AI assistant"),
+            p("AI_HISTORY", "ai", "GET /ai-service/ai/history", "Get AI chat history"),
+            p("AI_CLEAR", "ai", "DELETE /ai-service/ai/history", "Clear AI chat history"));
     // ── file-service ──────────────────────────────────────────────────────────
 
     static final List<Permission> FILE_PERMISSIONS =

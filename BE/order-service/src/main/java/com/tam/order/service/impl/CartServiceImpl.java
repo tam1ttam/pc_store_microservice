@@ -71,9 +71,15 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public CartResponse deleteItem(String identityUserId, Long itemId) {
-        cartRepository.findByIdentityUserId(identityUserId).orElseThrow(() -> new RuntimeException("Cart not found"));
-        cartItemRepository.deleteById(itemId);
-        return toResponse(cartRepository.findByIdentityUserId(identityUserId).orElseThrow());
+        Cart cart = cartRepository
+                .findByIdentityUserId(identityUserId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+        boolean removed = cart.getItems().removeIf(i -> i.getId().equals(itemId));
+        if (!removed) {
+            log.warn("CartItem {} not found in cart {}", itemId, cart.getId());
+        }
+        cartRepository.save(cart);
+        return toResponse(cart);
     }
 
     @Override

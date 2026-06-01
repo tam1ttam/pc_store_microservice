@@ -121,7 +121,7 @@ spring:
           predicates:
             - Path=/api-gateway/ai-service/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
 
 

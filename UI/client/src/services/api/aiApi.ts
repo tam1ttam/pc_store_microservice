@@ -1,32 +1,28 @@
 import axios from '@/config/axios.config'
+import ENDPOINT from '@/constants/endpoint'
 
 export interface AIChatResponse {
-    answer?: string
-    stats?: string
-    status: string
-    error?: string
+  success: boolean
+  response: string
+  model: string
+  usage?: any
+  error?: string
 }
 
 export const aiApi = {
-    askQuestion: async (question: string): Promise<AIChatResponse> => {
-        const response = await axios.post<{ code: number; result: AIChatResponse }>(
-            '/api-gateway/chat-service/ai/ask',
-            { question }
-        )
-        return response.data.result
-    },
+  askQuestion: async (question: string, userId?: string): Promise<AIChatResponse> => {
+    const response = await axios.post<AIChatResponse>(
+      ENDPOINT.AI.CHAT,
+      { message: question, ...(userId ? { userId } : {}) },
+    )
+    return response.data
+  },
 
-    getHistory: async (): Promise<any[]> => {
-        const response = await axios.get<{ code: number; result: any[] }>(
-            '/api-gateway/chat-service/ai/history'
-        )
-        return response.data.result
-    },
-
-    getStats: async (): Promise<AIChatResponse> => {
-        const response = await axios.get<{ code: number; result: AIChatResponse }>(
-            '/api-gateway/chat-service/ai/stats'
-        )
-        return response.data.result
-    }
+  getHistory: async (userId?: string): Promise<any[]> => {
+    const url = userId
+      ? `${ENDPOINT.AI.HISTORY}?userId=${encodeURIComponent(userId)}`
+      : ENDPOINT.AI.HISTORY
+    const response = await axios.get<any[]>(url)
+    return response.data
+  },
 }

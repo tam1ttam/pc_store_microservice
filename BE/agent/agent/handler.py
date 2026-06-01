@@ -37,15 +37,17 @@ def _get_history(conversation_id: str) -> list[dict[str, str]]:
     return []
 
 
-def _append_history(conversation_id: str, role: str, content: str) -> None:
+def _append_history(conversation_id: str, role: str, content: str, user_id: str = "") -> None:
     with _history_lock:
         dq = _conversation_history.setdefault(
             conversation_id, deque(maxlen=_HISTORY_MAX)
         )
         dq.append({"role": role, "content": content})
+    if not user_id:
+        return
     try:
         from services.ai_chat_history import save_message
-        save_message(conversation_id, "", role, content, source="kafka")
+        save_message(conversation_id, user_id, role, content, source="kafka")
     except Exception:
         logger.exception("Mongo history save failed for conv=%s", conversation_id)
 
@@ -83,7 +85,7 @@ class AgentHandler:
             message_type,
         )
 
-        _append_history(conversation_id, "user", user_message)
+        _append_history(conversation_id, "user", user_message, user_id=user_id)
 
         if message_type == "PRODUCT_CARD":
             ai_text = self._reply_for_product_card(user_id, payload)
@@ -94,7 +96,7 @@ class AgentHandler:
             history = _get_history(conversation_id)
             ai_text = agent.chat(user_message, history=history)
 
-        _append_history(conversation_id, "assistant", ai_text)
+        _append_history(conversation_id, "assistant", ai_text, user_id=user_id)
         self._send_reply(conversation_id, user_id, ai_text)
 
     def _reply_for_product_card(self, user_id: str, payload: dict) -> str:
