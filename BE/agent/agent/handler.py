@@ -2,6 +2,9 @@
 
 Receives messages from chat-messages-topic, runs the LangChain agent,
 and produces the AI reply to ai-replies-topic.
+
+History is stored in MongoDB (source of truth) with an in-memory cache
+for the current session to avoid round-trips on every turn.
 """
 import logging
 import threading
@@ -17,18 +20,45 @@ _conversation_history: dict[str, deque[dict[str, str]]] = {}
 
 def _get_history(conversation_id: str) -> list[dict[str, str]]:
     with _history_lock:
-        return list(_conversation_history.get(conversation_id, []))
+        cached = _conversation_history.get(conversation_id)
+        if cached is not None:
+            return list(cached)
+    try:
+        from services.ai_chat_history import get_recent
+        rows = get_recent(conversation_id, limit=_HISTORY_MAX)
+        if rows:
+            with _history_lock:
+                _conversation_history[conversation_id] = deque(
+                    rows, maxlen=_HISTORY_MAX
+                )
+            return rows
+    except Exception:
+        logger.exception("Mongo history load failed for conv=%s", conversation_id)
+    return []
 
 
 def _append_history(conversation_id: str, role: str, content: str) -> None:
     with _history_lock:
-        dq = _conversation_history.setdefault(conversation_id, deque(maxlen=_HISTORY_MAX))
+        dq = _conversation_history.setdefault(
+            conversation_id, deque(maxlen=_HISTORY_MAX)
+        )
         dq.append({"role": role, "content": content})
+    try:
+        from services.ai_chat_history import save_message
+        save_message(conversation_id, "", role, content, source="kafka")
+    except Exception:
+        logger.exception("Mongo history save failed for conv=%s", conversation_id)
 
 
 class AgentHandler:
     def __init__(self) -> None:
         self._agent: Optional[Any] = None
+
+    def _get_history(self, conversation_id: str):
+        return _get_history(conversation_id)
+
+    def _append_history(self, conversation_id: str, role: str, content: str):
+        _append_history(conversation_id, role, content)
 
     def _get_agent(self):
         if self._agent is None:
@@ -46,7 +76,12 @@ class AgentHandler:
             logger.warning("Skip empty message: %s", payload)
             return
 
-        logger.info("Processing: conv=%s user=%s type=%s", conversation_id, user_id, message_type)
+        logger.info(
+            "Processing: conv=%s user=%s type=%s",
+            conversation_id,
+            user_id,
+            message_type,
+        )
 
         _append_history(conversation_id, "user", user_message)
 
@@ -68,14 +103,19 @@ class AgentHandler:
         name = card.get("name", "sản phẩm này")
 
         if not product_id:
-            return f"Bạn quan tâm đến {name}. Tôi có thể giúp tìm thông tin chi tiết hoặc thêm vào giỏ hàng cho bạn."
+            return (
+                f"Bạn quan tâm đến {name}. Tôi có thể giúp tìm thông tin chi tiết "
+                "hoặc thêm vào giỏ hàng cho bạn."
+            )
 
         try:
             from services.product_client import get_product_detail, get_remaining_stock
             detail = get_product_detail(product_id)
             stock = get_remaining_stock(product_id)
             stock_label = {
-                -1: "không rõ", 0: "hết hàng", 1: "còn rất ít",
+                -1: "không rõ",
+                0: "hết hàng",
+                1: "còn rất ít",
             }.get(stock, f"còn {stock}") if isinstance(stock, int) else "không rõ"
 
             desc = ""
@@ -86,11 +126,14 @@ class AgentHandler:
                 f"💰 {detail.get('price', 0):,.0f}₫\n"
                 f"📊 Tồn kho: {stock_label}\n"
                 f"{desc}"
-                f"\nBạn muốn tôi thêm vào giỏ hàng không?"
+                "\nBạn muốn tôi thêm vào giỏ hàng không?"
             )
-        except Exception as exc:
-            logger.error("product card reply failed: %s", exc)
-            return f"Bạn quan tâm đến {name}. Bạn muốn tôi tìm thông tin chi tiết hoặc thêm vào giỏ hàng không?"
+        except Exception:
+            logger.exception("product card reply failed")
+            return (
+                f"Bạn quan tâm đến {name}. Bạn muốn tôi tìm thông tin chi tiết "
+                "hoặc thêm vào giỏ hàng không?"
+            )
 
     def _send_reply(self, conversation_id: str, user_id: str, text: str) -> None:
         from services.kafka import produce_ai_reply

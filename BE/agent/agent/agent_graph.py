@@ -1,12 +1,11 @@
 """agent_graph.py — LangChain/LangGraph Agent definition for ai-service."""
 import os
+import httpx 
 from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
-
-from agent.tools import TOOLS
 
 logger = __import__("logging").getLogger("ai-agent.graph")
 
@@ -26,11 +25,14 @@ class AIAgent:
     def __init__(self, user_id: str = "anonymous", conversation_id: str = "") -> None:
         self.user_id = user_id
         self.conversation_id = conversation_id
+
         self.llm = ChatOpenAI(
             model=OPENROUTER_MODEL,
             openai_api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
             temperature=0.7,
+            timeout=30,
+            http_client=httpx.Client(verify=False),
         )
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -58,12 +60,8 @@ class AIAgent:
                         messages.append(AIMessage(content=content))
             response = self.chain.invoke(
                 {"history": messages, "input": message},
-                config={"configurable": {"thread_id": self.conversation_id or self.user_id}},
             )
-            return str(response.content)
+            return getattr(response, "content", str(response))
         except Exception as exc:
             logger.exception("chat failed: %s", exc)
-            return (
-                "Toi dang gap van de ket noi. "
-                "Ban vui long thu lai sau hoac yeu cau chuyen giao cho nhan vien that."
-            )
+            return "Toi dang gap su co. Ban vui long thu lai sau."
