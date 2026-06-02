@@ -1,0 +1,39 @@
+package com.tam.chat.entity;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.MongoId;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Setter
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Document(collection = "chat_message")
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class ChatMessage {
+    @MongoId
+    String id;
+
+    @Indexed
+    String conversationId;
+
+    MessageType messageType = MessageType.TEXT;
+
+    ProductCardPayload productCard;
+
+    String message;
+
+    ParticipantInfo sender;
+
+    List<Attachment> attachments;
+
+    @Indexed
+    Instant createdDate;
+}

@@ -1,0 +1,525 @@
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import { adminApi } from "@/services/api/adminApi";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Ticket, Trash, User, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+type AccessType = "PUBLIC" | "PRIVATE";
+
+interface VoucherForm {
+    code: string;
+    description: string;
+    discountAmount: string;
+    discountPercent: string;
+    maxUsage: string;
+    maxUsagePerUser: string;
+    expiredAt: string;
+    isActive: boolean;
+    accessType: AccessType;
+    userId: string;
+}
+
+interface VoucherItem {
+    id: number;
+    code: string;
+    description?: string;
+    discountAmount?: number;
+    discountPercent?: number;
+    maxUsage?: number;
+    usedCount?: number;
+    maxUsagePerUser?: number;
+    expiredAt?: string;
+    isActive?: boolean;
+    accessType?: AccessType;
+    userId?: string;
+}
+
+const PAGE_SIZE = 15;
+
+const emptyForm = (): VoucherForm => ({
+    code: "",
+    description: "",
+    discountAmount: "",
+    discountPercent: "",
+    maxUsage: "",
+    maxUsagePerUser: "",
+    expiredAt: "",
+    isActive: true,
+    accessType: "PUBLIC",
+    userId: "",
+});
+
+const formatVND = (n: number) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+
+const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("vi-VN") : "—");
+
+export default function Voucher() {
+    const { t } = useTranslation();
+    const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
+    const [page, setPage] = useState(0);
+    const [isOpen, setIsOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [form, setForm] = useState<VoucherForm>(emptyForm());
+    const [isLoading, setIsLoading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState<number | null>(null);
+
+    // User picker state
+    const [userSearch, setUserSearch] = useState("");
+    const [userResults, setUserResults] = useState<any[]>([]);
+    const [isSearchingUser, setIsSearchingUser] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<{ id: string; display: string } | null>(null);
+    const userSearchTimer = useRef<any>(null);
+
+    useEffect(() => {
+        fetchVouchers();
+    }, []);
+
+    const fetchVouchers = async () => {
+        try {
+            const res = await adminApi.listVouchers();
+            setVouchers(res.data.result ?? []);
+        } catch {
+            toast({ title: t("voucher.loadError"), variant: "destructive" });
+        }
+    };
+
+    const paged = vouchers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    const totalPages = Math.ceil(vouchers.length / PAGE_SIZE);
+
+    const reset = () => {
+        setForm(emptyForm());
+        setEditingId(null);
+        setUserSearch("");
+        setUserResults([]);
+        setSelectedUser(null);
+    };
+
+    const handleUserSearchChange = (value: string) => {
+        setUserSearch(value);
+        clearTimeout(userSearchTimer.current);
+        if (!value.trim()) { setUserResults([]); return; }
+        userSearchTimer.current = setTimeout(async () => {
+            setIsSearchingUser(true);
+            try {
+                const res = await adminApi.searchCustomers(value.trim());
+                setUserResults(res.data.result?.content ?? []);
+            } catch {
+                setUserResults([]);
+            } finally {
+                setIsSearchingUser(false);
+            }
+        }, 400);
+    };
+
+    const selectUser = (u: any) => {
+        set("userId", u.id);
+        setSelectedUser({
+            id: u.id,
+            display: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.userName,
+        });
+        setUserSearch("");
+        setUserResults([]);
+    };
+
+    const clearSelectedUser = () => {
+        set("userId", "");
+        setSelectedUser(null);
+    };
+
+    const handleOpen = (v?: VoucherItem) => {
+        if (v) {
+            setEditingId(v.id);
+            setForm({
+                code: v.code,
+                description: v.description ?? "",
+                discountAmount: v.discountAmount ? String(v.discountAmount) : "",
+                discountPercent: v.discountPercent ? String(v.discountPercent) : "",
+                maxUsage: v.maxUsage ? String(v.maxUsage) : "",
+                maxUsagePerUser: v.maxUsagePerUser ? String(v.maxUsagePerUser) : "",
+                expiredAt: v.expiredAt ? v.expiredAt.slice(0, 16) : "",
+                isActive: v.isActive ?? true,
+                accessType: v.accessType ?? "PUBLIC",
+                userId: v.userId ?? "",
+            });
+            if (v.accessType === "PRIVATE" && v.userId) {
+                setSelectedUser({ id: v.userId, display: v.userId });
+            } else {
+                setSelectedUser(null);
+            }
+        } else {
+            reset();
+        }
+        setIsOpen(true);
+    };
+
+    const set = (field: keyof VoucherForm, value: any) => setForm((f) => ({ ...f, [field]: value }));
+
+    const handleSubmit = async () => {
+        if (!form.code.trim()) {
+            toast({ title: t("voucher.codeRequired"), variant: "destructive" });
+            return;
+        }
+        if (form.accessType === "PRIVATE" && !form.userId.trim()) {
+            toast({ title: t("voucher.userRequired"), variant: "destructive" });
+            return;
+        }
+        if (!form.discountAmount && !form.discountPercent) {
+            toast({ title: t("voucher.discountRequired"), variant: "destructive" });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const payload = {
+                code: form.code.trim().toUpperCase(),
+                description: form.description || null,
+                discountAmount: form.discountAmount ? Number(form.discountAmount) : null,
+                discountPercent: form.discountPercent ? Number(form.discountPercent) : null,
+                maxUsage: form.maxUsage ? Number(form.maxUsage) : null,
+                maxUsagePerUser: form.accessType === "PUBLIC" && form.maxUsagePerUser ? Number(form.maxUsagePerUser) : null,
+                expiredAt: form.expiredAt || null,
+                isActive: form.isActive,
+                accessType: form.accessType,
+                userId: form.accessType === "PRIVATE" ? form.userId.trim() : null,
+            };
+            if (editingId != null) {
+                await adminApi.updateVoucher(editingId, payload);
+                toast({ title: t("voucher.updateSuccessTitle") });
+            } else {
+                await adminApi.createVoucher(payload);
+                toast({ title: t("voucher.createSuccess") });
+            }
+            setIsOpen(false);
+            reset();
+            fetchVouchers();
+        } catch (err: any) {
+            toast({
+                title: t("voucher.failedTitle"),
+                description: err?.response?.data?.message ?? t("common.error"),
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm(t("voucher.deleteVoucherConfirm"))) return;
+        setIsDeleting(id);
+        try {
+            await adminApi.deleteVoucher(id);
+            toast({ title: t("voucher.deletedTitle") });
+            fetchVouchers();
+        } catch {
+            toast({ title: t("voucher.deleteFailedTitle"), variant: "destructive" });
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
+    return (
+        <div className="container mx-auto py-6 pt-24">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Ticket className="h-6 w-6 text-orange-500" />
+                    {t("voucher.title")}
+                </h1>
+
+                <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) reset(); }}>
+                    <DialogTrigger asChild>
+                        <Button onClick={() => handleOpen()}>
+                            <Plus className="mr-2 h-4 w-4" /> {t("voucher.createBtn")}
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>{editingId != null ? t("voucher.updateTitle") : t("voucher.createTitle")}</DialogTitle>
+                        </DialogHeader>
+
+                        <div className="grid gap-4 py-2">
+                            {/* Access type toggle */}
+                            <div className="grid gap-2">
+                                <Label>{t("voucher.voucherTypeLabel")}</Label>
+                                <div className="flex gap-2">
+                                    {(["PUBLIC", "PRIVATE"] as AccessType[]).map((tp) => (
+                                        <button
+                                            key={tp}
+                                            type="button"
+                                            onClick={() => set("accessType", tp)}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                                                form.accessType === tp
+                                                    ? tp === "PUBLIC"
+                                                        ? "bg-blue-500 text-white border-blue-500"
+                                                        : "bg-purple-500 text-white border-purple-500"
+                                                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            {tp === "PUBLIC" ? t("voucher.publicLabel") : t("voucher.privateLabel")}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    {form.accessType === "PUBLIC" ? t("voucher.publicDesc") : t("voucher.privateDesc")}
+                                </p>
+                            </div>
+
+                            {/* Code */}
+                            <div className="grid gap-2">
+                                <Label>{t("voucher.codeLabel")}</Label>
+                                <Input
+                                    value={form.code}
+                                    onChange={(e) => set("code", e.target.value.toUpperCase())}
+                                    placeholder={form.accessType === "PUBLIC" ? "VD: SUMMER2025" : "VD: USR-TAM-XK92"}
+                                />
+                            </div>
+
+                            {/* User picker (private only) */}
+                            {form.accessType === "PRIVATE" && (
+                                <div className="grid gap-2">
+                                    <Label>{t("voucher.userLabel")}</Label>
+
+                                    {selectedUser ? (
+                                        <div className="flex items-center gap-2 p-2.5 rounded-md border border-purple-200 bg-purple-50">
+                                            <User className="w-4 h-4 text-purple-500 shrink-0" />
+                                            <span className="text-sm font-medium text-purple-800 flex-1 truncate">
+                                                {selectedUser.display}
+                                            </span>
+                                            <button type="button" onClick={clearSelectedUser} className="p-0.5 hover:text-red-500 transition-colors">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
+                                                <Input
+                                                    className="pl-8"
+                                                    placeholder={t("voucher.searchUserPlaceholder")}
+                                                    value={userSearch}
+                                                    onChange={(e) => handleUserSearchChange(e.target.value)}
+                                                />
+                                            </div>
+                                            {(isSearchingUser || userResults.length > 0) && (
+                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                    {isSearchingUser && (
+                                                        <div className="px-3 py-2 text-sm text-gray-400">{t("voucher.searching")}</div>
+                                                    )}
+                                                    {!isSearchingUser && userResults.map((u) => (
+                                                        <button
+                                                            key={u.id}
+                                                            type="button"
+                                                            onClick={() => selectUser(u)}
+                                                            className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex flex-col border-b border-gray-100 last:border-0"
+                                                        >
+                                                            <span className="font-medium text-gray-800">
+                                                                {`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.userName}
+                                                            </span>
+                                                            <span className="text-xs text-gray-400">
+                                                                {u.phoneNumber} {u.email ? `· ${u.email}` : ""}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                    {!isSearchingUser && userSearch && userResults.length === 0 && (
+                                                        <div className="px-3 py-2 text-sm text-gray-400">{t("voucher.notFound")}</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Description */}
+                            <div className="grid gap-2">
+                                <Label>{t("voucher.descriptionLabel")}</Label>
+                                <Input
+                                    value={form.description}
+                                    onChange={(e) => set("description", e.target.value)}
+                                    placeholder={t("voucher.descriptionPlaceholder")}
+                                />
+                            </div>
+
+                            {/* Discount */}
+                            <div className="grid gap-2">
+                                <Label>{t("voucher.discountLabel")}</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <Label className="text-xs text-gray-500">{t("voucher.discountAmountLabel")}</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            value={form.discountAmount}
+                                            onChange={(e) => { set("discountAmount", e.target.value); set("discountPercent", ""); }}
+                                            placeholder="VD: 50000"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-gray-500">{t("voucher.discountPercentLabel")}</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value={form.discountPercent}
+                                            onChange={(e) => { set("discountPercent", e.target.value); set("discountAmount", ""); }}
+                                            placeholder="VD: 10"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Max usage */}
+                            <div className={`grid gap-2 ${form.accessType === "PUBLIC" ? "grid-cols-2" : ""}`}>
+                                <div className="grid gap-2">
+                                    <Label>{t("voucher.maxUsageLabel")}</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        value={form.maxUsage}
+                                        onChange={(e) => set("maxUsage", e.target.value)}
+                                        placeholder="VD: 100"
+                                    />
+                                </div>
+                                {form.accessType === "PUBLIC" && (
+                                    <div className="grid gap-2">
+                                        <Label>{t("voucher.maxUsagePerUserLabel")}</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={form.maxUsagePerUser}
+                                            onChange={(e) => set("maxUsagePerUser", e.target.value)}
+                                            placeholder="VD: 1"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Expiry */}
+                            <div className="grid gap-2">
+                                <Label>{t("voucher.expiryLabel")}</Label>
+                                <Input
+                                    type="datetime-local"
+                                    value={form.expiredAt}
+                                    onChange={(e) => set("expiredAt", e.target.value)}
+                                />
+                            </div>
+
+                            {/* Active */}
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="isActive"
+                                    checked={form.isActive}
+                                    onChange={(e) => set("isActive", e.target.checked)}
+                                    className="w-4 h-4 accent-blue-500"
+                                />
+                                <Label htmlFor="isActive">{t("voucher.activeLabel")}</Label>
+                            </div>
+
+                            <Button onClick={handleSubmit} disabled={isLoading}>
+                                {isLoading ? t("voucher.saving") : editingId != null ? t("voucher.updateBtn") : t("voucher.createBtn")}
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>{t("voucher.colCode")}</TableHead>
+                        <TableHead>{t("voucher.colType")}</TableHead>
+                        <TableHead>{t("voucher.colDiscount")}</TableHead>
+                        <TableHead>{t("voucher.colUsage")}</TableHead>
+                        <TableHead>{t("voucher.colMaxPerUser")}</TableHead>
+                        <TableHead>{t("voucher.colExpiry")}</TableHead>
+                        <TableHead>{t("voucher.colStatus")}</TableHead>
+                        <TableHead>{t("voucher.colActions")}</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {paged.map((v) => (
+                        <TableRow key={v.id}>
+                            <TableCell className="font-mono font-semibold">{v.code}</TableCell>
+                            <TableCell>
+                                <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        v.accessType === "PRIVATE"
+                                            ? "bg-purple-100 text-purple-700"
+                                            : "bg-blue-100 text-blue-700"
+                                    }`}
+                                >
+                                    {v.accessType === "PRIVATE" ? t("voucher.privateLabel") : t("voucher.publicLabel")}
+                                </span>
+                            </TableCell>
+                            <TableCell>
+                                {v.discountAmount
+                                    ? formatVND(v.discountAmount)
+                                    : v.discountPercent
+                                    ? `${v.discountPercent}%`
+                                    : "—"}
+                            </TableCell>
+                            <TableCell>
+                                {v.usedCount ?? 0}
+                                {v.maxUsage ? ` / ${v.maxUsage}` : " / ∞"}
+                            </TableCell>
+                            <TableCell>
+                                {v.accessType === "PUBLIC" ? (v.maxUsagePerUser ?? "∞") : "—"}
+                            </TableCell>
+                            <TableCell>{formatDate(v.expiredAt)}</TableCell>
+                            <TableCell>
+                                <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        v.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                    }`}
+                                >
+                                    {v.isActive ? t("voucher.statusActive") : t("voucher.statusInactive")}
+                                </span>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="icon" onClick={() => handleOpen(v)}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => handleDelete(v.id)}
+                                        disabled={isDeleting === v.id}
+                                    >
+                                        {isDeleting === v.id ? "..." : <Trash className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    {paged.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                                {t("voucher.noVouchers")}
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-2 mt-4">
+                    <Button variant="outline" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                        <ChevronLeft className="h-4 w-4" /> {t("voucher.previous")}
+                    </Button>
+                    <span className="flex items-center px-4 text-sm text-gray-600">
+                        {page + 1} / {totalPages}
+                    </span>
+                    <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+                        {t("voucher.next")} <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}

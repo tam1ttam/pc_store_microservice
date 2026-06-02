@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: client
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/client:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client
+  namespace: web
+spec:
+  selector:
+    app: client
+  ports:
+    - port: 80
+      targetPort: 80

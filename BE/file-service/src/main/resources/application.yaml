@@ -1,0 +1,84 @@
+server:
+  port: ${FILE_SERVICE_PORT:8084}
+  servlet:
+    context-path: /file-service
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  application:
+    name: file-service
+  jmx:
+    enabled: false
+  data:
+    mongodb:
+      uri: ${FILE_MONGO_URI:mongodb://root:123456@localhost:6000/file-service?authSource=admin}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6002}
+      connect-timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+      region:
+        static: ${AWS_REGION:}
+      s3:
+        bucket: ${AWS_S3_BUCKET:}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:dev-only-jwt-signer-key-for-local-development-please-change-prod}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_API_MODEL:gemini-2.0-flash}
+
+app:
+  file:
+    storage-dir: ${FILE_STORAGE_DIR:./uploads}
+    download-prefix: ${FILE_DOWNLOAD_PREFIX:http://localhost:8084/file/media/download/}
+  security:
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+      - /file-service/media/**
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
+
+grpc:
+  server:
+    port: ${FILE_SERVICE_GRPC_PORT:8184}
+    max-inbound-message-size: 52428800
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
+    metadata-map:
+      gRPC.port: ${FILE_SERVICE_GRPC_PORT:8184}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.tam: ${LOGGING_LEVEL_COM_TAM:INFO}
+  pattern:
+    console: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/file-service.log
+    max-size: 10MB
+    max-history: 7

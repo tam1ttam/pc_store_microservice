@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package com.tam.proto.product.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tam.proto.product.v1";
+option java_outer_classname = "ProductServiceProto";
+
+service ProductService {
+  rpc GetNewestProducts(GetNewestProductsRequest) returns (GetNewestProductsResponse);
+  rpc GetBestSellingProducts(GetBestSellingProductsRequest) returns (GetBestSellingProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc GetProductsByIds(GetProductsByIdsRequest) returns (GetProductsByIdsResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+  rpc CheckProductAvailability(CheckProductAvailabilityRequest) returns (CheckProductAvailabilityResponse);
+  rpc UpdateStock(UpdateStockRequest) returns (UpdateStockResponse);
+  rpc CheckRemainingStock(CheckRemainingStockRequest) returns (CheckRemainingStockResponse);
+  rpc GetProductDetail(GetProductDetailRequest) returns (GetProductDetailResponse);
+}
+
+// ==================== GET PRODUCT MESSAGES ====================
+
+message GetProductRequest {
+  string productId = 1;
+}
+
+message GetProductResponse {
+  string id = 1;
+  string name = 2;
+  string img = 3;
+  double price = 4;
+  string unit = 5;
+  SupplierInfo supplier = 6;
+}
+
+// ==================== GET NEWEST PRODUCTS MESSAGES ====================
+
+message GetNewestProductsRequest {
+  int32 limit = 1;
+}
+
+message GetNewestProductsResponse {
+  repeated ProductInfo products = 1;
+}
+
+// ==================== GET BEST SELLING PRODUCTS MESSAGES ====================
+
+message GetBestSellingProductsRequest {
+  int32 limit = 1;
+}
+
+message GetBestSellingProductsResponse {
+  repeated ProductInfo products = 1;
+}
+
+// ==================== GET PRODUCTS BY IDS MESSAGES ====================
+
+message GetProductsByIdsRequest {
+  repeated string productIds = 1;
+}
+
+message GetProductsByIdsResponse {
+  repeated ProductInfo products = 1;
+}
+
+message ProductInfo {
+  string id = 1;
+  string name = 2;
+  string img = 3;
+  double price = 4;
+  string unit = 5;
+  SupplierInfo supplier = 6;
+}
+
+// ==================== CREATE PRODUCT MESSAGES ====================
+
+message CreateProductRequest {
+  string name = 1;
+  string img = 2;
+  double price = 3;
+  string unit = 4;
+  int32 inStock = 5;
+  SupplierInfo supplier = 6;
+}
+
+message CreateProductResponse {
+  bool success = 1;
+  string message = 2;
+  ProductInfo product = 3;
+}
+
+// ==================== UPDATE PRODUCT MESSAGES ====================
+
+message UpdateProductRequest {
+  string productId = 1;
+  string name = 2;
+  string img = 3;
+  double price = 4;
+  string unit = 5;
+  int32 inStock = 6;
+  SupplierInfo supplier = 7;
+}
+
+message UpdateProductResponse {
+  bool success = 1;
+  string message = 2;
+  ProductInfo product = 3;
+}
+
+// ==================== DELETE PRODUCT MESSAGES ====================
+
+message DeleteProductRequest {
+  string productId = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ==================== SEARCH PRODUCTS MESSAGES ====================
+
+message SearchProductsRequest {
+  string keyword = 1;
+}
+
+message SearchProductsResponse {
+  repeated ProductInfo products = 1;
+}
+
+// ==================== CHECK PRODUCT AVAILABILITY MESSAGES ====================
+
+message CheckProductAvailabilityRequest {
+  string productId = 1;
+  int32 quantity = 2;
+}
+
+message CheckProductAvailabilityResponse {
+  bool available = 1;
+  string message = 2;
+  string productId = 3;
+  int32 requestedQuantity = 4;
+}
+
+// ==================== SUPPLIER INFO ====================
+
+message SupplierInfo {
+  string name = 1;
+  string address = 2;
+}
+
+// ==================== PRODUCT DETAIL MESSAGES ====================
+
+message ProductAttributeProto {
+  string name = 1;
+  string value = 2;
+  string unit = 3;
+  string description = 4;
+}
+
+message GetProductDetailRequest {
+  string productId = 1;
+}
+
+message GetProductDetailResponse {
+  string productId = 1;
+  repeated ProductAttributeProto attributes = 2;
+  repeated string images = 3;
+}
+
+// ==================== STOCK MANAGEMENT MESSAGES ====================
+
+message UpdateStockRequest {
+  string productId = 1;
+  int32 quantity = 2;
+}
+
+message UpdateStockResponse {
+  bool success = 1;
+  string message = 2;
+  string productId = 3;
+  int32 newStock = 4;
+}
+
+message CheckRemainingStockRequest {
+  string productId = 1;
+}
+
+message CheckRemainingStockResponse {
+  string productId = 1;
+  int32 remainingStock = 2;
+  bool available = 3;
+  string message = 4;
+}

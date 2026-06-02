@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: api-gateway
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/api-gateway:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
+          ports:
+            - containerPort: 6060
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+            - name: API_GATEWAY_PORT
+              value: "6060"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          readinessProbe:
+            tcpSocket:
+              port: 6060
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 6060
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: app
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - port: 6060
+      targetPort: 6060

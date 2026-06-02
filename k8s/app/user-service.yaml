@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: user-service
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/user-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
+          ports:
+            - containerPort: 6063
+            - containerPort: 6163
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+            - name: USER_SERVICE_PORT
+              value: "6063"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          readinessProbe:
+            tcpSocket:
+              port: 6063
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 6063
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: app
+spec:
+  selector:
+    app: user-service
+  ports:
+    - name: http
+      port: 6063
+      targetPort: 6063
+    - name: grpc
+      port: 6163
+      targetPort: 6163

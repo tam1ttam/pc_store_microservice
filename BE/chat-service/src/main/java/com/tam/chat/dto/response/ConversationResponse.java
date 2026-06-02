@@ -1,0 +1,30 @@
+package com.tam.chat.dto.response;
+
+import java.time.Instant;
+import java.util.List;
+
+import com.tam.chat.entity.ParticipantInfo;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class ConversationResponse {
+    String id;
+    String type;
+    String participantsHash;
+    String conversationAvatar;
+    String conversationName;
+    List<ParticipantInfo> participants;
+    String clientId;
+    String assignedManagerId;
+    String assignedManagerName;
+    String lastMessage;
+    Instant lastMessageAt;
+    Instant createdDate;
+    Instant modifiedDate;
+}

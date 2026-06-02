@@ -1,0 +1,34 @@
+package com.tam.product.entity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@Document(collection = "product_details")
+public class ProductDetail {
+    @Id
+    @Field("_id")
+    ObjectId id;
+
+    List<String> images;
+
+    @Field("productId")
+    ObjectId productId;
+
+    @Builder.Default
+    List<ProductAttribute> attributes = new ArrayList<>();
+}

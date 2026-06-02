@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: notification-service
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/notification-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
+          ports:
+            - containerPort: 6068
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+            - name: NOTIFICATION_SERVICE_PORT
+              value: "6068"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          readinessProbe:
+            tcpSocket:
+              port: 6068
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 6068
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: app
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 6068
+      targetPort: 6068
