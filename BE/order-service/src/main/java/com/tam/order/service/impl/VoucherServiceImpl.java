@@ -10,7 +10,6 @@ import com.tam.order.dto.request.ApplyVoucherRequest;
 import com.tam.order.dto.request.VoucherRequest;
 import com.tam.order.dto.response.VoucherResponse;
 import com.tam.order.entity.Order;
-import com.tam.order.entity.OrderStatus;
 import com.tam.order.entity.OrderVoucher;
 import com.tam.order.entity.Voucher;
 import com.tam.order.entity.VoucherAccessType;
@@ -112,9 +111,6 @@ public class VoucherServiceImpl implements VoucherService {
         Order order = orderRepository
                 .findById(request.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (order.getOrderStatus() != OrderStatus.DELIVERING) {
-            throw new RuntimeException("Cannot apply voucher at this order stage");
-        }
         Voucher voucher = voucherRepository
                 .findByCode(request.getVoucherCode())
                 .orElseThrow(() -> new RuntimeException("Voucher not found"));

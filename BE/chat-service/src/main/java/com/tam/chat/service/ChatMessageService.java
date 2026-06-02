@@ -306,7 +306,7 @@ public class ChatMessageService {
                 });
 
         ChatMessage chatMessage = ChatMessage.builder()
-                .conversationId(conversation.getId())
+                .conversationId("default")
                 .message(message)
                 .sender(ParticipantInfo.builder()
                         .userId(senderId)
@@ -325,7 +325,7 @@ public class ChatMessageService {
 
         if (conversation == null) return List.of();
 
-        return chatMessageRepository.findAllByConversationIdOrderByCreatedDateDesc(conversation.getId()).stream()
+        return chatMessageRepository.findAllByConversationIdOrderByCreatedDateDesc("default").stream()
                 .map(this::toChatMessageResponse)
                 .toList();
     }

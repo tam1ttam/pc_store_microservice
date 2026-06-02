@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { authReducer } from "@/redux/slices";
-
+import reviewReducer from "@/redux/slices/review";
 import { productReducer } from "@/redux/slices/product";
 import cartReducer from "@/redux/slices/cart";
 import adminReducer from "@/redux/slices/admin";
@@ -23,6 +23,7 @@ const store = configureStore({
         presence: presenceReducer,
         notification: notificationReducer,
         voucher: voucherReducer,
+  review: reviewReducer,
     }
 });
 

@@ -102,6 +102,10 @@ public class PermissionInitConfig {
             p("PRODUCT_DETAIL_GET", "product", "GET /product-details/{id}", "Get product detail entity"),
             p("PRODUCT_DETAIL_UPDATE", "product", "PUT /product-details/{id}", "Update product detail entity"),
             p("PRODUCT_ANALYTICS", "product", "GET /products/analytics", "Product analytics stats"),
+            p("PRODUCT_REVIEW_CREATE", "review", "POST /reviews", "Submit product review"),
+            p("PRODUCT_REVIEW_UPDATE", "review", "PUT /reviews/{id}", "Update own review"),
+            p("PRODUCT_REVIEW_DELETE", "review", "DELETE /reviews/{id}", "Delete a review (admin)"),
+            p("PRODUCT_REVIEW_READ", "review", "GET /reviews/product/{productId}", "List reviews for product"),
             p("CATEGORY_LIST", "category", "GET /categories", "List product categories"),
             p("CATEGORY_CREATE", "category", "POST /categories", "Create a product category"),
             p("CATEGORY_DELETE", "category", "DELETE /categories/{name}", "Delete a product category"));
@@ -129,7 +133,7 @@ public class PermissionInitConfig {
             p("ORDER_STATS", "order", "GET /order-service/api/orders/stats", "Admin order statistics"),
             p("VOUCHER_LIST", "voucher", "GET /order-service/vouchers", "List available vouchers"),
             p("VOUCHER_CREATE", "voucher", "POST /order-service/manager/vouchers", "Create a voucher"),
-            p("VOUCHER_UPDATE", "voucher", "PUT /order-service/manager/vouchers/{id", "Update a voucher"),
+            p("VOUCHER_UPDATE", "voucher", "PUT /order-service/manager/vouchers/{id}", "Update a voucher"),
             p("VOUCHER_DELETE", "voucher", "DELETE /order-service/manager/vouchers/{id}", "Delete a voucher"),
             p("VOUCHER_APPLY", "voucher", "POST /order-service/vouchers/apply", "Apply voucher to order"),
             p("VOUCHER_UNAPPLY", "voucher", "DELETE /order-service/vouchers/unapply", "Remove voucher from order"),
@@ -180,6 +184,7 @@ public class PermissionInitConfig {
             p("AI_CHAT", "ai", "POST /ai-service/ai/chat", "Send message to AI assistant"),
             p("AI_HISTORY", "ai", "GET /ai-service/ai/history", "Get AI chat history"),
             p("AI_CLEAR", "ai", "DELETE /ai-service/ai/history", "Clear AI chat history"));
+
     // ── file-service ──────────────────────────────────────────────────────────
 
     static final List<Permission> FILE_PERMISSIONS =
@@ -220,6 +225,9 @@ public class PermissionInitConfig {
             "PRODUCT_DETAIL_GET",
             "PRODUCT_BY_CATEGORIES",
             "PRODUCT_CATEGORY_COUNTS",
+            "PRODUCT_REVIEW_CREATE",
+            "PRODUCT_REVIEW_UPDATE",
+            "PRODUCT_REVIEW_READ",
             "CART_VIEW",
             "CART_UPDATE",
             "CART_DELETE_ITEM",
@@ -265,6 +273,10 @@ public class PermissionInitConfig {
             "PRODUCT_BY_CATEGORIES",
             "PRODUCT_CATEGORY_COUNTS",
             "PRODUCT_ANALYTICS",
+            "PRODUCT_REVIEW_CREATE",
+            "PRODUCT_REVIEW_UPDATE",
+            "PRODUCT_REVIEW_DELETE",
+            "PRODUCT_REVIEW_READ",
             "ORDER_LIST",
             "ORDER_DETAIL",
             "ORDER_UPDATE_STATUS",

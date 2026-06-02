@@ -98,7 +98,15 @@
       "PowerShell(docker exec kafka ls /opt/kafka/bin/)",
       "PowerShell(docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic chat-messages --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092)",
       "PowerShell(docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic ai-replies --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092)",
-      "PowerShell(docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092)"
+      "PowerShell(docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092)",
+      "Bash(xargs grep -l \"order.status\\\\|DELIVERED\\\\|OrderStatus\")",
+      "Bash(xargs grep -l \"SecurityConfig\\\\|permit-all\\\\|permitAll\")",
+      "Bash(xargs grep -l \"permitAll\\\\|permit-all\\\\|permit_all\\\\|SecurityFilterChain\")",
+      "Bash(xargs grep -l \"BaseSecurityConfig\\\\|permit-all-endpoints\")",
+      "Bash(xargs grep -l \"review\\\\|Review\")",
+      "Bash(xargs grep -l \"KafkaTemplate\\\\|kafkaTemplate\")",
+      "Bash(xxd BE/product-service/src/main/resources/application.yml)",
+      "PowerShell($env:ECC_GATEGUARD = \"off\"; Write-Output \"ECC_GATEGUARD set to $env:ECC_GATEGUARD\")"
     ]
   }
 }

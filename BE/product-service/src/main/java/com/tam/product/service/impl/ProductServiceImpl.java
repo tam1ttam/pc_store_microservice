@@ -2,7 +2,9 @@ package com.tam.product.service.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -14,7 +16,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,7 +78,6 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Error mapping ProductCreationRequest to Product"));
         product.setUpdateDetail(false);
 
-        // Upload ALL images before any DB write — prevents duplicate products on client retry
         if (isBase64(request.getImg())) {
             try {
                 product.setImg(fileServiceGrpcClient.uploadFile(request.getImg(), "product"));
@@ -91,7 +94,6 @@ public class ProductServiceImpl implements ProductService {
             detailReq.setImagesUpload(null);
         }
 
-        // All uploads done — safe to write to DB now
         Product savedProduct = productRepository.save(product);
         if (savedProduct == null) throw new RuntimeException("PRODUCT_NOT_CREATED_SUCCESSFULLY");
         log.info("Product created successfully with id: {}", savedProduct.getId());
@@ -138,7 +140,6 @@ public class ProductServiceImpl implements ProductService {
                 .findById(new ObjectId(productId))
                 .orElseThrow(() -> new RuntimeException("PRODUCT_NOT_FOUND"));
 
-        // Upload ALL images before any DB write
         if (isBase64(request.getImg())) {
             try {
                 request.setImg(fileServiceGrpcClient.uploadFile(request.getImg(), "product"));
@@ -221,7 +222,16 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public boolean updateInStockProduct(ObjectId productId, int quantity) {
-        return false;
+        try {
+            Query query = Query.query(Criteria.where("_id").is(productId));
+            Update update = new Update().inc("inStock", quantity);
+            mongoTemplate.updateFirst(query, update, Product.class);
+            log.info("Stock updated: productId={}, delta={}", productId, quantity);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to update stock for productId={}: {}", productId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
@@ -270,12 +280,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public java.util.Map<String, Long> countProductsByCategories(List<String> categories) {
-        java.util.Map<String, Long> result = new java.util.HashMap<>();
+    public Map<String, Long> countProductsByCategories(List<String> categories) {
+        Map<String, Long> result = new HashMap<>();
         for (String category : categories) {
-            org.springframework.data.mongodb.core.query.Query q = new org.springframework.data.mongodb.core.query.Query(
-                    org.springframework.data.mongodb.core.query.Criteria.where("category")
-                            .is(category));
+            Query q = new Query(Criteria.where("category").is(category));
             result.put(category, mongoTemplate.count(q, Product.class));
         }
         return result;
@@ -283,11 +291,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void incrementViewCount(String productId) {
-        org.springframework.data.mongodb.core.query.Query query = new org.springframework.data.mongodb.core.query.Query(
-                org.springframework.data.mongodb.core.query.Criteria.where("_id")
-                        .is(new ObjectId(productId)));
-        org.springframework.data.mongodb.core.query.Update update =
-                new org.springframework.data.mongodb.core.query.Update().inc("viewCount", 1);
+        Query query = new Query(Criteria.where("_id").is(new ObjectId(productId)));
+        Update update = new Update().inc("viewCount", 1);
         mongoTemplate.updateFirst(query, update, Product.class);
     }
 

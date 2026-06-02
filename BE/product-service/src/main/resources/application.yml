@@ -48,6 +48,7 @@ app:
       - /actuator/health
       - /api/v1/products/**
       - /api/v1/categories/**
+      - /api/v1/reviews/product/{productId}/rating
     allowed-origins:
       - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
 

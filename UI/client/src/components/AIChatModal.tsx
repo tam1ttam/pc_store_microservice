@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { aiApi } from "@/services/api/aiApi";
+import { aiApi, ChatMessageApi } from "@/services/api/aiApi";
 import { useAppSelector } from "@/hooks";
 import { RootState } from "@/redux/store";
 import { MessageCircle, X, Send, User, Loader2 } from "lucide-react";
 import { AILogo } from "../assets/logo";
 
 interface Message {
-    id: number;
+    id: string | number;
     type: "user" | "bot";
     content: string;
     timestamp: Date;
@@ -46,6 +46,7 @@ const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) =>
     const { toast } = useToast();
 
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
+const userId = useAppSelector((state: RootState) => state.user.info?.id);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,7 +56,28 @@ const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) =>
         scrollToBottom();
     }, [messages, isOpen]);
 
-    const handleSendMessage = async () => {
+    useEffect(() => {
+  if (!isOpen || !isLogin) return;
+  let cancelled = false;
+  const loadHistory = async () => {
+    if (cancelled) return;
+    try {
+      const items = userId ? await aiApi.getHistory(userId) : [];
+      if (cancelled) return;
+      const mapped: Message[] = (items as ChatMessageApi[]).map((m) => ({
+        id: m.id,
+        type: m.me ? "user" : "bot",
+        content: m.message ?? "",
+        timestamp: m.createdDate ? new Date(m.createdDate) : new Date(),
+      }));
+      if (mapped.length > 0) setMessages(mapped);
+    } catch {}
+  };
+  loadHistory();
+  return () => { cancelled = true; };
+}, [isOpen, isLogin, userId]);
+
+const handleSendMessage = async () => {
         if (!inputValue.trim() || isLoading) return;
 
         const userMessage: Message = {
