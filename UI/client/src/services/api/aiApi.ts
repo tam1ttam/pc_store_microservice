@@ -30,9 +30,9 @@ export const aiApi = {
     return response.data
   },
 
-  getHistory: async (userId: String): Promise<ChatMessageApi[]> => {
+  getHistory: async (): Promise<ChatMessageApi[]> => {
     const response = await axios.get<{ success: boolean; result: ChatMessageApi[] }>(
-      `${CHAT_SVC}/ai/history/userId=${userId}`,
+      `${CHAT_SVC}/ai/history`,
     )
     return response.data.result ?? []
   },

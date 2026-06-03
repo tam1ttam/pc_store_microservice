@@ -11,238 +11,239 @@ import { triggerSellerChat } from '@/redux/slices/chat';
 import { aiChatBus, AI_EVENTS } from '@/utils/aiChatBus';
 
 interface Supplier {
-    id?: string;
-    name: string;
+  id?: string;
+  name: string;
 }
 
 interface Product {
-    id: string;
-    name: string;
-    img?: string;
-    supplier?: Supplier;
-    price: number;
-    unit?: string;
+  id: string;
+  name: string;
+  img?: string;
+  supplier?: Supplier;
+  price: number;
+  unit?: string;
 }
 
 type Props = {
-    product: Product;
+  product: Product;
 };
 
 const formatPrice = (price: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 export default function ProductCard({ product }: Props) {
-    const { t } = useTranslation();
-    const dispatch = useDispatch<any>();
-    const { info: user } = useSelector((state: RootState) => state.user);
-    const isLogin = useSelector((state: RootState) => state.auth.isLogin);
-    const cartItems = useSelector((state: RootState) => state.cart.items);
-    const availableVouchers = useSelector((state: RootState) => state.voucher.available);
-    const { toast } = useToast();
-    const navigate = useNavigate();
-    const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
-    const [showChatMenu, setShowChatMenu] = useState(false);
+  const { t } = useTranslation();
+  const dispatch = useDispatch<any>();
+  const { info: user } = useSelector((state: RootState) => state.user);
+  const isLogin = useSelector((state: RootState) => state.auth.isLogin);
+  const cartItems = useSelector((state: RootState) => state.cart.items);
+  const availableVouchers = useSelector((state: RootState) => state.voucher.available);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [adding, setAdding] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
-    const bestResult = useMemo(() => {
-        if (!isLogin || !availableVouchers.length) return null;
-        return findBestVoucher(product.price ?? 0, availableVouchers);
-    }, [isLogin, availableVouchers, product.price]);
+  const bestResult = useMemo(() => {
+    if (!isLogin || !availableVouchers.length) return null;
+    return findBestVoucher(product.price ?? 0, availableVouchers);
+  }, [isLogin, availableVouchers, product.price]);
 
-    const discountedPrice = bestResult
-        ? Math.max(0, (product.price ?? 0) - bestResult.discount)
-        : (product.price ?? 0);
+  const discountedPrice = bestResult
+    ? Math.max(0, (product.price ?? 0) - bestResult.discount)
+    : (product.price ?? 0);
 
-    const discountLabel = useMemo(() => {
-        if (!bestResult) return null;
-        const v = bestResult.voucher;
-        if (v.discountPercent && v.discountPercent > 0) return `-${v.discountPercent}%`;
-        if (v.discountAmount && v.discountAmount > 0)
-            return `-${new Intl.NumberFormat('vi-VN').format(v.discountAmount)}đ`;
-        return null;
-    }, [bestResult]);
+  const discountLabel = useMemo(() => {
+    if (!bestResult) return null;
+    const v = bestResult.voucher;
+    if (v.discountPercent && v.discountPercent > 0) return `-${v.discountPercent}%`;
+    if (v.discountAmount && v.discountAmount > 0)
+      return `-${new Intl.NumberFormat('vi-VN').format(v.discountAmount)}đ`;
+    return null;
+  }, [bestResult]);
 
-    const handleAddToCart = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (adding === 'loading') return;
-        if (!user) {
-            toast({ title: t('product.addToCartNotify'), description: t('product.addToCartLoginRequired') });
-            navigate('/login');
-            return;
-        }
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (adding === 'loading') return;
+    if (!user) {
+      toast({ title: t('product.addToCartNotify'), description: t('product.addToCartLoginRequired') });
+      navigate('/login');
+      return;
+    }
 
-        const existing = cartItems.find((i) => i.productId === product.id);
-        const newQty = (existing?.quantity ?? 0) + 1;
+    const existing = cartItems.find((i) => i.productId === product.id);
+    const newQty = (existing?.quantity ?? 0) + 1;
 
-        setAdding('loading');
-        try {
-            await dispatch(upsertCartItem({
-                productId: product.id,
-                productName: product.name,
-                productPrice: product.price,
-                quantity: newQty,
-                productImage: product.img,
-            })).unwrap();
-            dispatch(getCart());
-            setAdding('done');
-            setTimeout(() => setAdding('idle'), 1500);
-        } catch (error: any) {
-            setAdding('idle');
-            toast({
-                variant: 'destructive',
-                title: t('common.error'),
-                description: error?.response?.data?.message ?? t('product.addToCartError'),
-            });
-        }
+    setAdding('loading');
+    try {
+      await dispatch(upsertCartItem({
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        quantity: newQty,
+        productImage: product.img,
+      })).unwrap();
+      dispatch(getCart());
+      setAdding('done');
+      setTimeout(() => setAdding('idle'), 1500);
+    } catch (error: any) {
+      setAdding('idle');
+      const status = error?.response?.status;
+      const msg = error?.response?.data?.message ?? t('product.addToCartError');
+      toast({
+        variant: 'destructive',
+        title: status === 409 ? msg : t('common.error'),
+        description: status === 409 ? undefined : msg,
+      });
+    }
+  };
+
+  const handleSendToChat = (target: 'seller' | 'ai', e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isLogin) {
+      toast({ title: t('common.loginRequired'), description: t('common.pleaseLoginFirst') });
+      navigate('/login');
+      return;
+    }
+
+    const productPayload = {
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.img,
+      slug: product.id,
     };
 
-    const handleSendToChat = (target: 'seller' | 'ai', e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!isLogin) {
-            toast({ title: t('common.loginRequired'), description: t('common.pleaseLoginFirst') });
-            navigate('/login');
-            return;
-        }
+    if (target === 'seller') {
+      dispatch(triggerSellerChat({ product: productPayload }));
+    } else {
+      aiChatBus.emit(AI_EVENTS.OPEN_AND_SEND_PRODUCT, {
+        product: productPayload,
+        message: `${product.name}`,
+      });
+    }
+  };
 
-        const productPayload = {
-            productId: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.img,
-            slug: product.id, // using id as slug for now
-        };
+  return (
+    <Link to={`/products/${product.id}`} className="block">
+      <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-orange-500/50">
+        <button className="absolute top-3 right-3 z-10 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-gray-700 shadow-lg">
+          <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+        </button>
 
-        if (target === 'seller') {
-            dispatch(triggerSellerChat({ product: productPayload }));
-        } else {
-            aiChatBus.emit(AI_EVENTS.OPEN_AND_SEND_PRODUCT, {
-                product: productPayload,
-                message: `${product.name}`,
-            });
-        }
-    };
+        {discountLabel && (
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+            <Tag className="w-3 h-3" />
+            {discountLabel}
+          </div>
+        )}
 
-    return (
-        <Link to={`/products/${product.id}`} className="block">
-            <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl hover:border-orange-500/50">
-                <button className="absolute top-3 right-3 z-10 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-gray-700 shadow-lg">
-                    <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                </button>
+        <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900">
+          <img
+            src={product.img}
+            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        </div>
 
-                {discountLabel && (
-                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                        <Tag className="w-3 h-3" />
-                        {discountLabel}
-                    </div>
-                )}
-
-                <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900">
-                    <img
-                        src={product.img}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                </div>
-
-                <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                {product.supplier?.name ?? t('product.supplier')}
-                            </span>
-                            <div className="flex items-center gap-0.5">
-                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs text-gray-600 dark:text-gray-400">4.8</span>
-                            </div>
-                        </div>
-
-                        <div className="relative">
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setShowChatMenu(!showChatMenu);
-                                }}
-                                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500"
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                            </button>
-
-                            {showChatMenu && (
-                                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                                    <button
-                                        onClick={(e) => {
-                                            handleSendToChat('seller', e);
-                                            setShowChatMenu(false);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
-                                    >
-                                        <MessageCircle className="w-3.5 h-3.5 text-orange-500" />
-                                        Gửi cho người bán
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            handleSendToChat('ai', e);
-                                            setShowChatMenu(false);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
-                                    >
-                                        <MessageCircle className="w-3.5 h-3.5 text-indigo-500" />
-                                        Gửi cho trợ lý AI
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <h3 className="font-semibold text-sm mb-3 line-clamp-2 min-h-[40px] text-gray-800 dark:text-gray-100">
-                        {product.name}
-                    </h3>
-
-                    <div className="mb-3">
-                        {bestResult ? (
-                            <div className="space-y-0.5">
-                                <div className="text-xs text-gray-400 line-through">
-                                    {formatPrice(product.price ?? 0)}
-                                </div>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold text-red-500 dark:text-red-400">
-                                        {formatPrice(discountedPrice)}
-                                    </span>
-                                    {product.unit && (
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                                    {formatPrice(product.price ?? 0)}
-                                </span>
-                                {product.unit && (
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    <button
-                        onClick={handleAddToCart}
-                        disabled={adding === 'loading'}
-                        className={`w-full py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2
-                            ${adding === 'done'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60 disabled:cursor-not-allowed'
-                            }`}
-                    >
-                        {adding === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {adding === 'done' && <Check className="w-4 h-4" />}
-                        {adding === 'idle' && <ShoppingCart className="w-4 h-4" />}
-                        {adding === 'done' ? t('product.added') : t('product.addToCart')}
-                    </button>
-                </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                {product.supplier?.name ?? t('product.supplier')}
+              </span>
+              <div className="flex items-center gap-0.5">
+                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">4.8</span>
+              </div>
             </div>
-        </Link>
-    );
+
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowChatMenu(!showChatMenu);
+                }}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </button>
+
+              {showChatMenu && (
+                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    onClick={(e) => {
+                      handleSendToChat('seller', e);
+                      setShowChatMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 text-orange-500" />
+                    Gửi cho người bán
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      handleSendToChat('ai', e);
+                      setShowChatMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 text-indigo-500" />
+                    Gửi cho trợ lý AI
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <h3 className="font-semibold text-sm mb-3 line-clamp-2 min-h-[40px] text-gray-800 dark:text-gray-100">
+            {product.name}
+          </h3>
+
+          <div className="mb-3">
+            {bestResult ? (
+              <div className="space-y-0.5">
+                <div className="text-xs text-gray-400 line-through">
+                  {formatPrice(product.price ?? 0)}
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold text-red-500 dark:text-red-400">
+                    {formatPrice(discountedPrice)}
+                  </span>
+                  {product.unit && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                  {formatPrice(product.price ?? 0)}
+                </span>
+                {product.unit && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">/ {product.unit}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleAddToCart}
+            disabled={adding === 'loading'}
+            className={`w-full py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2  ${adding === 'done'
+              ? 'bg-green-500 text-white'
+              : 'bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60 disabled:cursor-not-allowed'
+              }`}
+          >
+            {adding === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
+            {adding === 'done' && <Check className="w-4 h-4" />}
+            {adding === 'idle' && <ShoppingCart className="w-4 h-4" />}
+            {adding === 'done' ? t('product.added') : t('product.addToCart')}
+          </button>
+        </div>
+      </div>
+    </Link>
+  );
 }

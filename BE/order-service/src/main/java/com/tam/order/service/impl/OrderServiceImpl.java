@@ -27,6 +27,7 @@ import com.tam.order.entity.OrderItem;
 import com.tam.order.entity.OrderStatus;
 import com.tam.order.event.OrderCreatedEvent;
 import com.tam.order.event.OrderItemEvent;
+import com.tam.order.exception.OutOfStockException;
 import com.tam.order.grpc.ProductGrpcClient;
 import com.tam.order.repository.CartRepository;
 import com.tam.order.repository.OrderRepository;
@@ -62,6 +63,12 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("No valid cart items selected");
         }
 
+        for (CartItem ci : selectedItems) {
+            if (!productGrpcClient.checkStockAvailability(ci.getProductId(), ci.getQuantity())) {
+                throw new OutOfStockException("Sản phẩm " + ci.getProductName() + " không đủ hàng");
+            }
+        }
+
         double total = selectedItems.stream()
                 .mapToDouble(i -> i.getProductPrice() * i.getQuantity())
                 .sum();
@@ -74,7 +81,7 @@ public class OrderServiceImpl implements OrderService {
                 .currency("VND")
                 .totalPrice(total)
                 .isPaid(false)
-                .orderStatus(OrderStatus.PENDING) // Changed from DELIVERING to PENDING for Saga
+                .orderStatus(OrderStatus.PENDING)
                 .build();
 
         for (CartItem ci : selectedItems) {
@@ -91,10 +98,21 @@ public class OrderServiceImpl implements OrderService {
         order = orderRepository.save(order);
         log.info("Checkout order saved (PENDING): orderId={}", order.getId());
 
+        for (OrderItem item : order.getItems()) {
+            try {
+                productGrpcClient.deductStock(item.getProductId(), item.getQuantity());
+            } catch (Exception e) {
+                log.warn(
+                        "checkout deduct stock failed orderId={} productId={}: {}",
+                        order.getId(),
+                        item.getProductId(),
+                        e.getMessage());
+            }
+        }
+
         cart.getItems().removeAll(selectedItems);
         cartRepository.save(cart);
 
-        // Start Saga
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", order.getId());
         payload.put("userId", identityUserId);
@@ -174,8 +192,19 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getIdentityUserId().equals(identityUserId)) {
             throw new RuntimeException("Not authorized to cancel this order");
         }
-        if (order.getOrderStatus() != OrderStatus.DELIVERING) {
+        if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.PAID) {
             throw new RuntimeException("Order cannot be cancelled at this stage");
+        }
+        for (OrderItem item : order.getItems()) {
+            try {
+                productGrpcClient.addStock(item.getProductId(), item.getQuantity());
+            } catch (Exception e) {
+                log.warn(
+                        "cancelOrder restore stock failed orderId={} productId={}: {}",
+                        orderId,
+                        item.getProductId(),
+                        e.getMessage());
+            }
         }
         order.setOrderStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
@@ -187,6 +216,25 @@ public class OrderServiceImpl implements OrderService {
     public boolean deleteOrder(Long orderId) {
         orderRepository.deleteById(orderId);
         return true;
+    }
+
+    @Override
+    public List<Order> getPendingOrders() {
+        return orderRepository.findByOrderStatus(OrderStatus.PENDING);
+    }
+
+    @Override
+    public Order confirmOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getOrderStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Order is not in PENDING status");
+        }
+        order.setOrderStatus(OrderStatus.DELIVERING);
+        order.setPaid(true);
+        order = orderRepository.save(order);
+        publishOrderStatusNotification(order, OrderStatus.DELIVERING);
+        log.info("Order {} confirmed (PENDING -> DELIVERING)", orderId);
+        return order;
     }
 
     private void publishOrderStatusNotification(Order order, OrderStatus status) {
@@ -272,7 +320,6 @@ public class OrderServiceImpl implements OrderService {
                     long sold = soldMap.get(pid);
                     double importPrice = productGrpcClient.getImportPrice(pid);
 
-                    // Lợi nhuận ước tính = Doanh thu - (Giá nhập * Số lượng bán)
                     double profit = revenue - (importPrice * sold);
 
                     return ProductAnalyticsResponse.builder()
@@ -284,6 +331,26 @@ public class OrderServiceImpl implements OrderService {
                             .build();
                 })
                 .toList();
+    }
+
+    @Override
+    public void confirmPayment(Long orderId, double amount) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getTotalPrice() != amount) {
+            log.warn(
+                    "Payment amount mismatch for order {}: expected {}, got {}",
+                    orderId,
+                    order.getTotalPrice(),
+                    amount);
+            throw new RuntimeException("Payment amount does not match order total");
+        }
+
+        order.setPaid(true);
+        order.setOrderStatus(OrderStatus.DELIVERING);
+        orderRepository.save(order);
+        publishOrderStatusNotification(order, OrderStatus.DELIVERING);
+        log.info("Order {} marked as PAID via SePay", orderId);
     }
 
     OrderResponse toResponse(Order order) {
@@ -421,25 +488,5 @@ public class OrderServiceImpl implements OrderService {
                 log.error("Failed to publish email for orderId={}", order.getId(), e);
             }
         }
-    }
-
-    @Override
-    public void confirmPayment(Long orderId, double amount) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if (order.getTotalPrice() != amount) {
-            log.warn(
-                    "Payment amount mismatch for order {}: expected {}, got {}",
-                    orderId,
-                    order.getTotalPrice(),
-                    amount);
-            throw new RuntimeException("Payment amount does not match order total");
-        }
-
-        order.setPaid(true);
-        order.setOrderStatus(OrderStatus.DELIVERING);
-        orderRepository.save(order);
-        publishOrderStatusNotification(order, OrderStatus.DELIVERING);
-        log.info("Order {} marked as PAID via SePay", orderId);
     }
 }

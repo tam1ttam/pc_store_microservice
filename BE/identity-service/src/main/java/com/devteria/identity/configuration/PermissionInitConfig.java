@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 public class PermissionInitConfig {
 
     // ── identity-service ──────────────────────────────────────────────────────
-
     static final List<Permission> IDENTITY_PERMISSIONS = List.of(
             p("PERMISSION_LIST", "permission", "GET /identity-service/permissions", "List all permissions"),
             p("PERMISSION_CREATE", "permission", "POST /identity-service/permissions", "Create a permission"),
@@ -65,7 +64,6 @@ public class PermissionInitConfig {
                     "Internal manager details with username"));
 
     // ── user-service ──────────────────────────────────────────────────────────
-
     static final List<Permission> USER_PERMISSIONS = List.of(
             p("CUSTOMER_REGISTER", "customer", "POST /api/customers", "Register a new customer profile"),
             p("CUSTOMER_DETAIL", "customer", "GET /api/customers/my-profile", "Get own customer profile"),
@@ -85,7 +83,6 @@ public class PermissionInitConfig {
             p("ADMIN_CUSTOMER_DELETE", "customer", "DELETE /api/admin/customers/{userName}", "Admin delete customer"));
 
     // ── product-service ───────────────────────────────────────────────────────
-
     static final List<Permission> PRODUCT_PERMISSIONS = List.of(
             p("PRODUCT_LIST", "product", "GET /products", "List products with filter/pagination"),
             p("PRODUCT_DETAIL", "product", "GET /products/{id}", "Get product detail by ID"),
@@ -111,7 +108,6 @@ public class PermissionInitConfig {
             p("CATEGORY_DELETE", "category", "DELETE /categories/{name}", "Delete a product category"));
 
     // ── order-service ─────────────────────────────────────────────────────────
-
     static final List<Permission> ORDER_PERMISSIONS = List.of(
             p("CART_VIEW", "cart", "GET /order-service/cart", "View own cart"),
             p("CART_UPDATE", "cart", "PUT /order-service/cart/items", "Add or update cart items"),
@@ -139,10 +135,19 @@ public class PermissionInitConfig {
             p("VOUCHER_UNAPPLY", "voucher", "DELETE /order-service/vouchers/unapply", "Remove voucher from order"),
             p("PAYMENT_CREATE", "payment", "POST /order-service/payments", "Create a payment"),
             p("PAYMENT_CALLBACK", "payment", "GET /order-service/payments/callback", "Payment provider callback"),
-            p("PAYMENT_STATUS", "payment", "GET /order-service/payments/status", "Check payment status"));
+            p("PAYMENT_STATUS", "payment", "GET /order-service/payments/status", "Check payment status"),
+            p(
+                    "ORDER_PENDING_LIST",
+                    "order",
+                    "GET /order-service/api/orders/pending",
+                    "List all PENDING orders (manager)"),
+            p(
+                    "ORDER_CONFIRM",
+                    "order",
+                    "POST /order-service/api/orders/{id}/confirm",
+                    "Confirm a PENDING order -> DELIVERING (manager)"));
 
     // ── chat-service ──────────────────────────────────────────────────────────
-
     static final List<Permission> CHAT_PERMISSIONS = List.of(
             p("CONVERSATION_CREATE", "conversation", "POST /conversations", "Create a direct conversation"),
             p("CONVERSATION_LIST", "conversation", "GET /conversations/my", "List own conversations"),
@@ -186,12 +191,10 @@ public class PermissionInitConfig {
             p("AI_CLEAR", "ai", "DELETE /ai-service/ai/history", "Clear AI chat history"));
 
     // ── file-service ──────────────────────────────────────────────────────────
-
     static final List<Permission> FILE_PERMISSIONS =
             List.of(p("FILE_UPLOAD", "file", "POST /media/upload", "Upload a file or image to S3"));
 
     // ── notification-service ──────────────────────────────────────────────────
-
     static final List<Permission> NOTIFICATION_PERMISSIONS = List.of(
             p("EMAIL_SEND", "notification", "POST /api/notifications/email", "Send an email notification"),
             p("NOTIFICATION_LIST", "notification", "GET /api/notifications", "List own notifications"),
@@ -213,7 +216,6 @@ public class PermissionInitConfig {
             p("NOTIFICATION_COUNT", "notification", "GET /api/notifications/count", "Get notification count"));
 
     // ── role → permission mapping ─────────────────────────────────────────────
-
     static final Set<String> USER_ROLE_PERMISSIONS = Set.of(
             "MY_INFO",
             "CUSTOMER_DETAIL",
@@ -316,18 +318,17 @@ public class PermissionInitConfig {
             "NOTIFICATION_MARK_READ",
             "NOTIFICATION_MARK_ALL_READ",
             "NOTIFICATION_ACTION_DONE",
-            "NOTIFICATION_COUNT");
+            "NOTIFICATION_COUNT",
+            "ORDER_PENDING_LIST",
+            "ORDER_CONFIRM");
 
     // ADMIN gets everything — built dynamically from all permission lists
-
     // ─────────────────────────────────────────────────────────────────────────
-
     @Bean
     @Order(2)
     ApplicationRunner permissionRunner(PermissionRepository permissionRepository, RoleRepository roleRepository) {
         return args -> {
             log.info("Initializing permissions and role assignments.....");
-
             List<Permission> allPermissions = concat(
                     IDENTITY_PERMISSIONS,
                     USER_PERMISSIONS,
@@ -372,7 +373,6 @@ public class PermissionInitConfig {
             Set<String> allNames = new HashSet<>();
             allPermissions.forEach(perm -> allNames.add(perm.getName()));
             assignPermissions(roleRepository, permissionRepository, PredefinedRole.ADMIN_ROLE, allNames);
-
             log.info("Permission initialization completed .....");
         };
     }

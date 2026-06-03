@@ -40,4 +40,8 @@ public interface OrderService {
     List<ProductAnalyticsResponse> getProductAnalytics();
 
     void confirmPayment(Long orderId, double amount);
+
+    List<Order> getPendingOrders();
+
+    Order confirmOrder(Long orderId);
 }

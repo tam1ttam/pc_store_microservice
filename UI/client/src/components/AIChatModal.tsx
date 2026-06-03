@@ -46,7 +46,6 @@ const AIChatModal = ({ isOpen, onOpen, onClose, isHidden }: AIChatModalProps) =>
     const { toast } = useToast();
 
     const isLogin = useAppSelector((state: RootState) => state.auth.isLogin);
-const userId = useAppSelector((state: RootState) => state.user.info?.id);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,7 +61,7 @@ const userId = useAppSelector((state: RootState) => state.user.info?.id);
   const loadHistory = async () => {
     if (cancelled) return;
     try {
-      const items = userId ? await aiApi.getHistory(userId) : [];
+      const items = await aiApi.getHistory();
       if (cancelled) return;
       const mapped: Message[] = (items as ChatMessageApi[]).map((m) => ({
         id: m.id,
@@ -75,7 +74,7 @@ const userId = useAppSelector((state: RootState) => state.user.info?.id);
   };
   loadHistory();
   return () => { cancelled = true; };
-}, [isOpen, isLogin, userId]);
+}, [isOpen, isLogin]);
 
 const handleSendMessage = async () => {
         if (!inputValue.trim() || isLoading) return;

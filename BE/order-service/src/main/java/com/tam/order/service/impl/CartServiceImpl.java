@@ -10,6 +10,8 @@ import com.tam.order.dto.response.CartItemResponse;
 import com.tam.order.dto.response.CartResponse;
 import com.tam.order.entity.Cart;
 import com.tam.order.entity.CartItem;
+import com.tam.order.exception.OutOfStockException;
+import com.tam.order.grpc.ProductGrpcClient;
 import com.tam.order.repository.CartItemRepository;
 import com.tam.order.repository.CartRepository;
 import com.tam.order.service.CartService;
@@ -27,6 +29,7 @@ public class CartServiceImpl implements CartService {
 
     CartRepository cartRepository;
     CartItemRepository cartItemRepository;
+    ProductGrpcClient productGrpcClient;
 
     @Override
     public CartResponse getCart(String identityUserId) {
@@ -43,6 +46,17 @@ public class CartServiceImpl implements CartService {
                 .findByIdentityUserId(identityUserId)
                 .orElseGet(() -> cartRepository.save(
                         Cart.builder().identityUserId(identityUserId).build()));
+
+        if (request.getQuantity() > 0) {
+            int remaining = productGrpcClient.getRemainingStock(request.getProductId());
+            if (remaining <= 0) {
+                throw new OutOfStockException("Sản phẩm " + request.getProductName() + " đã hết hàng");
+            }
+            if (request.getQuantity() > remaining) {
+                throw new OutOfStockException(
+                        "Sản phẩm " + request.getProductName() + " chỉ còn " + remaining + " sản phẩm");
+            }
+        }
 
         cartItemRepository
                 .findByCartIdAndProductId(cart.getId(), request.getProductId())

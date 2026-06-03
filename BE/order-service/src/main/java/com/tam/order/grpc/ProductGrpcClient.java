@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ProductGrpcClient {
-
     private final ProductServiceGrpc.ProductServiceBlockingStub stub;
 
     public ProductGrpcClient() {
@@ -63,5 +62,22 @@ public class ProductGrpcClient {
             log.error("gRPC deductStock failed for product {} qty {}: {}", productId, quantity, e.getMessage());
             return false;
         }
+    }
+
+    public boolean addStock(String productId, int quantity) {
+        try {
+            UpdateStockResponse resp = stub.updateStock(UpdateStockRequest.newBuilder()
+                    .setProductId(productId)
+                    .setQuantity(quantity)
+                    .build());
+            return resp.getSuccess();
+        } catch (Exception e) {
+            log.error("gRPC addStock failed for product {} qty {}: {}", productId, quantity, e.getMessage());
+            return false;
+        }
+    }
+
+    public double getImportPrice(String productId) {
+        return 0.0;
     }
 }

@@ -40,3 +40,13 @@ export type OrderItem = z.infer<typeof orderItemSchema>;
 export type Order = z.infer<typeof orderSchema>;
 export type OrderResponse = z.infer<typeof orderResponseSchema>;
 export type OrderAdmin = z.infer<typeof orderAdminSchema>;
+
+export const OrderStatus = {
+    PENDING: "PENDING",
+    PAID: "PAID",
+    DELIVERING: "DELIVERING",
+    DELIVERED: "DELIVERED",
+    CANCELLED: "CANCELLED",
+} as const;
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+

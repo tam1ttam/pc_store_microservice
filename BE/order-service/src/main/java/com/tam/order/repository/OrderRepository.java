@@ -18,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByCustomerIdAndOrderStatus(String customerId, OrderStatus status);
 
+    List<Order> findByOrderStatus(OrderStatus status);
+
     @Query("SELECT o FROM Order o WHERE o.identityUserId = :uid"
             + " AND (:status IS NULL OR o.orderStatus = :status)"
             + " AND (:from IS NULL OR o.orderDate >= :from)"

@@ -9,6 +9,7 @@ import { aiChatBus, AI_EVENTS } from '@/utils/aiChatBus';
 import { ProductCardBubble } from '@/components/chat/ProductCardBubble';
 import { RootState } from '@/redux/store';
 import { upsertCartItem } from '@/redux/thunks/cart';
+import { useToast } from '@/hooks/use-toast';
 
 interface AiMessage {
   role: 'user' | 'ai';
@@ -70,10 +71,10 @@ export const AiChatBubble = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const history = await aiApi.getHistory(userId);
+        const history = await aiApi.getHistory();
         if (history && history.length > 0) {
           const mappedHistory = history.map((msg: any) => ({
-            role: (msg.senderUserId === userId ? 'user' : 'ai') as 'user' | 'ai',
+            role: msg.me ? 'user' : 'ai' as 'user' | 'ai',
             text: msg.message,
             timestamp: new Date(msg.createdDate),
             messageType: msg.messageType,
@@ -89,7 +90,7 @@ export const AiChatBubble = () => {
     if (isOpen) {
       fetchHistory();
     }
-  }, [isOpen, userId]);
+  }, [isOpen]);
 
   const sendAiMessage = async (text: string, productCard?: AiMessage['productCard']) => {
     if (!text?.trim() && !productCard) return;

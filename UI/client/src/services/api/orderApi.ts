@@ -1,12 +1,16 @@
 import ENDPOINT from "@/constants/endpoint";
-import { get, patch } from "../api.service";
+import { get, post, patch } from "../api.service";
 
 export const orderApi = {
-    getOrders: () => get(ENDPOINT.ORDER),
+  getOrders: () => get(ENDPOINT.ORDER),
 
-    getOrderById: (id: number) => get(`${ENDPOINT.ORDER}/${id}`),
+  getOrderById: (id: number) => get(`${ENDPOINT.ORDER}/${id}`),
 
-    cancelOrder: (id: number) => patch(ENDPOINT.ORDER_CANCEL(id), {}),
+  cancelOrder: (id: number) => patch(ENDPOINT.ORDER_CANCEL(id), {}),
 
-    getPaymentStatus: (paymentId: string) => get(`${ENDPOINT.PAYMENT_STATUS}/${paymentId}`),
+  getPaymentStatus: (paymentId: string) => get(`${ENDPOINT.PAYMENT_STATUS}/${paymentId}`),
+
+  getPendingOrders: () => get(ENDPOINT.ORDER_PENDING),
+
+  confirmOrder: (orderId: number) => post(ENDPOINT.ORDER_CONFIRM(orderId), {}),
 };

@@ -116,6 +116,23 @@ public class OrderController {
                 .build();
     }
 
+    // ── Manager order helpers ────────────────────────────────────────────────
+    @GetMapping("/api/orders/pending")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<Order>> getPendingOrders() {
+        return ApiResponse.<List<Order>>builder()
+                .result(orderService.getPendingOrders())
+                .build();
+    }
+
+    @PostMapping("/api/orders/{id}/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<Order> confirmOrder(@PathVariable Long id) {
+        return ApiResponse.<Order>builder()
+                .result(orderService.confirmOrder(id))
+                .build();
+    }
+
     // ── Legacy endpoint (used by gRPC/saga-orchestrator) ──────────────────────
 
     @PostMapping("/api/orders")
