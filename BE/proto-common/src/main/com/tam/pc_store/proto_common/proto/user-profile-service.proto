@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package com.tam.proto.profile.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tam.proto.profile.v1";
+option java_outer_classname = "ProfileServiceProto";
+
+service ProfileService {
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  rpc GetCustomerInfo(GetCustomerInfoRequest) returns (GetCustomerResponse);
+  rpc GetCustomerByUserId(GetCustomerByUserIdRequest) returns (GetCustomerResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse);
+  rpc SearchCustomers(SearchCustomersRequest) returns (SearchCustomersResponse);
+}
+
+message AddressResponse {
+  string id = 1;
+  string country = 2;
+  string province = 3;
+  string city = 4;
+  string ward = 5;
+  string street = 6;
+  bool is_default = 7;
+  repeated string phone_contacts = 8;
+  bool is_active = 9;
+}
+
+message CreateCustomerRequest {
+  string user_name = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  string phone_number = 5;
+  string avatar = 6;
+  string dob = 7; // Using string for LocalDate
+  string city = 8;
+  string user_id = 9;
+}
+
+message CreateCustomerResponse {
+  string id = 1;
+  string user_name = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string email = 5;
+  string phone_number = 6;
+  string avatar = 7;
+  string dob = 8;
+  string city = 9;
+  string default_phone_number = 10;
+  string default_email = 11;
+  string gender = 12;
+  bool is_active = 13;
+}
+
+message GetCustomerRequest {
+  string user_name = 1;
+}
+
+message GetCustomerByUserIdRequest {
+  string user_id = 1;
+}
+
+message GetCustomerInfoRequest {
+  string user_name = 1;
+}
+
+message GetCustomerResponse {
+  string id = 1;
+  string user_name = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string email = 5;
+  string phone_number = 6;
+  string avatar = 7;
+  string dob = 8;
+  string city = 9;
+  string default_phone_number = 10;
+  string default_email = 11;
+  string gender = 12;
+  bool is_active = 13;
+  repeated AddressResponse addresses = 14;
+}
+
+message UpdateCustomerRequest {
+  string user_name = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  string phone_number = 5;
+  string avatar = 6;
+  string dob = 7;
+  string city = 8;
+  string default_phone_number = 9;
+  string default_email = 10;
+  string gender = 11;
+}
+
+message UpdateCustomerResponse {
+  string id = 1;
+  bool updated = 2;
+}
+
+message DeleteCustomerRequest {
+  string user_name = 1;
+}
+
+message DeleteCustomerResponse {
+  bool deleted = 1;
+}
+
+message SearchCustomersRequest {
+  string search_key = 1;
+  int32 page = 2;
+  int32 size = 3;
+}
+
+message SearchCustomersResponse {
+  repeated GetCustomerResponse customers = 1;
+  int32 total_pages = 2;
+  int32 total_elements = 3;
+}

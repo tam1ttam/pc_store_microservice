@@ -1,0 +1,23 @@
+server:
+  port: ${DISCOVERY_SERVICE_PORT:6059}
+
+spring:
+  application:
+    name: discovery-service
+  jmx:
+    enabled: false
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    serviceUrl:
+      # Tự động lấy hostname và port hiện tại để cấu hình, không bao giờ trật
+      defaultZone: ${EUREKA_URI:http://${eureka.instance.hostname}:${server.port}/eureka/}
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+  pattern:
+    console: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,20 @@
+# Node
+node_modules/
+UI/**/node_modules/
+UI/**/.next/
+UI/**/dist/
+UI/**/.nuxt/
+UI/**/.output/
+
+# Env
+.env
+*.env
+.env.production
+.env.development
+!.env.example
+*.md
+!README.md
+*.claude
+# K8s secrets
+k8s/jenkins/kubeconfig.yaml
+k8s/base/secret.yaml

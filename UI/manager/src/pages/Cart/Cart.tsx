@@ -1,0 +1,430 @@
+import { PayPal, ShipCOD } from "@/assets/cart";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { RootState } from "@/redux/store";
+import { deleteCartItem, getCartCount } from "@/redux/thunks/cart";
+import { viewOrder } from "@/redux/thunks/order";
+import { cartApi } from "@/services/api/cartApi";
+import { orderApi } from "@/services/api/orderApi";
+import { Loader2, MapPin, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
+function Cart() {
+    const { t } = useTranslation();
+    const { items } = useSelector((state: RootState) => state.cart);
+    console.log(items);
+    const dispatch = useDispatch();
+    const { toast } = useToast();
+    const { info: user } = useSelector((state: RootState) => state.user);
+    const [showAddressModal, setShowAddressModal] = useState(false);
+    const [address, setAddress] = useState(localStorage.getItem("addressShipping") || "");
+
+    const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
+    const [isOrdering, setIsOrdering] = useState(false);
+
+    const [paymentMethod, setPaymentMethod] = useState<string>("ship");
+
+    const totalPrice = useMemo(() => {
+        return (
+            items?.reduce((total, item) => {
+                if (!item?.product?.price) return total;
+                const quantity = quantities[item.product.id as string] || item.quantity;
+                return total + item.product.price * quantity;
+            }, 0) || 0
+        );
+    }, [items, quantities]);
+
+    useEffect(() => {
+        if (items.length > 0) {
+            const initialQuantities: { [key: string]: number } = {};
+            items?.forEach((item) => {
+                initialQuantities[item.product.id as string] = item.quantity;
+            });
+            setQuantities(initialQuantities as any);
+        }
+    }, [JSON.stringify]);
+
+    const handleDeleteCartItem = async (productId: string) => {
+        try {
+            const result = await dispatch(
+                deleteCartItem({
+                    userId: user?.id as string,
+                    productId
+                }) as any
+            );
+
+            if (result.payload.code === 1000) {
+                toast({
+                    title: t("clientCart.deleteSuccess")
+                });
+                dispatch(
+                    getCartCount({
+                        userId: user?.id as string
+                    }) as any
+                );
+            } else {
+                toast({
+                    title: t("clientCart.deleteFailed"),
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            toast({
+                title: t("clientCart.genericError"),
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleDecreaseQuantity = (productId: string) => {
+        const currentQuantity = quantities[productId];
+        if (currentQuantity <= 1) return;
+        setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
+        cartApi.decreaseQuantity(user?.id as string, productId).then((result) => {
+            if (result.data.code !== 1000) {
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
+                toast({ title: t("clientCart.decreaseFailed"), variant: "destructive" });
+            }
+        }).catch(() => {
+            setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
+            toast({ title: t("clientCart.genericError"), variant: "destructive" });
+        });
+    };
+
+    const handleIncreaseQuantity = (productId: string) => {
+        setQuantities((prev) => ({ ...prev, [productId]: prev[productId] + 1 }));
+        cartApi.increaseQuantity(user?.id as string, productId).then((result) => {
+            if (result.data.code !== 1000) {
+                setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
+                toast({
+                    title: result.data.code === 6001 ? t("clientCart.outOfStock") : t("clientCart.increaseFailed"),
+                    variant: "destructive"
+                });
+            }
+        }).catch((error: any) => {
+            setQuantities((prev) => ({ ...prev, [productId]: prev[productId] - 1 }));
+            toast({
+                title: error?.response?.data?.code === 6001 ? t("clientCart.outOfStock") : t("clientCart.genericError"),
+                variant: "destructive"
+            });
+        });
+    };
+
+    const handleOrder = async () => {
+        if (!address) {
+            toast({
+                title: t("clientCart.addressRequired"),
+                variant: "destructive"
+            });
+            setShowAddressModal(true);
+            return;
+        }
+        if (paymentMethod === "ship") {
+            setIsOrdering(true);
+            try {
+                const result = await post<any>(ENDPOINTS.ORDER, {
+                    customerId: user?.id,
+                    shipAddress: address,
+                    items,
+                    totalPrice,
+                    orderStatus: "DELIVERING",
+                    isPaid: "false"
+                });
+
+                if (result.data.code === 1000) {
+                    toast({
+                        title: t("clientCart.orderSuccess")
+                    });
+                    dispatch(
+                        getCartCount({
+                            userId: user?.id as string
+                        }) as any
+                    );
+                    dispatch(
+                        viewOrder({
+                            userId: user?.id as string
+                        }) as any
+                    );
+                } else {
+                    throw new Error("Failed to order");
+                }
+            } catch (error: any) {
+                if (error.response && error.response.status === 401) {
+                    toast({
+                        title: t("clientCart.sessionExpired"),
+                        description: t("clientCart.sessionExpiredDesc"),
+                        variant: "destructive"
+                    });
+                    setTimeout(() => {
+                        window.location.href = "/login";
+                    }, 2000);
+                } else {
+                    toast({
+                        title: t("clientCart.orderFailed"),
+                        description: error.message || t("clientCart.genericError"),
+                        variant: "destructive"
+                    });
+                }
+            } finally {
+                setIsOrdering(false);
+            }
+        } else if (paymentMethod === "paypal") {
+            setIsOrdering(true);
+            try {
+                const response = await post<any>(`${ENDPOINTS.PAYPAL}`, {
+                    amount: totalPrice,
+                    userId: user?.id,
+                    shipAddress: address,
+                    items: items
+                });
+
+                if (response.data.code === 1000) {
+                    localStorage.setItem("paymentId", response.data.result.paymentId as string);
+                    window.location.href = response.data.result.url;
+                } else {
+                    toast({
+                        title: t("clientCart.orderFailedRetry"),
+                        variant: "destructive"
+                    });
+                }
+            } catch (error) {
+                console.log(error);
+                toast({
+                    title: t("clientCart.connectionError"),
+                    variant: "destructive"
+                });
+            } finally {
+                setIsOrdering(false);
+            }
+        }
+    };
+
+    return (
+        <div className="container mx-auto px-4 pb-10 relative pt-24">
+            <div className="flex items-center gap-2 mb-6 text-muted-foreground">
+                <Link to="/" className="hover:text-orange-500 transition-colors">
+                    {t("clientCart.breadcrumbHome")}
+                </Link>
+                <span>/</span>
+                <span className="text-orange-500">{t("clientCart.title")}</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-8">{t("clientCart.title")}</h1>
+
+            {!items?.length ? (
+                <div className="text-center py-16">
+                    <ShoppingCart className="w-20 h-20 mx-auto text-orange-500 mb-4" />
+                    <p className="text-muted-foreground text-lg mb-4">{t("clientCart.emptyMsg")}</p>
+                    <Button asChild variant="outline" className="hover:text-orange-500 hover:border-orange-500">
+                        <Link to="/products">{t("clientCart.continueShopping")}</Link>
+                    </Button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        {items?.map((item) => (
+                            <Card key={item.product.id}>
+                                <CardContent className="p-4 flex items-center gap-4">
+                                    <img
+                                        src={item.product.img}
+                                        alt={item.product.name}
+                                        className="w-24 h-24 object-cover rounded-lg"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-base line-clamp-2">{item.product.name}</h3>
+                                        <p className="text-muted-foreground text-sm">
+                                            {t("clientCart.supplier")}: {item.product.supplier.name}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="font-medium text-orange-500">
+                                                {item.product.price.toLocaleString("vi-VN")}đ
+                                            </span>
+                                            {item.product.unit && (
+                                                <span className="text-muted-foreground text-sm">/ {item.product.unit}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2 ">
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8 cursor-pointer"
+                                                onClick={() => handleDecreaseQuantity(item.product.id as string)}
+                                                disabled={quantities[item.product.id as string] <= 1}
+                                            >
+                                                <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <span className="w-8 text-center">
+                                                {quantities[item.product.id as string]}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8 cursor-pointer"
+                                                onClick={() => handleIncreaseQuantity(item.product.id as string)}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 ml-auto text-muted-foreground hover:text-red-500"
+                                                onClick={() => handleDeleteCartItem(item.product.id as string)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <div className="lg:col-span-1">
+                        <Card className="sticky top-4">
+                            <CardContent className="p-6 space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <MapPin className="text-orange-500" size={20} />
+                                    <div className="flex-1 min-w-0">
+                                        <span className="font-medium block mb-1">{t("clientCart.shipAddress")}</span>
+                                        {address ? (
+                                            <p className="text-muted-foreground text-sm truncate">{address}</p>
+                                        ) : (
+                                            <Badge variant="outline" className="text-orange-500 border-orange-500">
+                                                {t("clientCart.noAddress")}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                        onClick={() => setShowAddressModal(true)}
+                                    >
+                                        {address ? t("clientCart.editAddress") : t("clientCart.addAddress")}
+                                    </Button>
+                                </div>
+
+                                <Separator />
+
+                                <div>
+                                    <h3 className="font-medium mb-3">{t("clientCart.paymentMethod")}</h3>
+                                    <RadioGroup
+                                        defaultValue="ship"
+                                        className="grid grid-cols-2 gap-3"
+                                        onValueChange={setPaymentMethod}
+                                    >
+                                        <div className="col-span-1">
+                                            <Label
+                                                htmlFor="ship"
+                                                className="flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-orange-50 hover:border-orange-500 [&:has([data-state=checked])]:border-orange-500 [&:has([data-state=checked])]:bg-orange-50"
+                                            >
+                                                <img src={ShipCOD} alt="COD" className="w-8 h-8" />
+                                                <RadioGroupItem value="ship" id="ship" className="sr-only" />
+                                                <span className="text-sm text-center">{t("clientCart.cod")}</span>
+                                            </Label>
+                                        </div>
+                                        <div className="col-span-1">
+                                            <Label
+                                                htmlFor="paypal"
+                                                className="flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-orange-50 hover:border-orange-500 [&:has([data-state=checked])]:border-orange-500 [&:has([data-state=checked])]:bg-orange-50"
+                                            >
+                                                <img src={PayPal} alt="paypal" className="w-8 h-8" />
+                                                <RadioGroupItem value="paypal" id="paypal" className="sr-only" />
+                                                <span className="text-sm text-center">{t("clientCart.paypal")}</span>
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>{t("clientCart.subtotal")}:</span>
+                                        <span>{totalPrice.toLocaleString("vi-VN")}đ</span>
+                                    </div>
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>{t("clientCart.shipping")}:</span>
+                                        <span>0đ</span>
+                                    </div>
+                                    <Separator />
+                                    <div className="flex justify-between items-center font-medium text-lg">
+                                        <span>{t("clientCart.total")}:</span>
+                                        <span className="text-orange-500">{totalPrice.toLocaleString("vi-VN")}đ</span>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    className="w-full bg-orange-500 hover:bg-orange-600"
+                                    size="lg"
+                                    onClick={handleOrder}
+                                    disabled={isOrdering || !items?.length}
+                                >
+                                    {isOrdering ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                            {t("clientCart.processing")}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ShoppingCart className="w-4 h-4 mr-2" />
+                                            {paymentMethod === "ship" ? t("clientCart.placeOrder") : t("clientCart.checkout")}
+                                        </>
+                                    )}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            )}
+
+            <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("clientCart.addressDialogTitle")}</DialogTitle>
+                    </DialogHeader>
+                    <Textarea
+                        className="min-h-[100px] resize-none"
+                        placeholder={t("clientCart.addressPlaceholder")}
+                        value={address}
+                        onChange={(e) => {
+                            setAddress(e.target.value);
+                            localStorage.setItem("addressShipping", e.target.value);
+                        }}
+                    />
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowAddressModal(false)}>
+                            {t("common.cancel")}
+                        </Button>
+                        <Button
+                            className="bg-orange-500 hover:bg-orange-600"
+                            onClick={() => {
+                                if (address.trim()) {
+                                    setShowAddressModal(false);
+                                } else {
+                                    toast({
+                                        title: t("clientCart.addressRequired"),
+                                        variant: "destructive"
+                                    });
+                                }
+                            }}
+                        >
+                            {t("clientCart.confirm")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+export default Cart;

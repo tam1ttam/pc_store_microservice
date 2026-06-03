@@ -1,0 +1,72 @@
+server:
+  port: ${NOTIFICATION_SERVICE_PORT:6068}
+  servlet:
+    context-path: /notification-service
+
+grpc:
+  server:
+    port: ${NOTIFICATION_GRPC_PORT:6168}
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  application:
+    name: notification-service
+  jmx:
+    enabled: false
+  data:
+    mongodb:
+      uri: ${NOTIFICATION_MONGO_URI:mongodb://root:123456@localhost:6000/notification-service?authSource=admin}
+      auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6002}
+      connect-timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "*"
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:dev-only-jwt-signer-key-for-local-development-please-change-prod}
+
+notification:
+  email:
+    brevo-url: https://api.brevo.com
+    brevo-apikey: ${BREVO_API_KEY:}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.tam: ${LOGGING_LEVEL_COM_TAM:INFO}
+    com.devteria: ${LOGGING_LEVEL_COM_DEVTERIA:INFO}
+  pattern:
+    console: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/notification-service.log
+    max-size: 10MB
+    max-history: 7
+
+app:
+  security:
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3003,http://localhost:3004}
+    permit-all-endpoints: []

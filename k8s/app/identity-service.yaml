@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: identity-service
+  template:
+    metadata:
+      labels:
+        app: identity-service
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: identity-service
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/identity-service:latest
+          command: ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app.jar"]
+          ports:
+            - containerPort: 6062
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx256m"
+            - name: IDENTITY_SERVICE_PORT
+              value: "6062"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          readinessProbe:
+            tcpSocket:
+              port: 6062
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 6062
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: app
+spec:
+  selector:
+    app: identity-service
+  ports:
+    - port: 6062
+      targetPort: 6062

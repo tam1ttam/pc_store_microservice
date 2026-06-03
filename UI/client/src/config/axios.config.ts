@@ -1,0 +1,97 @@
+// axios.config.ts
+import axios from "axios";
+
+const BASE = import.meta.env.VITE_API_URL;
+const REFRESH_URL = `${BASE}/api-gateway/identity-service/client/auth/refresh`;
+
+// ─── In-memory access token (không lưu localStorage) ─────────────────────────
+let inMemoryToken: string | null = null;
+export const setAccessToken = (t: string | null) => {
+    inMemoryToken = t;
+};
+export const getAccessToken = () => inMemoryToken;
+
+// ─── Queue để gom các request bị 401 trong lúc đang refresh ────────────────
+type QueueEntry = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let isRefreshing = false;
+let pendingQueue: QueueEntry[] = [];
+
+const flushQueue = (token: string | null, err: unknown = null) => {
+    pendingQueue.forEach((e) => (token ? e.resolve(token) : e.reject(err)));
+    pendingQueue = [];
+};
+
+// ─── Axios instance ─────────────────────────────────────────────────────────
+const instance = axios.create({
+    baseURL: BASE,
+    withCredentials: true,
+    headers: { "ngrok-skip-browser-warning": "true" },
+});
+
+// Request interceptor — đính token vào header từ bộ nhớ
+instance.interceptors.request.use(
+    (config) => {
+        if (inMemoryToken) config.headers["Authorization"] = `Bearer ${inMemoryToken}`;
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response interceptor — silent refresh khi 401, redirect nếu refresh thất bại
+instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const original = error.config;
+
+        // Không retry nếu chính refresh endpoint bị lỗi — tránh vòng lặp vô hạn
+        const isRefreshRequest = original?.url?.includes('/auth/refresh');
+
+        if (error.response?.status === 401 && !original._retry && !isRefreshRequest) {
+            // Đang refresh rồi → xếp hàng chờ token mới
+            if (isRefreshing) {
+                // Đánh dấu _retry để tránh refresh vòng 2 nếu retry request cũng bị 401
+                original._retry = true;
+                return new Promise<string>((resolve, reject) => {
+                    pendingQueue.push({ resolve, reject });
+                }).then((newToken) => {
+                    original.headers["Authorization"] = `Bearer ${newToken}`;
+                    return instance(original);
+                });
+            }
+
+            original._retry = true;
+            isRefreshing = true;
+
+            try {
+                // Dùng raw axios để tránh vòng lặp interceptor
+                // withCredentials: true để browser tự gửi httpOnly cookie
+                const res = await axios.post(
+                    REFRESH_URL,
+                    {},
+                    { withCredentials: true, headers: { "ngrok-skip-browser-warning": "true" } }
+                );
+                const newToken: string = res.data?.result?.token;
+                if (!newToken) throw new Error("Refresh response missing token");
+
+                inMemoryToken = newToken;
+                flushQueue(newToken);
+                original.headers["Authorization"] = `Bearer ${newToken}`;
+                return instance(original);
+            } catch {
+                flushQueue(null, error);
+                inMemoryToken = null;
+                localStorage.removeItem("addressShipping");
+                // Dùng custom event thay vì hard reload (window.location.href)
+                // để tránh vòng lặp: reload → restore() → 401 → reload → ...
+                window.dispatchEvent(new CustomEvent('auth:session-expired'));
+                return Promise.reject(error);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+export default instance;

@@ -1,0 +1,90 @@
+server:
+  port: ${CHAT_SERVICE_PORT:8085}
+  servlet:
+    context-path: /chat-service
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+      group-id: chat-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    topics:
+      chat-messages: chat-messages
+      ai-replies: ai-replies
+  application:
+    name: chat-service
+  jmx:
+    enabled: false
+  data:
+    mongodb:
+      uri: ${CHAT_MONGO_URI:mongodb://root:123456@localhost:6000/chat-service?authSource=admin}
+      auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6002}
+      connect-timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:dev-only-jwt-signer-key-for-local-development-please-change-prod}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+
+openrouter:
+  api:
+    key: ${OPENROUTER_API_KEY:your-api-key-here}
+    model: ${OPENROUTER_MODEL:meta-llama/llama-3.3-70b-instruct}
+    url: https://openrouter.ai/api/v1/chat/completions
+
+
+app:
+  security:
+    permit-all-endpoints:
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/health
+    allowed-origins:
+      - ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004}
+  services:
+    profile:
+      grpc-host: ${USER_SERVICE_HOST:localhost}
+      grpc-port: ${USER_SERVICE_GRPC_PORT:6163}
+    identity:
+      url: lb://IDENTITY-SERVICE
+order:
+      url: lb://ORDER-SERVICE
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:6059/eureka/}
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.tam: ${LOGGING_LEVEL_COM_TAM:INFO}
+  pattern:
+    console: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%X{traceId:-},%X{spanId:-}] [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/chat-service.log
+    max-size: 10MB
+    max-history: 7

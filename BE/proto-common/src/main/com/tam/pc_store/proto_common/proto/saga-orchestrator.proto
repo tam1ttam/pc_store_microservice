@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package com.tam.proto.saga.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tam.proto.saga.v1";
+option java_outer_classname = "SagaOrchestratorProto";
+
+service SagaOrchestratorService {
+  rpc StartOrderSaga(StartOrderSagaRequest) returns (StartOrderSagaResponse);
+  rpc GetSagaStatus(GetSagaStatusRequest) returns (GetSagaStatusResponse);
+  rpc CompensateSaga(CompensateSagaRequest) returns (CompensateSagaResponse);
+}
+
+// Saga Status Enum
+enum SagaStatus {
+  SAGA_PENDING = 0;
+  SAGA_IN_PROGRESS = 1;
+  SAGA_SUCCESS = 2;
+  SAGA_FAILED = 3;
+  SAGA_COMPENSATING = 4;
+  SAGA_COMPENSATED = 5;
+}
+
+// Step Status Enum
+enum StepStatus {
+  STEP_PENDING = 0;
+  STEP_IN_PROGRESS = 1;
+  STEP_SUCCESS = 2;
+  STEP_FAILED = 3;
+  STEP_COMPENSATING = 4;
+  STEP_COMPENSATED = 5;
+}
+
+// Order Saga Request/Response
+message StartOrderSagaRequest {
+  string sagaId = 1;
+  string userId = 2;
+  repeated OrderItem items = 3;
+  ShippingInfo shippingInfo = 4;
+  PaymentInfo paymentInfo = 5;
+}
+
+message OrderItem {
+  int64 productId = 1;
+  int32 quantity = 2;
+  double price = 3;
+}
+
+message ShippingInfo {
+  string address = 1;
+  string city = 2;
+  string zipCode = 3;
+  string country = 4;
+}
+
+message PaymentInfo {
+  string paymentMethod = 1;
+  string cardToken = 2;
+}
+
+message StartOrderSagaResponse {
+  string sagaId = 1;
+  SagaStatus status = 2;
+  string message = 3;
+}
+
+// Get Saga Status
+message GetSagaStatusRequest {
+  string sagaId = 1;
+}
+
+message GetSagaStatusResponse {
+  string sagaId = 1;
+  SagaStatus status = 2;
+  repeated SagaStep steps = 3;
+  string errorMessage = 4;
+}
+
+message SagaStep {
+  string stepName = 1;
+  StepStatus status = 2;
+  string timestamp = 3;
+  string errorReason = 4;
+}
+
+// Compensate Saga
+message CompensateSagaRequest {
+  string sagaId = 1;
+  string reason = 2;
+}
+
+message CompensateSagaResponse {
+  string sagaId = 1;
+  SagaStatus status = 2;
+  bool compensated = 3;
+  string message = 4;
+}
+
+// Event messages for async messaging
+message SagaEvent {
+  string sagaId = 1;
+  string eventType = 2;
+  string serviceName = 3;
+  string timestamp = 4;
+  bytes payload = 5;
+  SagaStatus sagaStatus = 6;
+}
+
+message StepEvent {
+  string sagaId = 1;
+  string stepName = 2;
+  StepStatus stepStatus = 3;
+  string timestamp = 4;
+  string errorReason = 5;
+}

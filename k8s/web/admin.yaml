@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin
+  namespace: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin
+  template:
+    metadata:
+      labels:
+        app: admin
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: admin
+          image: registry.gitlab.com/tam1ttam-group/pc_store_microservice/admin:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin
+  namespace: web
+spec:
+  selector:
+    app: admin
+  ports:
+    - port: 80
+      targetPort: 80
