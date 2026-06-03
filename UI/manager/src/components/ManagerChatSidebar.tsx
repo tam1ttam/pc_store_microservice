@@ -452,7 +452,6 @@ const CustomerChatWindow = ({
                             <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /></div>
                         ) : (() => {
                             const filtered = transferFilter === "online" ? onlineManagers : managerList;
-                            console.log('online manager: ', onlineManagers);
 
                             return filtered.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-3">
@@ -496,7 +495,6 @@ const CustomerChatWindow = ({
                         const time = msg.createdDate
                             ? new Date(msg.createdDate).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
                             : "";
-                        console.log("=== CustomerChat msg ===", JSON.stringify(msg, null, 2));
                         return (
                             <div key={msg.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
                                 {isMe ? (
@@ -909,4 +907,3 @@ const ManagerChatSidebar = () => {
 };
 
 export default ManagerChatSidebar;
-
